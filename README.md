@@ -1,5 +1,7 @@
 # CarefreeBag
 
+![CarefreeBag](media/logo.png)
+
 **Questing or in a dungeon, you never have to think about your inventory.**
 
 CarefreeBag is a simple bag addon for WoW Forever. It does the boring bag chores for you, so you can keep playing.

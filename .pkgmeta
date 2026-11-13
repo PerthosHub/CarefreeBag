@@ -3,3 +3,4 @@ package-as: CarefreeBag
 ignore:
   - README.md
   - .github
+  - media
