@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: CarefreeBag
+## Notes: Carefree bags: questing or in a dungeon, you never have to think about your inventory. One window, drag-and-drop groups, Auto Sell, auto-restack and mail to your alts.
+## Author: Perthos
+## Version: @project-version@
+## SavedVariables: CarefreeBagDB
+## OptionalDeps: Auctionator
+## IconTexture: Interface\Icons\INV_Misc_Bag_08
+## X-License: MIT
+## X-Curse-Project-ID: VUL_HIER_HET_PROJECT_ID_IN
+
+CarefreeBag.lua
