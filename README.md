@@ -20,7 +20,7 @@ CarefreeBag is a simple bag addon for WoW Forever. It does the boring bag chores
 - **AH value**: groups that you mail away are sorted by stack value, using Auctionator prices if you have it.
 - Search box, keyring, new items flash once, hide items you never need (like your Hearthstone).
 - Tiles stay in place while the window is open; it sorts again when you reopen it.
-- English and Dutch.
+- English, Nederlands, Deutsch, Français, Español, Italiano, Português and Русский. Picks your client language automatically.
 
 ## Usage
 - **B** opens and closes your bags.

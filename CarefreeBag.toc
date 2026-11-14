@@ -9,4 +9,5 @@
 ## X-License: MIT
 ## X-Curse-Project-ID: 1803698
 
+Locales.lua
 CarefreeBag.lua

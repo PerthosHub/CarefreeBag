@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 – more languages
+- New languages: Deutsch, Français, Español, Italiano, Português and Русский, next to English and Nederlands.
+- New installs pick the language of your WoW client automatically. Change it at the top of the options (/cfb).
+- The translations are machine-assisted. Native speakers: corrections are very welcome on GitHub.
+
 ## 1.0.0 – first release
 Tired of playing the inventory-management minigame? CarefreeBag plays it for you.
 - One window for all your bags, split into groups you make yourself. Drag an item onto a group's empty slot and it stays there.

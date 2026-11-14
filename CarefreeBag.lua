@@ -8,8 +8,9 @@
 --    het totaal, plus een klein "2x"-labeltje.
 -- 6. Post: bij de mailbox een lijstje "naar bank-alt / naar BoE-alt" met één knop.
 
-local ADDON = ...
-local VERSION = "1.0.0"
+local ADDON, ns = ...
+ns = ns or {}
+local VERSION = "1.1.0"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -23,11 +24,29 @@ local function Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99CarefreeBag|r: " .. tostring(msg))
 end
 
--- Teksten: Engels in de code, Nederlands via de tabel NL onderaan dit blok.
+-- Teksten: Engels in de code. Nederlands via de tabel NL hieronder, de andere
+-- talen staan in Locales.lua (ns.L.de, ns.L.fr, ...).
 local NL = {}
+local L = ns.L or {}
+ns.L = L
+L.nl = NL
 local function T(s)
-	if DB and DB.lang == "nl" and NL[s] then return NL[s] end
-	return s
+	local t = DB and L[DB.lang]
+	return (t and t[s]) or s
+end
+
+local LANGS = {
+	{ "en", "English" }, { "nl", "Nederlands" }, { "de", "Deutsch" }, { "fr", "Français" },
+	{ "es", "Español" }, { "it", "Italiano" }, { "pt", "Português" }, { "ru", "Русский" },
+}
+local function LangName(code)
+	for _, l in ipairs(LANGS) do if l[1] == code then return l[2] end end
+	return "English"
+end
+-- Taal van de WoW-client (er bestaat geen Nederlandse client, dus nl kies je zelf).
+local function DetectLang()
+	local map = { deDE = "de", frFR = "fr", esES = "es", esMX = "es", itIT = "it", ptBR = "pt", ptPT = "pt", ruRU = "ru" }
+	return map[GetLocale and GetLocale() or ""] or "en"
 end
 
 -- Nederlandse vertalingen
@@ -239,7 +258,8 @@ local function Defaults()
 	CarefreeBagDB = CarefreeBagDB or {}
 	DB = CarefreeBagDB
 	-- Taal: bestaande installaties (van voor 0.6.0) waren Nederlands.
-	if DB.lang == nil then DB.lang = fresh and "en" or "nl" end
+	if DB.lang == nil then DB.lang = fresh and DetectLang() or "nl" end
+	if not L[DB.lang] and DB.lang ~= "en" then DB.lang = "en" end
 	-- Auto Sell: nieuwe gebruikers krijgen bij de eerste vendor een vraag.
 	if DB.autoSellAsked == nil then DB.autoSellAsked = (not fresh) and DB.autoSell ~= nil end
 	DB.assign = DB.assign or {}   -- [itemID] = categorie-key
@@ -1640,14 +1660,36 @@ local function BuildConfig()
 		function() return DB.enabled end, function(v) SetEnabled(v) end)
 	onCb:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 4, y)
 	config.checks[#config.checks + 1] = onCb
-	local langBtn = MakeButton(config, DB.lang == "nl" and "Taal: Nederlands" or "Language: English", 150)
+	local langBtn = MakeButton(config, "Language: " .. LangName(DB.lang), 150)
 	langBtn:SetPoint("TOPRIGHT", config, "TOPRIGHT", -PAD - 4, y)
+	-- keuzelijstje met alle talen; kiezen = opslaan + interface herladen
+	local langMenu = CreateFrame("Frame", "CarefreeBagLangMenu", config, "BackdropTemplate")
+	langMenu:SetSize(150, #LANGS * 22 + 8)
+	langMenu:SetPoint("TOPRIGHT", langBtn, "BOTTOMRIGHT", 0, -2)
+	langMenu:SetFrameStrata("DIALOG")
+	if langMenu.SetBackdrop then
+		langMenu:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
+			insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+		langMenu:SetBackdropColor(0, 0, 0, 0.95)
+	end
+	langMenu:Hide()
+	for i, l in ipairs(LANGS) do
+		local b = MakeButton(langMenu, l[2], 140)
+		b:SetPoint("TOP", langMenu, "TOP", 0, -4 - (i - 1) * 22)
+		b.langCode = l[1]
+		b:SetScript("OnClick", function()
+			langMenu:Hide()
+			if DB.lang == l[1] then return end
+			DB.lang = l[1]
+			Log("language: " .. DB.lang)
+			ReloadUI()
+		end)
+	end
 	langBtn:SetScript("OnClick", function()
-		DB.lang = (DB.lang == "nl") and "en" or "nl"
-		Log("language: " .. DB.lang)
-		ReloadUI()
+		if langMenu:IsShown() then langMenu:Hide() else langMenu:Show() end
 	end)
-	Tooltip(langBtn, "Language / Taal", "English <-> Nederlands (reloads the UI / herlaadt de interface)")
+	Tooltip(langBtn, "Language", "Choose a language. The interface reloads.")
 	y = y - 34
 
 	-- 1. Groepen: eigen categorieën en vaste groepen in één lijst ---------------
