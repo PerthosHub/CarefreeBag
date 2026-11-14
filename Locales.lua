@@ -120,6 +120,9 @@ ns.L.de = {
 	["Reload the interface to switch language."] = "Lade die Oberfläche neu, um die Sprache zu wechseln.",
 	["Reload"] = "Neu laden",
 	["Later"] = "Später",
+	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': Umbenennen verschiebt keine Items. Die %d gelernten Items landen weiterhin hier.",
+	["Learned: %d items"] = "Gelernt: %d Items",
+	["Renaming does not change which items go here."] = "Umbenennen ändert nicht, welche Items hier landen.",
 }
 
 ns.L.fr = {
@@ -239,6 +242,9 @@ ns.L.fr = {
 	["Reload the interface to switch language."] = "Recharge l'interface pour changer de langue.",
 	["Reload"] = "Recharger",
 	["Later"] = "Plus tard",
+	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s' : renommer ne déplace pas d'objets. Les %d objets appris vont toujours ici.",
+	["Learned: %d items"] = "Appris : %d objets",
+	["Renaming does not change which items go here."] = "Renommer ne change pas les objets qui vont ici.",
 }
 
 ns.L.es = {
@@ -358,6 +364,9 @@ ns.L.es = {
 	["Reload the interface to switch language."] = "Recarga la interfaz para cambiar de idioma.",
 	["Reload"] = "Recargar",
 	["Later"] = "Más tarde",
+	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': cambiar el nombre no mueve objetos. Los %d objetos aprendidos siguen yendo aquí.",
+	["Learned: %d items"] = "Aprendidos: %d objetos",
+	["Renaming does not change which items go here."] = "Cambiar el nombre no cambia qué objetos van aquí.",
 }
 
 ns.L.pt = {
@@ -477,6 +486,9 @@ ns.L.pt = {
 	["Reload the interface to switch language."] = "Recarregue a interface para trocar de idioma.",
 	["Reload"] = "Recarregar",
 	["Later"] = "Depois",
+	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': renomear não move itens. Os %d itens aprendidos continuam indo para cá.",
+	["Learned: %d items"] = "Aprendidos: %d itens",
+	["Renaming does not change which items go here."] = "Renomear não muda quais itens vão para cá.",
 }
 
 ns.L.it = {
@@ -596,6 +608,9 @@ ns.L.it = {
 	["Reload the interface to switch language."] = "Ricarica l'interfaccia per cambiare lingua.",
 	["Reload"] = "Ricarica",
 	["Later"] = "Più tardi",
+	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': rinominare non sposta oggetti. I %d oggetti imparati continuano ad andare qui.",
+	["Learned: %d items"] = "Imparati: %d oggetti",
+	["Renaming does not change which items go here."] = "Rinominare non cambia quali oggetti vanno qui.",
 }
 
 ns.L.ru = {
@@ -715,4 +730,7 @@ ns.L.ru = {
 	["Reload the interface to switch language."] = "Перезагрузите интерфейс, чтобы сменить язык.",
 	["Reload"] = "Перезагрузить",
 	["Later"] = "Позже",
+	["'%s': renaming does not move items. The %d items it learned still go here."] = "«%s»: переименование не перемещает предметы. Выученные предметы (%d) по-прежнему попадают сюда.",
+	["Learned: %d items"] = "Выучено предметов: %d",
+	["Renaming does not change which items go here."] = "Переименование не меняет, какие предметы попадают сюда.",
 }

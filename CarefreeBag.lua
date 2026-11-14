@@ -122,6 +122,9 @@ NL["grey"] = "grijs"
 
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': hernoemen verplaatst geen items. De %d geleerde items komen hier nog steeds."
+NL["Learned: %d items"] = "Geleerd: %d items"
+NL["Renaming does not change which items go here."] = "Hernoemen verandert niet welke items hierheen gaan."
 NL["Type /reload to switch language."] = "Typ /reload om van taal te wisselen."
 NL["Reload the interface to switch language."] = "Herlaad de interface om van taal te wisselen."
 NL["Reload"] = "Herladen"
@@ -337,6 +340,13 @@ local NOHIDDEN = {}
 local function Hidden()
 	local ch = CharEntry()
 	return ch and ch.hidden or NOHIDDEN
+end
+
+-- Hoeveel items heeft dit karakter aan een groep geleerd (door slepen)?
+local function LearnedCount(key)
+	local n = 0
+	for _, k in pairs(Assign()) do if k == key then n = n + 1 end end
+	return n
 end
 
 local function CatByKey(key)
@@ -918,10 +928,12 @@ local function GetHeader()
 		end)
 		h.sort:SetScript("OnLeave", function() GameTooltip:Hide() end)
 		h:SetScript("OnEnter", function(self)
-			if not self.rules then return end
+			local own = self.key and CatByKey(self.key)
+			if not self.rules and not own then return end
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 			GameTooltip:AddLine(self.ruleTitle or "")
-			GameTooltip:AddLine(self.rules, 1, 1, 1, true)
+			if self.rules then GameTooltip:AddLine(self.rules, 1, 1, 1, true) end
+			if own then GameTooltip:AddLine(T("Learned: %d items"):format(LearnedCount(self.key)), 0.7, 0.7, 0.7) end
 			GameTooltip:Show()
 		end)
 		h:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -2183,6 +2195,8 @@ local function BuildConfig()
 			if c and new ~= "" and new ~= c.name then
 				Log("renamed: " .. c.name .. " -> " .. new)
 				c.name = new
+				local n = LearnedCount(c.key)
+				if n > 0 then Print(T("'%s': renaming does not move items. The %d items it learned still go here."):format(new, n)) end
 				Refresh()
 			end
 			self:ClearFocus()
@@ -2190,6 +2204,14 @@ local function BuildConfig()
 		end
 		r.name:SetScript("OnEnterPressed", rename)
 		r.name:SetScript("OnEditFocusLost", rename)
+		r.name:HookScript("OnEnter", function(self)
+			if not r.key then return end
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:AddLine(T("Learned: %d items"):format(LearnedCount(r.key)))
+			GameTooltip:AddLine(T("Renaming does not change which items go here."), 1, 1, 1, true)
+			GameTooltip:Show()
+		end)
+		r.name:HookScript("OnLeave", function() GameTooltip:Hide() end)
 
 		-- Vaste groep: blauwe naam, niet aan te passen, uitleg in de tooltip.
 		r.fixedName = CreateFrame("Frame", nil, r)
