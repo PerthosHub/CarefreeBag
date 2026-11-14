@@ -9,7 +9,7 @@
 -- 6. Post: bij de mailbox een lijstje "naar bank-alt / naar BoE-alt" met één knop.
 
 local ADDON = ...
-local VERSION = "0.9.6"
+local VERSION = "1.0.0"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")

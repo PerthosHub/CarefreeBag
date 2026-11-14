@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0 – first release
+Tired of playing the inventory-management minigame? CarefreeBag plays it for you.
+- One window for all your bags, split into groups you make yourself. Drag an item onto a group's empty slot and it stays there.
+- Fixed groups: Quest, Keys, BoE, Auto Sell and Other. Turn each on or off and change the order.
+- Auto Sell: grey items (and anything you drop in) are sold at the vendor. Hold Shift to skip.
+- Half stacks are combined automatically (never in combat).
+- Mail to alts: give a group a character name and send it with one click at the mailbox. Mails have no text, so they disappear once emptied.
+- Groups you mail away are sorted by stack value, using Auctionator prices if installed.
+- Hide items, search box, keyring, new items flash once, tiles stay in place while the window is open.
+- English and Dutch.
+
 ## 0.9.6
 - Mails sent by CarefreeBag have no body text anymore, so they disappear by themselves once you take the attachments (also with Open All).
 
