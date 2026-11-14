@@ -17,7 +17,7 @@ CarefreeBag is a simple bag addon for WoW Forever. It does the boring bag chores
 - **Auto Sell**: grey items, plus anything you drop in, are sold when you open a vendor. Hold **Shift** to skip once.
 - **Stacks**: the same item shows as one tile; half stacks are combined in your bags (never during combat).
 - **Mail to alts**: give a group an address. At a mailbox you're asked per group: Yes, send or Skip.
-- **Per group**: collapse it and pick the sorting: type, stack price, newest last or manual (drag to reorder).
+- **Per group**: collapse it, and (optional) pick the sorting: stack price, newest last or manual (drag to reorder).
 - **AH value** of a stack after the AH cut in the tooltip, if you have Auctionator.
 - Search box, bag fill bar, hide items you never need (like your Hearthstone), new items flash once.
 - English, Nederlands, Deutsch, Français, Español, Italiano, Português and Русский. Picks your client language automatically.

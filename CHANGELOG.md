@@ -1,10 +1,10 @@
 # Changelog
 
 ## 1.1.0 – works out of the box
-- **Ready-made categories** that fill themselves: Consumables, Professions and Gear for new installs; add Food & Drink, Potions & Elixirs or Scrolls from the options. Your own categories still fill by dragging.
+- **Ready-made categories** that fill themselves: Consumables, Professions and Gear for new installs; add Food & Drink, Potions & Elixirs, Scrolls or your own category from the options.
 - **Mail asks per category** at the mailbox: Yes, send or Skip. Mailed groups show "Auto" with an envelope.
-- **Per group in the bag:** collapse it, and choose the sorting (type, stack price, newest last or manual). Drag items onto each other to reorder.
-- **Remembered per character:** what you drag where, and your own order.
+- **Per group in the bag:** collapse it. Turn on sort buttons in the options to choose Stack price, Newest last or Manual. Drag items onto each other to reorder.
+- **Remembered per character:** what you drag where, hidden items and your own order.
 - AH value of a stack after the 5% AH cut in the item tooltip (needs Auctionator).
 - Bag fill bar, Blizzard-style buttons, shorter tooltips, no copper shown once you have gold. Keys group is off by default.
 - New languages: Deutsch, Français, Español, Italiano, Português and Русский. New installs follow your client language. Translations are machine-assisted; corrections welcome.
