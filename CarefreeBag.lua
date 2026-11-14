@@ -121,9 +121,8 @@ NL["grey"] = "grijs"
 
 
 NL["sell automatically"] = "automatisch verkopen"
-NL["Sell on the AH"] = "Verkoop op het AH"
-NL["Sell to a vendor"] = "Verkoop aan de vendor"
-NL["AH after 5%% cut: %s, vendor: %s (%s more)"] = "AH na 5%% kosten: %s, vendor: %s (%s meer)"
+NL["Sell on the AH to earn %s more than at a vendor"] = "Verkoop op het AH: %s meer dan bij de vendor"
+NL["Sell to a vendor to earn %s more than on the AH"] = "Verkoop aan de vendor: %s meer dan op het AH"
 NL["General"] = "Algemeen"
 NL["Bag width: %d columns"] = "Breedte van de tas: %d kolommen"
 NL["Predefined groups"] = "Kant-en-klare groepen"
@@ -417,11 +416,13 @@ local function AddAHLines(tt, g)
 	local net = each * g.count * (1 - AH_CUT)
 	local vendor = g.value or 0
 	tt:AddLine(" ")
-	-- Regel 1: "CarefreeBag:" in blauw + het advies. Regel 2: waarom en hoeveel het scheelt.
-	local ah = net > vendor
-	local advice = ah and ("|cff40ff40" .. T("Sell on the AH") .. "|r") or ("|cffffd100" .. T("Sell to a vendor") .. "|r")
-	tt:AddLine("|cff66ccffCarefreeBag:|r " .. advice)
-	tt:AddLine(T("AH after 5%% cut: %s, vendor: %s (%s more)"):format(money(net), money(vendor), money(math.abs(net - vendor))), 0.8, 0.8, 0.8)
+	-- Eén regel: "CarefreeBag:" in blauw + advies + hoeveel meer (AH al na 5% kosten).
+	local diff = money(math.abs(net - vendor))
+	if net > vendor then
+		tt:AddLine("|cff66ccffCarefreeBag:|r |cff40ff40" .. T("Sell on the AH to earn %s more than at a vendor"):format(diff) .. "|r")
+	else
+		tt:AddLine("|cff66ccffCarefreeBag:|r |cffffd100" .. T("Sell to a vendor to earn %s more than on the AH"):format(diff) .. "|r")
+	end
 end
 local ahHooked
 local function HookAHTooltip()
