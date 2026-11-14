@@ -1,21 +1,13 @@
 # Changelog
 
-## 1.1.0 – works out of the box, more languages
-- Ready-made categories that fill themselves: Food & Drink, Potions & Elixirs, Scrolls, Consumables, Professions and Gear. New installs start with Consumables, Professions and Gear; add others from the "Ready-made" list in the options. Their names are fixed so it's always clear what goes in. Your own categories are still filled by dragging.
-- Anything you drag onto a category goes there from now on, ready-made or your own.
-- Bag fill bar at the bottom (green, orange, red) instead of the free-slot tile; icon buttons for Hide (eye) and Options (gear); a language icon in the options.
-- Collapse a group with the [-] in its header.
-- Sort per group: type, stack price, newest last or manual. Drag an item onto another item in the same group to reorder: on the left edge it goes in between (gold line), elsewhere they swap (gold border).
-- Groups that are mailed automatically show "Auto" with an envelope; hover the header to see where they go.
-- "selling is off" only shows after you said No at the first vendor.
-- What you drag into a category is now remembered per character.
-- Mail asks per category: "Send Professions to Thrall Stormrage?" Yes, send or Skip, until every category is done.
-- Item tooltips show the AH value of the stack after the 5% AH cut (needs Auctionator).
-- Group headers no longer show a total value.
-- Dropping an item on a free slot never tries to put it in a profession bag it doesn't fit in.
-- New languages: Deutsch, Français, Español, Italiano, Português and Русский, next to English and Nederlands.
-- New installs pick the language of your WoW client automatically. Change it at the top of the options (/cfb).
-- The translations are machine-assisted. Native speakers: corrections are very welcome on GitHub.
+## 1.1.0 – works out of the box
+- **Ready-made categories** that fill themselves: Consumables, Professions and Gear for new installs; add Food & Drink, Potions & Elixirs or Scrolls from the options. Your own categories still fill by dragging.
+- **Mail asks per category** at the mailbox: Yes, send or Skip. Mailed groups show "Auto" with an envelope.
+- **Per group in the bag:** collapse it, and choose the sorting (type, stack price, newest last or manual). Drag items onto each other to reorder.
+- **Remembered per character:** what you drag where, and your own order.
+- AH value of a stack after the 5% AH cut in the item tooltip (needs Auctionator).
+- Bag fill bar, Blizzard-style buttons, shorter tooltips, no copper shown once you have gold. Keys group is off by default.
+- New languages: Deutsch, Français, Español, Italiano, Português and Русский. New installs follow your client language. Translations are machine-assisted; corrections welcome.
 
 ## 1.0.0 – first release
 Tired of playing the inventory-management minigame? CarefreeBag plays it for you.

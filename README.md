@@ -12,14 +12,14 @@ CarefreeBag is a simple bag addon for WoW Forever. It does the boring bag chores
 - **Calm and simple.** One window, the classic Blizzard look, and only a few options.
 
 ## Features
-- All bags in one window, split into groups you make yourself.
-- Fixed groups: **Quest**, **Keys**, **BoE**, **Auto Sell** and **Other**. Each can be turned off.
+- **Works out of the box**: ready-made categories (Consumables, Professions, Gear, and more in the options) fill themselves. Drag an item onto any group and it stays there, per character.
+- Fixed groups: **Quest**, **BoE**, **Auto Sell**, **Other** and **Keys** (off by default). Each can be turned off.
 - **Auto Sell**: grey items, plus anything you drop in, are sold when you open a vendor. Hold **Shift** to skip once.
-- **Stacks**: the same item in several slots shows as one tile; half stacks are combined in your bags automatically (never during combat).
-- **Mail to alts**: give a group an address. At a mailbox you see what will be sent and send it with one click.
-- **AH value**: groups that you mail away are sorted by stack value, using Auctionator prices if you have it.
-- Search box, keyring, new items flash once, hide items you never need (like your Hearthstone).
-- Tiles stay in place while the window is open; it sorts again when you reopen it.
+- **Stacks**: the same item shows as one tile; half stacks are combined in your bags (never during combat).
+- **Mail to alts**: give a group an address. At a mailbox you're asked per group: Yes, send or Skip.
+- **Per group**: collapse it and pick the sorting: type, stack price, newest last or manual (drag to reorder).
+- **AH value** of a stack after the AH cut in the tooltip, if you have Auctionator.
+- Search box, bag fill bar, hide items you never need (like your Hearthstone), new items flash once.
 - English, Nederlands, Deutsch, Français, Español, Italiano, Português and Русский. Picks your client language automatically.
 
 ## Usage
