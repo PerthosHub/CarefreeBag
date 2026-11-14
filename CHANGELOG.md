@@ -1,13 +1,17 @@
 # Changelog
 
-## 1.1.0 – works out of the box
+## 1.2.0 – works out of the box
 - **Ready-made categories** that fill themselves: Consumables, Professions and Gear for new installs; add Food & Drink, Potions & Elixirs, Scrolls or your own category from the options.
 - **Mail asks per category** at the mailbox: Yes, send or Skip. Mailed groups show "Auto" with an envelope.
 - **Per group in the bag:** collapse it. Turn on sort buttons in the options to choose Stack price, Newest last or Manual. Drag items onto each other to reorder.
 - **Remembered per character:** what you drag where, hidden items and your own order.
 - AH value of a stack after the 5% AH cut in the item tooltip (needs Auctionator).
 - Bag fill bar, Blizzard-style buttons, shorter tooltips, no copper shown once you have gold. Keys group is off by default.
-- New languages: Deutsch, Français, Español, Italiano, Português and Русский. New installs follow your client language. Translations are machine-assisted; corrections welcome.
+
+## 1.1.0 – more languages
+- New languages: Deutsch, Français, Español, Italiano, Português and Русский, next to English and Nederlands.
+- New installs pick the language of your WoW client automatically. Change it at the top of the options (/cfb).
+- The translations are machine-assisted. Native speakers: corrections are very welcome on GitHub.
 
 ## 1.0.0 – first release
 Tired of playing the inventory-management minigame? CarefreeBag plays it for you.

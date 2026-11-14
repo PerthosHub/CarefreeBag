@@ -10,7 +10,7 @@
 
 local ADDON, ns = ...
 ns = ns or {}
-local VERSION = "1.1.0"
+local VERSION = "1.2.0"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
