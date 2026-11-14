@@ -9,7 +9,7 @@
 -- 6. Post: bij de mailbox een lijstje "naar bank-alt / naar BoE-alt" met één knop.
 
 local ADDON = ...
-local VERSION = "0.9.5"
+local VERSION = "0.9.6"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -1501,7 +1501,9 @@ local function MailSend()
 	if not c then return end
 	mail.waiting = true
 	Log("mail to '" .. c.to .. "': " .. c.n .. " item(s)")
-	SendMail(c.to, "CarefreeBag: " .. c.n .. " item(s)", T("Sent by CarefreeBag."))
+	-- Geen tekst in de mail: dan verdwijnt hij vanzelf zodra je de bijlagen eruit haalt
+	-- (een mail met tekst blijft staan als "brief").
+	SendMail(c.to, "CarefreeBag: " .. c.n .. " item(s)", "")
 end
 
 local function MailStart()

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.6
+- Mails sent by CarefreeBag have no body text anymore, so they disappear by themselves once you take the attachments (also with Open All).
+
 ## 0.9.5
 - Fixed: on the character that a group is mailed to, CarefreeBag no longer tries to mail items to itself (full name with surname is now used).
 
