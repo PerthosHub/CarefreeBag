@@ -232,6 +232,24 @@ NL["Off = this group is not used; its items go to Other."] = "Uit = deze groep w
 NL["On/off"] = "Aan/uit"
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["Drop an item: it goes here from now on."] = "Sleep een item hierheen: het komt hier voortaan."
+NL["Quest items. Never sold or mailed."] = "Quest-items. Nooit verkocht of gemaild."
+NL["Your keyring."] = "Je keyring."
+NL["Unbound BoE items, green and better."] = "Ongebonden BoE-items, groen en beter."
+NL["Grey items. Sold at a vendor (Shift = skip)."] = "Grijze items. Verkocht bij de vendor (Shift = overslaan)."
+NL["Everything without a group."] = "Alles zonder groep."
+NL["Drop an item to hide it."] = "Sleep een item hierheen om het te verbergen."
+NL["Your hidden items."] = "Je verborgen items."
+NL["These items are mailed to %s when you open a mailbox."] = "Deze items worden naar %s gemaild als je een mailbox opent."
+NL["AH value after 5%% cut: %s"] = "AH-waarde na 5%% kosten: %s"
+NL["Drag items onto each other to reorder."] = "Sleep items op elkaar om de volgorde te veranderen."
+NL["Off = your normal bags."] = "Uit = je gewone tassen."
+NL["Off: items go to Other."] = "Uit: items gaan naar Overig."
+NL["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Volledige naam van je alt, bijv. 'Thrall Stormrage'. Leeg = niet mailen."
+NL["Items go back to Other."] = "Items gaan terug naar Overig."
+NL["Add a category that fills itself."] = "Voeg een categorie toe die zichzelf vult."
+NL["Window width before you scroll."] = "Vensterbreedte voordat je gaat scrollen."
+NL["Sell at a vendor. Shift = skip once."] = "Verkopen bij de vendor. Shift = één keer overslaan."
 NL["At a mailbox you are asked per category whether to send it."] = "Bij de mailbox krijg je per categorie de vraag of hij weg moet."
 NL["Choose how this group is sorted: type, stack price, newest last or manual."] = "Kies hoe deze groep gesorteerd wordt: soort, stackprijs, nieuwste als laatst of handmatig."
 NL["Sort: %s"] = "Sortering: %s"
@@ -351,6 +369,7 @@ local function Defaults()
 	for _, k in ipairs({ "quest", "keys", "grey" }) do
 		if DB.fixedOn[k] == nil then DB.fixedOn[k] = true end
 	end
+	if not DB.keysOffDone then DB.fixedOn.keys = false; DB.keysOffDone = true end
 	if DB.enabled == nil then DB.enabled = (DB.replaceBags ~= false) end
 	DB.replaceBags = nil
 	DB.questAuto = true -- quest-items gaan altijd naar Quest (groep uit = naar Overig)
@@ -538,6 +557,7 @@ local function SectionOf(e)
 	if key == "grey" and On("grey") then return "grey" end    -- zelf naar Auto Sell gesleept
 	if key == "other" then return "other" end                 -- zelf naar Overig gesleept: nooit automatisch
 	if key == "quest" and On("quest") then return "quest" end -- zelf naar Quest gesleept
+	if key == "boe" and On("boe") then return "boe" end       -- zelf naar BoE gesleept
 	if key and CatByKey(key) then return key end
 	if On("quest") and DB.questAuto and e.quest then return "quest" end
 	if On("grey") and DB.greyAuto and e.quality == 0 then return "grey" end
@@ -753,7 +773,7 @@ local function NewItemButton(i)
 		local each = g and AHPrice(g.link)
 		if not each or not GameTooltip:IsOwned(self) then return end
 		local net = math.floor(each * g.count * (1 - AH_CUT))
-		GameTooltip:AddLine(T("AH value of this stack after the 5%% AH cut: %s"):format(
+		GameTooltip:AddLine(T("AH value after 5%% cut: %s"):format(
 			GetMoneyString and GetMoneyString(net, true) or tostring(net)), 0.4, 0.8, 1)
 		GameTooltip:Show()
 	end)
@@ -793,6 +813,37 @@ local function GetItemButton()
 	if not b then
 		b = NewItemButton(usedItems)
 		itemPool[usedItems] = b
+	end
+	return b
+end
+
+-- Rode vierkante knop zoals Blizzard die gebruikt (128-RedButton-...).
+local function HasAtlas(a) return a and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(a) ~= nil end
+local function SetRedKit(b, kit, fallback)
+	if HasAtlas(kit) then
+		b:SetNormalAtlas(kit)
+		if HasAtlas(kit .. "-Pressed") then b:SetPushedAtlas(kit .. "-Pressed") end
+		if HasAtlas(kit .. "-Highlight") then b:SetHighlightAtlas(kit .. "-Highlight", "ADD")
+		else b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD") end
+	elseif fallback then
+		b:SetNormalTexture(fallback)
+		b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	end
+end
+local function RedButton(parent, name, size, kit, fallback, iconAtlases)
+	local b = CreateFrame("Button", name, parent)
+	b:SetSize(size, size)
+	SetRedKit(b, kit, fallback)
+	if iconAtlases and HasAtlas(kit) then
+		for _, a in ipairs(iconAtlases) do
+			if HasAtlas(a) then
+				b.icon = b:CreateTexture(nil, "OVERLAY")
+				b.icon:SetAtlas(a)
+				b.icon:SetSize(size * 0.6, size * 0.6)
+				b.icon:SetPoint("CENTER", 0, 1)
+				break
+			end
+		end
 	end
 	return b
 end
@@ -856,10 +907,8 @@ local function GetHeader()
 		h:SetSize(200, 16)
 		h:EnableMouse(true)
 		-- [-] / [+]: groep in- of uitklappen
-		h.toggle = CreateFrame("Button", nil, h)
-		h.toggle:SetSize(14, 14)
+		h.toggle = RedButton(h, nil, 15, "128-redbutton-minus", "Interface\\Buttons\\UI-MinusButton-Up")
 		h.toggle:SetPoint("LEFT", h, "LEFT", 0, 0)
-		h.toggle:SetHighlightTexture("Interface\\Buttons\\UI-PlusButton-Hilight", "ADD")
 		h.toggle:SetScript("OnClick", function()
 			if not h.key then return end
 			DB.collapsed = DB.collapsed or {}
@@ -881,27 +930,27 @@ local function GetHeader()
 		h.mail:SetScript("OnEnter", function(self)
 			if not (h.sec and h.sec.mailTo) then return end
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:AddLine(MAIL_ICON .. " " .. T("Auto mail to: %s"):format(h.sec.mailTo), 0.4, 0.8, 1, true)
-			GameTooltip:AddLine(T("At a mailbox you are asked per category whether to send it."), 1, 1, 1, true)
+			GameTooltip:AddLine(T("These items are mailed to %s when you open a mailbox."):format(h.sec.mailTo), 1, 1, 1, true)
 			GameTooltip:Show()
 		end)
 		h.mail:SetScript("OnLeave", function() GameTooltip:Hide() end)
 		-- Sorteerknop rechts: klik = volgende manier van sorteren
 		h.sort = CreateFrame("Button", nil, h)
-		h.sort:SetSize(80, 14)
+		h.sort:SetSize(18, 18)
 		h.sort:SetPoint("RIGHT", h, "RIGHT", 0, 0)
-		h.sort.bg = h.sort:CreateTexture(nil, "BACKGROUND")
-		h.sort.bg:SetAllPoints(h.sort)
-		h.sort.bg:SetColorTexture(0, 0, 0, 0.45)
-		h.sort:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
-		h.sort.fs = h.sort:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-		h.sort.fs:SetPoint("RIGHT", h.sort, "RIGHT", -4, 0)
+		if HasAtlas("bags-button-autosort-up") then
+			h.sort:SetNormalAtlas("bags-button-autosort-up")
+			if HasAtlas("bags-button-autosort-down") then h.sort:SetPushedAtlas("bags-button-autosort-down") end
+			h.sort:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+		else
+			SetRedKit(h.sort, "128-redbutton-arrowdown", "Interface\\Buttons\\UI-ScrollBar-ScrollDownButton-Up")
+		end
 		h.sort:SetScript("OnClick", function(self) OpenSortMenu(self, h.sec) end)
 		h.sort:SetScript("OnEnter", function(self)
+			if not h.sec then return end
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:AddLine(T("Sorting"))
-			GameTooltip:AddLine(T("Choose how this group is sorted: type, stack price, newest last or manual."), 1, 1, 1, true)
-			GameTooltip:AddLine(T("Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."), 0.8, 0.8, 0.8, true)
+			GameTooltip:AddLine(T("Sort: %s"):format(T(SORT_NAME[SortMode(h.sec)])))
+			GameTooltip:AddLine(T("Drag items onto each other to reorder."), 1, 1, 1, true)
 			GameTooltip:Show()
 		end)
 		h.sort:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1061,22 +1110,23 @@ local function FixedSection(key)
 	if key ~= "other" and not On(key) then return nil end
 	if key == "quest" then
 		return { key = "quest", title = T("Quest"), plus = true, fixed = true,
-			tip = T("Drop an item here: it is shown with your quest items from now on."),
-			rules = T("Fixed group. Items the game marks as quest items, plus items you drop here. Never sold or mailed.") }
+			tip = T("Drop an item: it goes here from now on."),
+			rules = T("Quest items. Never sold or mailed.") }
 	elseif key == "keys" then
 		return { key = "keys", title = T("Keys"), plus = false, fixed = true,
-			rules = T("Fixed group. Everything on your keyring.") }
+			rules = T("Your keyring.") }
 	elseif key == "boe" then
-		return { key = "boe", title = "BoE", mailTo = (DB.boeMail ~= "" and DB.boeMail or nil), plus = false, fixed = true,
-			rules = T("Fixed group. Unbound Bind on Equip items, green and better. Mailed to the BoE address from the options, if you set one.") }
+		return { key = "boe", title = "BoE", mailTo = (DB.boeMail ~= "" and DB.boeMail or nil), plus = true, fixed = true,
+			tip = T("Drop an item: it goes here from now on."),
+			rules = T("Unbound BoE items, green and better.") }
 	elseif key == "grey" then
 		return { key = "grey", title = "Auto Sell" .. ((DB.autoSell or not DB.autoSellAsked) and "" or ("  |cff888888(" .. T("selling is off") .. ")|r")), plus = true, byValue = true, fixed = true,
-			tip = T("Drop an item here: it is sold automatically at a vendor from now on, even if it is not grey."),
-			rules = T("Fixed group. Grey items plus items you drop here, most valuable first. Sold when you open a vendor (hold Shift to skip). Items without a sell price stay.") }
+			tip = T("Drop an item: it goes here from now on."),
+			rules = T("Grey items. Sold at a vendor (Shift = skip).") }
 	elseif key == "other" then
 		return { key = "other", title = T("Other"), plus = true, fixed = true,
-			tip = T("Drop an item here: it stays in Other and never moves to Auto Sell, Quest or BoE by itself."),
-			rules = T("Fixed group. Everything without a group. Items you drop here stay here and never move by themselves.") }
+			tip = T("Drop an item: it goes here from now on."),
+			rules = T("Everything without a group.") }
 	end
 end
 
@@ -1091,15 +1141,14 @@ local function SectionList()
 			local title = c.name
 			list[#list + 1] = { key = c.key, title = title, plus = true, byValue = (c.mailTo and c.mailTo ~= "") and "ah" or nil,
 				mailTo = (c.mailTo and c.mailTo ~= "") and c.mailTo or nil,
-				tip = T("Drop an item here: that kind of item belongs to %s from now on."):format(c.name),
-				rules = c.preset and (T(PRESET[c.preset].tip) .. " " .. T("Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."))
-					or T("Your category. Drop items on its + slot. Rename it, reorder it or give it a mail address in the options.") }
+				tip = T("Drop an item: it goes here from now on."),
+				rules = c.preset and T(PRESET[c.preset].tip) or nil }
 		end
 	end
 	if showHidden then
 		list[#list + 1] = { key = "hidden", title = T("Hidden"), plus = true, fixed = true,
-			tip = T("Drop an item here to hide it."),
-			rules = T("Fixed group. Your hidden items. Only visible while you are hiding items.") }
+			tip = T("Drop an item to hide it."),
+			rules = T("Your hidden items.") }
 	end
 	return list
 end
@@ -1287,11 +1336,11 @@ local function Layout()
 		local t = f.sec.fixed and (BLUE .. f.title .. "|r") or f.title
 		if f.collapsed and f.n > 0 then t = t .. "  |cff888888(" .. f.n .. ")|r" end
 		h:SetText(t)
-		h.toggle:SetNormalTexture(f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
+		SetRedKit(h.toggle, f.collapsed and "128-redbutton-plus" or "128-redbutton-minus",
+			f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
 		h.sort:SetShown(not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys")
 		h.mail:SetShown(f.sec.mailTo ~= nil)
-		h.sort.fs:SetText("|cffbbbbbb" .. T(SORT_NAME[SortMode(f.sec)]) .. "|r " .. ARROW_ICON)
-		h.sort:SetWidth((h.sort.fs.GetStringWidth and h.sort.fs:GetStringWidth() or 80) + 10)
+		h.sort.mode = SortMode(f.sec)
 		h.rules, h.ruleTitle = f.sec.rules, StripColors(f.sec.title)
 		y = y - 18
 		local col = 0
@@ -1314,7 +1363,7 @@ local function Layout()
 		if f.sec.plus and not f.collapsed then
 			local p = GetPlus()
 			p.section = f.sec.key
-			p.tipTitle = T("Empty slot: %s"):format(StripColors(f.sec.title))
+			p.tipTitle = StripColors(f.sec.title)
 			p.tipText = f.sec.tip
 			place(p, col)
 			col = col + 1
@@ -1367,10 +1416,12 @@ local function Layout()
 	main.freeBar:SetStatusBarColor(r, g, bl)
 	main.freeBar.text:SetText(used .. "/" .. total)
 	main.freeBar.free, main.freeBar.total = #free, total
-	main.money:SetText(GetMoneyString and GetMoneyString(GetMoney(), true) or tostring(GetMoney()))
+	local money = GetMoney()
+	if money >= 10000 then money = money - money % 100 end -- met goud: geen koper meer tonen
+	main.money:SetText(GetMoneyString and GetMoneyString(money, true) or tostring(money))
 
 	main.hiddenBtn.count:SetText(hiddenCount > 0 and hiddenCount or "")
-	if showHidden then main.hiddenBtn:LockHighlight() else main.hiddenBtn:UnlockHighlight() end
+	SetRedKit(main.hiddenBtn, showHidden and "128-redbutton-visibilityon" or "128-redbutton-visibilityoff", "Interface\\Icons\\Spell_Shadow_EvilEye")
 	main.hint:SetShown(showHidden)
 
 	main:SetSize(width + 2 * PAD, top + viewH + FOOTER_H + PAD)
@@ -1429,32 +1480,18 @@ local function BuildMain()
 		if PlaySound and SOUNDKIT then pcall(PlaySound, SOUNDKIT.IG_BACKPACK_CLOSE) end
 	end)
 
-	-- Twee icoonknoppen rechtsboven: oog met streep (verbergen) en tandwiel (opties).
-	local function HasAtlas(a) return C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(a) ~= nil end
-	local function IconButton(name, atlas, fallback)
-		local b = CreateFrame("Button", name, main)
-		b:SetSize(22, 22)
-		b.icon = b:CreateTexture(nil, "ARTWORK")
-		b.icon:SetAllPoints(b)
-		if HasAtlas(atlas) then b.icon:SetAtlas(atlas) else b.icon:SetTexture(fallback) end
-		b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-		return b
-	end
-	main.optBtn = IconButton("CarefreeBagOptionsButton", "OptionsIcon-Brown", "Interface\\Icons\\Trade_Engineering")
-	main.optBtn:SetPoint("TOPRIGHT", main, "TOPRIGHT", -PAD, -33)
+	-- Twee rode Blizzard-knoppen rechtsboven: verbergen en opties.
+	main.optBtn = RedButton(main, "CarefreeBagOptionsButton", 24, "128-RedButton", "Interface\\Icons\\Trade_Engineering",
+		{ "GM-icon-settings", "questlog-icon-setting", "OptionsIcon-Brown" })
+	main.optBtn:SetPoint("TOPRIGHT", main, "TOPRIGHT", -PAD, -32)
 	main.optBtn:SetScript("OnClick", function() ToggleConfig() end)
 	Tooltip(main.optBtn, T("Options"))
-	main.hiddenBtn = IconButton("CarefreeBagHideButton", "friends-icon-eye", "Interface\\Icons\\Spell_Shadow_EvilEye")
+	main.hiddenBtn = RedButton(main, "CarefreeBagHideButton", 24, "128-redbutton-visibilityoff", "Interface\\Icons\\Spell_Shadow_EvilEye")
 	main.hiddenBtn:SetPoint("RIGHT", main.optBtn, "LEFT", -4, 0)
-	main.hiddenBtn.slash = main.hiddenBtn:CreateTexture(nil, "OVERLAY")
-	main.hiddenBtn.slash:SetColorTexture(0.9, 0.15, 0.1, 1)
-	main.hiddenBtn.slash:SetSize(26, 2)
-	main.hiddenBtn.slash:SetPoint("CENTER")
-	if main.hiddenBtn.slash.SetRotation then main.hiddenBtn.slash:SetRotation(math.rad(45)) end
 	main.hiddenBtn.count = main.hiddenBtn:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
 	main.hiddenBtn.count:SetPoint("BOTTOMRIGHT", main.hiddenBtn, "BOTTOMRIGHT", 2, -2)
 	main.hiddenBtn:SetScript("OnClick", function() showHidden = not showHidden; Refresh() end)
-	Tooltip(main.hiddenBtn, T("Hide items"), T("Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."))
+	Tooltip(main.hiddenBtn, T("Hide items"))
 
 	-- Zoekbalk: typ een naam, alles wat niet past wordt grijs.
 	local okS, sb = pcall(CreateFrame, "EditBox", "CarefreeBagSearch", main, "SearchBoxTemplate")
@@ -1496,20 +1533,20 @@ local function BuildMain()
 	main.scrollHint:Hide()
 
 	-- Balk die laat zien hoe vol je tassen zitten (groen, oranje, rood).
-	-- Plat en strak: dunne balk met een fijne rand, het getal klein ernaast.
+	-- Balk in Blizzard-stijl, zoals de levensbalk in een tooltip.
 	local bar = CreateFrame("StatusBar", "CarefreeBagFreeBar", main)
-	bar:SetSize(150, 6)
+	bar:SetSize(150, 10)
 	bar:SetPoint("LEFT", main, "BOTTOMLEFT", PAD + 4, PAD - 2 + TILE / 2)
-	bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
 	bar:SetMinMaxValues(0, 1)
 	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-	bar.bg:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
-	bar.bg:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 1, -1)
-	bar.bg:SetColorTexture(0, 0, 0, 0.75)
-	bar.track = bar:CreateTexture(nil, "BORDER")
-	bar.track:SetAllPoints(bar)
-	bar.track:SetColorTexture(1, 1, 1, 0.08)
-	bar.text = bar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	bar.bg:SetAllPoints(bar)
+	bar.bg:SetColorTexture(0, 0, 0, 0.6)
+	bar.border = bar:CreateTexture(nil, "OVERLAY")
+	bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+	bar.border:SetPoint("TOPLEFT", bar, "TOPLEFT", -2, 2)
+	bar.border:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 2, -2)
+	bar.text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	bar.text:SetPoint("LEFT", bar, "RIGHT", 6, 0)
 	bar:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -2008,8 +2045,7 @@ local function BuildMailPanel()
 	mailPanel.skip = MakeButton(mailPanel, T("Skip"), 110)
 	mailPanel.skip:SetPoint("BOTTOMRIGHT", mailPanel, "BOTTOMRIGHT", -PAD, 16)
 	mailPanel.skip:SetScript("OnClick", MailSkip)
-	Tooltip(mailPanel.send, T("Send"), T("Asks per category whether to send it to its mail address. BoEs go to the BoE address."),
-		T("Hidden items are never sent. Costs 30 copper per item."))
+
 	mailPanel:SetScript("OnShow", function() UpdateMailPanel() end)
 end
 
@@ -2063,7 +2099,7 @@ local function BuildConfig()
 	end
 
 	-- 0. Aan/uit -------------------------------------------------------------
-	local onCb = NewCheck(config, T("CarefreeBag on"), T("Off = your normal bags, no Auto Sell, no mail and no tidying. Shift-click the minimap button does the same."),
+	local onCb = NewCheck(config, T("CarefreeBag on"), T("Off = your normal bags."),
 		function() return DB.enabled end, function(v) SetEnabled(v) end)
 	onCb:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 4, y)
 	config.checks[#config.checks + 1] = onCb
@@ -2101,7 +2137,7 @@ local function BuildConfig()
 	langBtn:SetScript("OnClick", function()
 		if langMenu:IsShown() then langMenu:Hide() else langMenu:Show() end
 	end)
-	Tooltip(langBtn, "Language: " .. LangName(DB.lang), "Choose a language. The interface reloads.")
+	Tooltip(langBtn, "Language: " .. LangName(DB.lang))
 	y = y - 34
 
 	-- 1. Groepen: eigen categorieën en vaste groepen in één lijst ---------------
@@ -2125,11 +2161,11 @@ local function BuildConfig()
 	end
 
 	local FIXED_TIPS = {
-		quest = T("Quest items, plus anything you drop on it. Never sold or mailed. Putting a normal item here does no harm: it is only shown here and is protected from Auto Sell and mail."),
-		keys = T("Everything on your keyring."),
-		boe = T("Unbound Bind on Equip items, green and better. If you set an address, they are mailed there at a mailbox."),
-		grey = T("Grey items plus anything you drop on it, most valuable first. Items without a sell price stay."),
-		other = T("Everything without a group. What you drop here stays here and never moves to Quest, BoE or Auto Sell by itself."),
+		quest = T("Quest items. Never sold or mailed."),
+		keys = T("Your keyring."),
+		boe = T("Unbound BoE items, green and better."),
+		grey = T("Grey items. Sold at a vendor (Shift = skip)."),
+		other = T("Everything without a group."),
 	}
 
 	for i = 1, 20 do
@@ -2151,7 +2187,7 @@ local function BuildConfig()
 		end
 		r.name:SetScript("OnEnterPressed", rename)
 		r.name:SetScript("OnEditFocusLost", rename)
-		Tooltip(r.name, T("Rename"), T("Click the name, type a new name and press Enter."))
+
 		-- Vaste groep: blauwe naam, niet aan te passen, uitleg in de tooltip.
 		r.fixedName = CreateFrame("Frame", nil, r)
 		r.fixedName:SetSize(120, 20)
@@ -2165,7 +2201,6 @@ local function BuildConfig()
 			if c and c.preset then
 				GameTooltip:AddLine(T("Ready-made category"))
 				GameTooltip:AddLine(T(PRESET[c.preset].tip), 1, 1, 1, true)
-				GameTooltip:AddLine(T("Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."), 1, 1, 1, true)
 			else
 				GameTooltip:AddLine(T("Fixed group"))
 				GameTooltip:AddLine(FIXED_TIPS[r.key] or "", 1, 1, 1, true)
@@ -2177,7 +2212,7 @@ local function BuildConfig()
 		r.onCb = NewCheck(r, "", nil, function() return r.key and On(r.key) end,
 			function(v) if r.key then DB.fixedOn[r.key] = v and true or false; Log("fixed group " .. r.key .. " " .. (v and "on" or "off")); ResetOrder() end end)
 		r.onCb:SetPoint("LEFT", r, "LEFT", 8, 0) -- vinkje vóór de naam
-		Tooltip(r.onCb, T("On/off"), T("Off = this group is not used; its items go to Other."))
+		Tooltip(r.onCb, T("Off: items go to Other."))
 
 		r.mail = NewEdit(r, 140)
 		r.mail:SetPoint("LEFT", r, "LEFT", 146, 0)
@@ -2197,7 +2232,7 @@ local function BuildConfig()
 		end
 		r.mail:SetScript("OnEnterPressed", setMail)
 		r.mail:SetScript("OnEditFocusLost", setMail)
-		Tooltip(r.mail, T("Mail to"), T("Type the full name of your alt, for example 'Thrall Stormrage'. At a mailbox, everything in this group is sent there. Leave empty to never mail it."))
+		Tooltip(r.mail, T("Mail to"), T("Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."))
 
 		-- Vinkjes voor vaste groepen (in de kolom van het postadres).
 		r.cb1 = NewCheck(r, "", nil, function() return r.cb1Field and DB[r.cb1Field] end, function(v) if r.cb1Field then DB[r.cb1Field] = v end end)
@@ -2235,7 +2270,7 @@ local function BuildConfig()
 			end
 			ResetOrder(); Refresh(); RefreshConfig()
 		end)
-		Tooltip(r.del, T("Remove"), T("The items of this category go back to Other."))
+		Tooltip(r.del, T("Remove"), T("Items go back to Other."))
 		catRows[i] = r
 	end
 
@@ -2252,7 +2287,7 @@ local function BuildConfig()
 	end
 	config.newEdit:SetScript("OnEnterPressed", add)
 	config.addBtn:SetScript("OnClick", add)
-	Tooltip(config.addBtn, T("Add"), T("Type a name on the left and click Add to make your own category."))
+
 
 	-- Kant-en-klare categorie kiezen uit een lijstje.
 	config.presetBtn = MakeButton(config, T("Ready-made") .. " v", 110)
@@ -2300,7 +2335,7 @@ local function BuildConfig()
 		pm:SetPoint("TOPLEFT", config.presetBtn, "BOTTOMLEFT", 0, -2)
 		pm:Show()
 	end)
-	Tooltip(config.presetBtn, T("Ready-made category"), T("Add a ready-made category that fills itself. Its name is fixed."))
+	Tooltip(config.presetBtn, T("Add a category that fills itself."))
 
 	-- Alles hieronder schuift mee met het aantal groepen.
 	local low = CreateFrame("Frame", nil, config)
@@ -2317,8 +2352,8 @@ local function BuildConfig()
 	local plus = MakeButton(low, "+", 24)
 	plus:SetPoint("LEFT", minus, "RIGHT", 2, 0)
 	plus:SetScript("OnClick", function() DB.maxCols = math.min(30, DB.maxCols + 1); ResetOrder(); Refresh(); RefreshConfig() end)
-	Tooltip(minus, T("Width"), T("The window gets wider when your bags fill up, up to this many columns. After that you scroll."))
-	Tooltip(plus, T("Width"), T("The window gets wider when your bags fill up, up to this many columns. After that you scroll."))
+	Tooltip(minus, T("Window width before you scroll."))
+	Tooltip(plus, T("Window width before you scroll."))
 	ly = ly - 34
 	low:SetHeight(-ly)
 
@@ -2332,7 +2367,7 @@ local FIXED_ROW = {
 	quest = {},
 	keys = {},
 	boe = { mail = true },
-	grey = { cb1 = { "autoSell", "sell automatically", "Everything in Auto Sell is sold when you open a vendor. Hold Shift while opening to skip it once." } },
+	grey = { cb1 = { "autoSell", "sell automatically", "Sell at a vendor. Shift = skip once." } },
 	other = {},
 }
 local FIXED_NAME = { quest = "Quest", keys = "Keys", boe = "BoE", grey = "Auto Sell", other = "Other" }
