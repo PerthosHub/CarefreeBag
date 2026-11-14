@@ -175,7 +175,7 @@ NL["Fills itself with food, drink, potions, elixirs, scrolls, bandages and encha
 NL["Fills itself with trade goods and recipes."] = "Vult zichzelf met trade goods en recepten."
 NL["Fills itself with weapons and armor you can wear."] = "Vult zichzelf met wapens en armor die je kunt dragen."
 NL["%s sent."] = "%s verstuurd."
-NL["Send %s to %s?"] = "%s versturen naar %s?"
+NL["Send everything in %s to %s?"] = "Wil je alles uit %s versturen naar %s?"
 NL["After that: %s"] = "Daarna: %s"
 NL["Yes, send"] = "Ja, versturen"
 NL["Skip"] = "Overslaan"
@@ -2005,7 +2005,9 @@ UpdateMailPanel = function()
 	local p = plan[1]
 	local any = p ~= nil and #p.items > 0
 	if any then
-		lines[#lines + 1] = "|cffffd100" .. T("Send %s to %s?"):format(p.cat, p.to) .. "|r"
+		-- Witte vraag, categorie in goud, ontvanger in blauw.
+		lines[#lines + 1] = T("Send everything in %s to %s?"):format("|cffffd100" .. p.cat .. "|r", "|cff66ccff" .. p.to .. "|r")
+		lines[#lines + 1] = " "
 		for i = 1, math.min(8, #p.items) do
 			local it = p.items[i]
 			lines[#lines + 1] = "  " .. it.name .. (it.count > 1 and (" x" .. it.count) or "")
