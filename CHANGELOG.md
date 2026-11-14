@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.1
 - CarefreeBag opens with every bag key you use (open all bags, backpack, single bags) and when you click a bag button.
 - New items get a clear pulsing gold border until you hover them.
 
