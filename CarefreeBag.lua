@@ -420,7 +420,9 @@ local function AddAHLines(tt, g)
 	-- Levert het AH (afgerond) niets meer op, dan gewoon: verkoop aan de vendor, zonder bedrag.
 	local diff = math.floor(net) - vendor
 	if diff > 0 then
-		tt:AddLine("|cff66ccffCarefreeBag:|r |cff40ff40" .. T("Sell on the AH to earn %s more than at a vendor"):format(money(diff)) .. "|r")
+		-- het bedrag zelf in gewoon wit, zoals WoW geld altijd toont
+		local amount = "|r|cffffffff" .. money(diff) .. "|r|cff40ff40"
+		tt:AddLine("|cff66ccffCarefreeBag:|r |cff40ff40" .. T("Sell on the AH to earn %s more than at a vendor"):format(amount) .. "|r")
 	else
 		tt:AddLine("|cff66ccffCarefreeBag:|r |cffffd100" .. T("Sell to a vendor for the best price") .. "|r")
 	end
