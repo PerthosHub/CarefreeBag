@@ -122,6 +122,16 @@ NL["grey"] = "grijs"
 
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["Stack price"] = "Stackprijs"
+NL["Newest last"] = "Nieuwste als laatst"
+NL["Manual"] = "Handmatig"
+NL["Most valuable stack first (with Auctionator: AH value)."] = "Duurste stack eerst (met Auctionator: AH-waarde)."
+NL["What you got last is at the end."] = "Wat je het laatst kreeg staat achteraan."
+NL["Your own order: drag items onto each other."] = "Je eigen volgorde: sleep items op elkaar."
+NL["Sort buttons in the bag"] = "Sorteerknopjes in de tas"
+NL["Choose per group how it is sorted."] = "Kies per groep hoe hij gesorteerd wordt."
+NL["Own category"] = "Eigen categorie"
+NL["Fills only with what you drag onto it."] = "Bevat alleen wat je erheen sleept."
 NL["Drop an item: it goes here from now on."] = "Sleep een item hierheen: het komt hier voortaan."
 NL["Quest items. Never sold or mailed."] = "Quest-items. Nooit verkocht of gemaild."
 NL["Your keyring."] = "Je keyring."
@@ -132,18 +142,13 @@ NL["Drop an item to hide it."] = "Sleep een item hierheen om het te verbergen."
 NL["Your hidden items."] = "Je verborgen items."
 NL["These items are mailed to %s when you open a mailbox."] = "Deze items worden naar %s gemaild als je een mailbox opent."
 NL["AH value after 5%% cut: %s"] = "AH-waarde na 5%% kosten: %s"
-NL["Drag items onto each other to reorder."] = "Sleep items op elkaar om de volgorde te veranderen."
 NL["Off = your normal bags."] = "Uit = je gewone tassen."
 NL["Off: items go to Other."] = "Uit: items gaan naar Overig."
 NL["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Volledige naam van je alt, bijv. 'Thrall Stormrage'. Leeg = niet mailen."
 NL["Items go back to Other."] = "Items gaan terug naar Overig."
-NL["Add a category that fills itself."] = "Voeg een categorie toe die zichzelf vult."
 NL["Window width before you scroll."] = "Vensterbreedte voordat je gaat scrollen."
 NL["Sell at a vendor. Shift = skip once."] = "Verkopen bij de vendor. Shift = één keer overslaan."
 NL["Sort: %s"] = "Sortering: %s"
-NL["type"] = "soort"
-NL["stack price"] = "stackprijs"
-NL["newest last"] = "nieuwste als laatst"
 NL["manual"] = "handmatig"
 NL["Sorting set to manual for this group."] = "Sortering van deze groep staat nu op handmatig."
 NL["Food & Drink"] = "Eten & drinken"
@@ -153,7 +158,6 @@ NL["Fills itself with food and drink."] = "Vult zichzelf met eten en drinken."
 NL["Fills itself with potions, elixirs and flasks."] = "Vult zichzelf met potions, elixirs en flasks."
 NL["Fills itself with scrolls."] = "Vult zichzelf met scrolls."
 NL["Ready-made category"] = "Kant-en-klare categorie"
-NL["Ready-made"] = "Kant-en-klaar"
 NL["Consumables"] = "Consumables"
 NL["Professions"] = "Beroepen"
 NL["Gear"] = "Gear"
@@ -248,6 +252,7 @@ local function Defaults()
 	for _, k in ipairs({ "quest", "keys", "grey" }) do
 		if DB.fixedOn[k] == nil then DB.fixedOn[k] = true end
 	end
+	if DB.showSort == nil then DB.showSort = false end -- sorteerknopjes: standaard uit
 	if not DB.keysOffDone then DB.fixedOn.keys = false; DB.keysOffDone = true end
 	if DB.enabled == nil then DB.enabled = (DB.replaceBags ~= false) end
 	DB.replaceBags = nil
@@ -311,6 +316,10 @@ local function CharEntry()
 		for id, k in pairs(DB.assign or {}) do ch.assign[id] = k end
 		DB.chars[charKey] = ch
 	end
+	if not ch.hidden then -- verbergen geldt per karakter; begin met de oude lijst
+		ch.hidden = {}
+		for id in pairs(DB.hidden or {}) do ch.hidden[id] = true end
+	end
 	ch.seen = ch.seen or {}
 	ch.manual = ch.manual or {}
 	return ch
@@ -318,6 +327,11 @@ end
 local function Assign()
 	local ch = CharEntry()
 	return ch and ch.assign or (DB.assign or {})
+end
+local NOHIDDEN = {}
+local function Hidden()
+	local ch = CharEntry()
+	return ch and ch.hidden or NOHIDDEN
 end
 
 local function CatByKey(key)
@@ -430,7 +444,7 @@ end
 local function On(k) return not (DB.fixedOn and DB.fixedOn[k] == false) end
 
 local function SectionOf(e)
-	if DB.hidden[e.itemID] then return "hidden" end
+	if Hidden()[e.itemID] then return "hidden" end
 	if e.key then return On("keys") and "keys" or "other" end
 	local key = Assign()[e.itemID]
 	if key == "grey" and On("grey") then return "grey" end    -- zelf naar Auto Sell gesleept
@@ -452,7 +466,7 @@ end
 
 -- Waar moet een item heen bij de mailbox? (nil = nergens)
 local function MailTarget(e)
-	if DB.hidden[e.itemID] or e.bound or e.key then return nil end
+	if Hidden()[e.itemID] or e.bound or e.key then return nil end
 	local sec = SectionOf(e)
 	local name
 	if sec == "boe" then
@@ -551,11 +565,18 @@ local function CursorItemID()
 end
 
 -- Sorteren per categorie: soort, stapelprijs, nieuwste als laatst of handmatig.
-local SORTS = { "type", "value", "newest", "manual" }
-local SORT_NAME = { type = "type", value = "stack price", newest = "newest last", manual = "manual" }
+local SORTS = { "value", "newest", "manual" }
+local SORT_NAME = { value = "Stack price", newest = "Newest last", manual = "Manual" }
+local SORT_TIP = {
+	value = "Most valuable stack first (with Auctionator: AH value).",
+	newest = "What you got last is at the end.",
+	manual = "Your own order: drag items onto each other.",
+}
 local function SortMode(sec)
 	DB.sort = DB.sort or {}
-	return DB.sort[sec.key] or (sec.byValue and "value" or "type")
+	local m = DB.sort[sec.key]
+	if m and SORT_NAME[m] then return m end
+	return sec.byValue and "value" or "newest"
 end
 
 -- Per karakter: wanneer is een item voor het eerst gezien, en jouw eigen volgorde.
@@ -669,7 +690,7 @@ local function NewItemButton(i)
 	o.tex:SetAllPoints(o)
 	o:SetScript("OnClick", function(self)
 		local g = b.group
-		if g then SetHidden(g.itemID, not DB.hidden[g.itemID]) end
+		if g then SetHidden(g.itemID, not Hidden()[g.itemID]) end
 	end)
 	o:SetScript("OnEnter", function(self)
 		local g = b.group
@@ -677,7 +698,7 @@ local function NewItemButton(i)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		if g.link then GameTooltip:SetHyperlink(g.link) end
 		GameTooltip:AddLine(" ")
-		GameTooltip:AddLine(DB.hidden[g.itemID] and T("CarefreeBag: click to show this item again") or T("CarefreeBag: click to hide this item"), GOLD[1], GOLD[2], GOLD[3])
+		GameTooltip:AddLine(Hidden()[g.itemID] and T("CarefreeBag: click to show this item again") or T("CarefreeBag: click to hide this item"), GOLD[1], GOLD[2], GOLD[3])
 		GameTooltip:Show()
 	end)
 	o:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -762,6 +783,13 @@ local function OpenSortMenu(anchor, sec)
 				sortMenu:Hide()
 				ResetOrder(); Refresh()
 			end)
+			b:SetScript("OnEnter", function(self)
+				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+				GameTooltip:AddLine(T(SORT_NAME[self.mode]))
+				GameTooltip:AddLine(T(SORT_TIP[self.mode]), 1, 1, 1, true)
+				GameTooltip:Show()
+			end)
+			b:SetScript("OnLeave", function() GameTooltip:Hide() end)
 			sortMenu.buttons[i] = b
 		end
 		sortMenu:Hide()
@@ -821,8 +849,9 @@ local function GetHeader()
 		h.sort:SetScript("OnEnter", function(self)
 			if not h.sec then return end
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:AddLine(T("Sort: %s"):format(T(SORT_NAME[SortMode(h.sec)])))
-			GameTooltip:AddLine(T("Drag items onto each other to reorder."), 1, 1, 1, true)
+			local m = SortMode(h.sec)
+			GameTooltip:AddLine(T("Sort: %s"):format(T(SORT_NAME[m])))
+			GameTooltip:AddLine(T(SORT_TIP[m]), 1, 1, 1, true)
 			GameTooltip:Show()
 		end)
 		h.sort:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -846,12 +875,12 @@ local function DropOn(sectionKey)
 	local id = CursorItemID()
 	if not id then return end
 	if sectionKey == "hidden" then
-		DB.hidden[id] = true
+		Hidden()[id] = true
 	elseif sectionKey == "other" then
-		DB.hidden[id] = nil
+		Hidden()[id] = nil
 		Assign()[id] = "other"
 	else
-		DB.hidden[id] = nil
+		Hidden()[id] = nil
 		Assign()[id] = sectionKey
 	end
 	Log("dropped " .. id .. " -> " .. sectionKey)
@@ -942,7 +971,7 @@ local function SetupItemButton(b, g)
 		b.multi:Hide()
 	end
 	if showHidden then
-		if DB.hidden[g.itemID] then b.overlay.tex:SetColorTexture(0.6, 0, 0, 0.35)
+		if Hidden()[g.itemID] then b.overlay.tex:SetColorTexture(0.6, 0, 0, 0.35)
 		else b.overlay.tex:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], 0.12) end
 		b.overlay:Show()
 	else
@@ -1023,12 +1052,6 @@ local function SectionList()
 			rules = T("Your hidden items.") }
 	end
 	return list
-end
-
-local function SortGroups(a, b)
-	if a.quality ~= b.quality then return a.quality > b.quality end
-	if a.name ~= b.name then return a.name < b.name end
-	return a.rep.bag * 100 + a.rep.slot < b.rep.bag * 100 + b.rep.slot
 end
 
 local gapPool, usedGaps = {}, 0
@@ -1135,7 +1158,7 @@ local function Layout()
 				return newer(a, b)
 			end)
 		else
-			table.sort(groups, SortGroups)
+			table.sort(groups, newer)
 		end
 		local cells = {}
 		local order = frozen[sec.key]
@@ -1210,7 +1233,7 @@ local function Layout()
 		h:SetText(t)
 		SetRedKit(h.toggle, f.collapsed and "128-redbutton-plus" or "128-redbutton-minus",
 			f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
-		h.sort:SetShown(not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys")
+		h.sort:SetShown(DB.showSort and not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys" or false)
 		h.mail:SetShown(f.sec.mailTo ~= nil)
 		h.sort.mode = SortMode(f.sec)
 		h.rules, h.ruleTitle = f.sec.rules, StripColors(f.sec.title)
@@ -1436,7 +1459,7 @@ end
 -- Bewerkmenu per item
 ---------------------------------------------------------------------------
 
-SetHidden = function(id, v) DB.hidden[id] = v or nil; Log((v and "hidden: " or "visible: ") .. id); ResetOrder(); Refresh() end
+SetHidden = function(id, v) Hidden()[id] = v or nil; Log((v and "hidden: " or "visible: ") .. id); ResetOrder(); Refresh() end
 ---------------------------------------------------------------------------
 -- Standaardtassen vervangen
 ---------------------------------------------------------------------------
@@ -2146,23 +2169,52 @@ local function BuildConfig()
 		catRows[i] = r
 	end
 
-	config.newEdit = NewEdit(config, 120)
-	config.addBtn = MakeButton(config, T("Add"), 90)
+	-- Toevoegen: links een keuzeveld met de kant-en-klare categorieën en "Eigen categorie".
+	-- Kies je Eigen categorie, dan verschijnt een naamveld.
+	config.choice = nil -- preset-id, of "own"
+	config.pickBtn = MakeButton(config, "", 160)
+	config.newEdit = NewEdit(config, 110)
+	config.addBtn = MakeButton(config, T("Add"), 80)
+	local function FreePresets()
+		local list = {}
+		for _, p in ipairs(PRESETS) do
+			local used = false
+			for _, c in ipairs(DB.cats) do if c.preset == p.id then used = true end end
+			if not used then list[#list + 1] = p end
+		end
+		return list
+	end
+	local function ShowChoice()
+		local free = FreePresets()
+		local ok = config.choice == "own"
+		for _, p in ipairs(free) do if p.id == config.choice then ok = true end end
+		if not ok then config.choice = free[1] and free[1].id or "own" end
+		local label = config.choice == "own" and T("Own category") or T(PRESET[config.choice].name)
+		config.pickBtn:SetText(label .. " v")
+		config.newEdit:SetShown(config.choice == "own")
+	end
+	config.ShowChoice = ShowChoice
 	local function add()
-		local name = Trim(config.newEdit:GetText())
-		if name == "" then return end
 		if #DB.cats >= 12 then Print(T("at most 12 categories.")); return end
-		DB.cats[#DB.cats + 1] = { key = NewCatKey(name), name = name }
-		config.newEdit:SetText("")
-		config.newEdit:ClearFocus()
+		if config.choice == "own" then
+			local name = Trim(config.newEdit:GetText())
+			if name == "" then config.newEdit:SetFocus(); return end
+			DB.cats[#DB.cats + 1] = { key = NewCatKey(name), name = name }
+			config.newEdit:SetText("")
+			config.newEdit:ClearFocus()
+		else
+			local p = PRESET[config.choice]
+			if not p then return end
+			local key = p.id
+			if CatByKey(key) then key = NewCatKey("p" .. p.id) end
+			DB.cats[#DB.cats + 1] = { key = key, preset = p.id, name = T(p.name) }
+			Log("preset added: " .. p.id)
+		end
 		ResetOrder(); Refresh(); RefreshConfig()
 	end
 	config.newEdit:SetScript("OnEnterPressed", add)
 	config.addBtn:SetScript("OnClick", add)
 
-
-	-- Kant-en-klare categorie kiezen uit een lijstje.
-	config.presetBtn = MakeButton(config, T("Ready-made") .. " v", 110)
 	local pm = CreateFrame("Frame", "CarefreeBagPresetMenu", config, "BackdropTemplate")
 	pm:SetFrameStrata("DIALOG")
 	if pm.SetBackdrop then
@@ -2173,41 +2225,38 @@ local function BuildConfig()
 	end
 	pm:Hide()
 	pm.buttons = {}
-	for i, p in ipairs(PRESETS) do
-		local b = MakeButton(pm, T(p.name), 150)
-		b.presetID = p.id
+	local entries = {}
+	for _, p in ipairs(PRESETS) do entries[#entries + 1] = { id = p.id, name = p.name, tip = p.tip } end
+	entries[#entries + 1] = { id = "own", name = "Own category", tip = "Fills only with what you drag onto it." }
+	for i, en in ipairs(entries) do
+		local b = MakeButton(pm, T(en.name), 150)
+		b.presetID = en.id
 		b:SetScript("OnClick", function()
 			pm:Hide()
-			for _, c in ipairs(DB.cats) do if c.preset == p.id then return end end
-			if #DB.cats >= 12 then Print(T("at most 12 categories.")); return end
-			local key = p.id
-			if CatByKey(key) then key = NewCatKey("p" .. p.id) end
-			DB.cats[#DB.cats + 1] = { key = key, preset = p.id, name = T(p.name) }
-			Log("preset added: " .. p.id)
-			ResetOrder(); Refresh(); RefreshConfig()
+			config.choice = en.id
+			RefreshConfig()
+			if en.id == "own" then config.newEdit:SetFocus() end
 		end)
-		Tooltip(b, T(p.name), T(p.tip))
+		Tooltip(b, T(en.name), T(en.tip))
 		pm.buttons[i] = b
 	end
 	config.presetMenu = pm
-	config.presetBtn:SetScript("OnClick", function()
+	config.pickBtn:SetScript("OnClick", function()
 		if pm:IsShown() then pm:Hide(); return end
+		local free = {}
+		for _, p in ipairs(FreePresets()) do free[p.id] = true end
 		local n = 0
 		for _, b in ipairs(pm.buttons) do
-			local used = false
-			for _, c in ipairs(DB.cats) do if c.preset == b.presetID then used = true end end
 			b:ClearAllPoints()
-			if used then b:Hide() else
+			if b.presetID == "own" or free[b.presetID] then
 				b:SetPoint("TOP", pm, "TOP", 0, -4 - n * 22); b:Show(); n = n + 1
-			end
+			else b:Hide() end
 		end
-		if n == 0 then return end
 		pm:SetSize(160, n * 22 + 8)
 		pm:ClearAllPoints()
-		pm:SetPoint("TOPLEFT", config.presetBtn, "BOTTOMLEFT", 0, -2)
+		pm:SetPoint("TOPLEFT", config.pickBtn, "BOTTOMLEFT", 0, -2)
 		pm:Show()
 	end)
-	Tooltip(config.presetBtn, T("Add a category that fills itself."))
 
 	-- Alles hieronder schuift mee met het aantal groepen.
 	local low = CreateFrame("Frame", nil, config)
@@ -2227,6 +2276,13 @@ local function BuildConfig()
 	Tooltip(minus, T("Window width before you scroll."))
 	Tooltip(plus, T("Window width before you scroll."))
 	ly = ly - 34
+
+	-- 3. Sorteerknopjes in de tas
+	local sortCb = NewCheck(low, T("Sort buttons in the bag"), T("Choose per group how it is sorted."),
+		function() return DB.showSort end, function(v) DB.showSort = v; Refresh() end)
+	sortCb:SetPoint("TOPLEFT", low, "TOPLEFT", PAD + 4, ly)
+	config.checks[#config.checks + 1] = sortCb
+	ly = ly - 30
 	low:SetHeight(-ly)
 
 	config.version = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -2268,19 +2324,13 @@ RefreshConfig = function()
 	local addAfter = 0
 	for i, k in ipairs(order) do if not FIXED[k] then addAfter = i end end
 	local function PlaceAdd()
+		config.ShowChoice()
+		config.pickBtn:ClearAllPoints()
+		config.pickBtn:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 8, y - 2)
 		config.newEdit:ClearAllPoints()
-		config.newEdit:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 12, y - 2)
+		config.newEdit:SetPoint("LEFT", config.pickBtn, "RIGHT", 10, 0)
 		config.addBtn:ClearAllPoints()
-		config.addBtn:SetPoint("LEFT", config.newEdit, "RIGHT", 8, 0)
-		config.presetBtn:ClearAllPoints()
-		config.presetBtn:SetPoint("LEFT", config.addBtn, "RIGHT", 8, 0)
-		local free = false
-		for _, p in ipairs(PRESETS) do
-			local used = false
-			for _, c in ipairs(DB.cats) do if c.preset == p.id then used = true end end
-			if not used then free = true end
-		end
-		config.presetBtn:SetEnabled(free)
+		config.addBtn:SetPoint("LEFT", config.pickBtn, "RIGHT", config.choice == "own" and 128 or 8, 0)
 		y = y - 30
 	end
 	if addAfter == 0 then PlaceAdd() end
