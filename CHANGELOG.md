@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.1.0 – more languages
+## 1.1.0 – works out of the box, more languages
+- New installs start with three categories that fill themselves: Consumables (food, drink, potions, elixirs, scrolls, bandages, enchants), Professions (trade goods, recipes) and Gear (weapons and armor you can wear). Rename, move or remove them as you like.
+- What you drag into a category is now remembered per character.
+- Mail asks per category: "Send Professions to Thrall Stormrage?" Yes, send or Skip, until every category is done.
+- Item tooltips show the AH value of the stack after the 5% AH cut (needs Auctionator).
+- Group headers no longer show a total value.
+- Dropping an item on a free slot never tries to put it in a profession bag it doesn't fit in.
 - New languages: Deutsch, Français, Español, Italiano, Português and Русский, next to English and Nederlands.
 - New installs pick the language of your WoW client automatically. Change it at the top of the options (/cfb).
 - The translations are machine-assisted. Native speakers: corrections are very welcome on GitHub.

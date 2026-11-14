@@ -231,6 +231,19 @@ NL["Off = this group is not used; its items go to Other."] = "Uit = deze groep w
 NL["On/off"] = "Aan/uit"
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["Consumables"] = "Consumables"
+NL["Professions"] = "Beroepen"
+NL["Gear"] = "Gear"
+NL["Fills itself with food, drink, potions, elixirs, scrolls, bandages and enchants."] = "Vult zichzelf met eten, drinken, potions, elixirs, scrolls, bandages en enchants."
+NL["Fills itself with trade goods and recipes."] = "Vult zichzelf met trade goods en recepten."
+NL["Fills itself with weapons and armor you can wear."] = "Vult zichzelf met wapens en armor die je kunt dragen."
+NL["AH value of this stack after the 5%% AH cut: %s"] = "AH-waarde van deze stack na 5%% AH-kosten: %s"
+NL["%s sent."] = "%s verstuurd."
+NL["Send %s to %s?"] = "%s versturen naar %s?"
+NL["After that: %s"] = "Daarna: %s"
+NL["Yes, send"] = "Ja, versturen"
+NL["Skip"] = "Overslaan"
+NL["Asks per category whether to send it to its mail address. BoEs go to the BoE address."] = "Vraagt per categorie of hij naar zijn postadres moet. BoE's gaan naar het BoE-adres."
 
 -- Logboek in de SavedVariables (laatste 80 regels). Lees met /cfb log.
 local function Log(msg)
@@ -245,13 +258,27 @@ end
 -- Instellingen
 ---------------------------------------------------------------------------
 
+-- Nieuwe installaties: drie categorieën die zichzelf vullen op itemsoort.
+-- Je kunt ze hernoemen, verplaatsen, een postadres geven of weghalen.
 local DEFAULT_CATS = {
-	{ key = "buffs", name = "Buffs" },
-	{ key = "eten", name = "Food & Drink" },
-	{ key = "scrolls", name = "Scrolls" },
-	{ key = "ah", name = "To AH" },
-	{ key = "craft", name = "Keep for crafting" },
+	{ key = "consum", name = "Consumables", auto = "consumable" },
+	{ key = "prof", name = "Professions", auto = "profession" },
+	{ key = "gear", name = "Gear", auto = "gear" },
 }
+
+-- Itemsoorten (Enum.ItemClass): 0 Consumable, 2 Weapon, 3 Gem, 4 Armor,
+-- 7 Tradegoods, 8 ItemEnhancement, 9 Recipe, 19 Profession.
+local AUTO_CLASSES = {
+	consumable = { [0] = true, [8] = true },
+	profession = { [3] = true, [7] = true, [9] = true, [19] = true },
+	gear = { [2] = true, [4] = true },
+}
+local function AutoMatch(auto, e)
+	local set = AUTO_CLASSES[auto]
+	if not (set and e.classID and set[e.classID]) then return false end
+	if auto == "gear" then return (e.equipLoc or "") ~= "" end -- alleen wat je kunt dragen
+	return true
+end
 
 local function Defaults()
 	local fresh = (CarefreeBagDB == nil) or (next(CarefreeBagDB) == nil)
@@ -262,13 +289,13 @@ local function Defaults()
 	if not L[DB.lang] and DB.lang ~= "en" then DB.lang = "en" end
 	-- Auto Sell: nieuwe gebruikers krijgen bij de eerste vendor een vraag.
 	if DB.autoSellAsked == nil then DB.autoSellAsked = (not fresh) and DB.autoSell ~= nil end
-	DB.assign = DB.assign or {}   -- [itemID] = categorie-key
+	DB.chars = DB.chars or {}     -- per karakter: { assign = { [itemID] = categorie-key } }
 	DB.hidden = DB.hidden or {}   -- [itemID] = true
 	DB.locked = nil               -- locken is weggehaald in 0.3.0
 	if not DB.cats then
 		DB.cats = {}
 		for _, c in ipairs(DEFAULT_CATS) do
-			DB.cats[#DB.cats + 1] = { key = c.key, name = c.name, mail = c.mail }
+			DB.cats[#DB.cats + 1] = { key = c.key, name = T(c.name), auto = c.auto }
 		end
 	end
 	-- Post: elke categorie heeft zijn eigen adres (mailTo). Oude instellingen omzetten.
@@ -337,6 +364,25 @@ local function SameName(a, b)
 	return norm(a) == norm(b)
 end
 
+-- Wat jij versleept onthoudt CarefreeBag per karakter. Van voor 1.1.0 was dat
+-- één lijst voor het hele account (DB.assign); elk karakter begint met een kopie daarvan.
+local assignCache
+local function Assign()
+	if assignCache then return assignCache end
+	local name = UnitName and UnitName("player")
+	if not name or name == "" or name == UNKNOWNOBJECT then return DB.assign or {} end
+	local realm = (GetRealmName and GetRealmName()) or ""
+	local key = name .. "-" .. realm
+	local ch = DB.chars[key]
+	if not ch then
+		ch = { assign = {} }
+		for id, k in pairs(DB.assign or {}) do ch.assign[id] = k end
+		DB.chars[key] = ch
+	end
+	assignCache = ch.assign
+	return assignCache
+end
+
 local function CatByKey(key)
 	for i, c in ipairs(DB.cats) do
 		if c.key == key then return c, i end
@@ -362,11 +408,11 @@ local LAST_BAG = NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
 local needInfo = false
 
 local function ItemExtra(itemID)
-	local ok, name, _, _, _, _, _, _, stack, _, _, price, classID, _, bind = pcall(C_Item.GetItemInfo, itemID)
-	if ok and name then return stack or 1, bind or 0, price or 0, classID end
+	local ok, name, _, _, _, _, _, _, stack, equipLoc, _, price, classID, _, bind = pcall(C_Item.GetItemInfo, itemID)
+	if ok and name then return stack or 1, bind or 0, price or 0, classID, equipLoc end
 	needInfo = true
 	if C_Item.RequestLoadItemDataByID then pcall(C_Item.RequestLoadItemDataByID, itemID) end
-	return nil, nil, 0, nil
+	return nil, nil, 0, nil, nil
 end
 
 local QUEST_CLASS = (Enum and Enum.ItemClass and Enum.ItemClass.Questitem) or 12
@@ -388,6 +434,8 @@ local function AHPrice(link)
 	if ok and type(price) == "number" and price > 0 then return price end
 	return nil
 end
+
+local AH_CUT = 0.05 -- het AH houdt 5% van de verkoopprijs in (de borg krijg je terug)
 
 local function IsBoE(e)
 	return e.bindType == 2 and not e.bound and (e.quality or 0) >= 2
@@ -419,7 +467,7 @@ local function Scan()
 			if not isKey then total = total + 1 end
 			local info = C_Container.GetContainerItemInfo(bag, slot)
 			if info and info.itemID then
-				local stack, bind, price, classID = ItemExtra(info.itemID)
+				local stack, bind, price, classID, equipLoc = ItemExtra(info.itemID)
 				local link = info.hyperlink
 				items[#items + 1] = {
 					bag = bag, slot = slot, info = info, itemID = info.itemID,
@@ -431,6 +479,7 @@ local function Scan()
 					bindType = bind or 0,
 					price = price or 0,
 					quest = IsQuestItem(bag, slot, classID),
+					classID = classID, equipLoc = equipLoc,
 					key = isKey,
 				}
 			elseif not isKey then
@@ -446,7 +495,7 @@ local function On(k) return not (DB.fixedOn and DB.fixedOn[k] == false) end
 local function SectionOf(e)
 	if DB.hidden[e.itemID] then return "hidden" end
 	if e.key then return On("keys") and "keys" or "other" end
-	local key = DB.assign[e.itemID]
+	local key = Assign()[e.itemID]
 	if key == "grey" and On("grey") then return "grey" end    -- zelf naar Auto Sell gesleept
 	if key == "other" then return "other" end                 -- zelf naar Overig gesleept: nooit automatisch
 	if key == "quest" and On("quest") then return "quest" end -- zelf naar Quest gesleept
@@ -454,6 +503,9 @@ local function SectionOf(e)
 	if On("quest") and DB.questAuto and e.quest then return "quest" end
 	if On("grey") and DB.greyAuto and e.quality == 0 then return "grey" end
 	if On("boe") and IsBoE(e) then return "boe" end
+	for _, c in ipairs(DB.cats) do
+		if c.auto and AutoMatch(c.auto, e) then return c.key end
+	end
 	return "other"
 end
 
@@ -562,6 +614,15 @@ local SetHidden -- vooruit
 local function NewItemButton(i)
 	local b = CreateFrame("ItemButton", "CarefreeBagItem" .. i, main.content, "ContainerFrameItemButtonTemplate")
 	b:SetSize(TILE, TILE)
+	b:HookScript("OnEnter", function(self)
+		local g = self.group
+		local each = g and AHPrice(g.link)
+		if not each or not GameTooltip:IsOwned(self) then return end
+		local net = math.floor(each * g.count * (1 - AH_CUT))
+		GameTooltip:AddLine(T("AH value of this stack after the 5%% AH cut: %s"):format(
+			GetMoneyString and GetMoneyString(net, true) or tostring(net)), 0.4, 0.8, 1)
+		GameTooltip:Show()
+	end)
 	b.multi = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
 	b.multi:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -2)
 	b.multi:SetTextColor(0.4, 0.85, 1)
@@ -640,10 +701,10 @@ local function DropOn(sectionKey)
 		DB.hidden[id] = true
 	elseif sectionKey == "other" then
 		DB.hidden[id] = nil
-		DB.assign[id] = "other"
+		Assign()[id] = "other"
 	else
 		DB.hidden[id] = nil
-		DB.assign[id] = sectionKey
+		Assign()[id] = sectionKey
 	end
 	Log("dropped " .. id .. " -> " .. sectionKey)
 	ClearCursor() -- item gaat terug naar zijn eigen vakje
@@ -691,11 +752,19 @@ end
 
 -- Vrije vakjes: liever een gewone tas dan een speciale (quiver, herb bag).
 local function FirstFreeSlot()
+	local id = CursorItemID()
+	local itemFam = 0
+	if id and C_Item.GetItemFamily then
+		local okI, fam = pcall(C_Item.GetItemFamily, id)
+		if okI and fam then itemFam = fam end
+	end
 	local best
 	for _, f in ipairs(lastFree) do
 		local okF, _, family = pcall(C_Container.GetContainerNumFreeSlots, f.bag)
-		if okF and (family or 0) == 0 then return f end
-		best = best or f
+		family = okF and family or 0
+		if family == 0 then return f end
+		-- beroepstas: alleen als het item erin past
+		if bit and bit.band and itemFam ~= 0 and bit.band(itemFam, family) ~= 0 then best = best or f end
 	end
 	return best
 end
@@ -785,6 +854,13 @@ local function FixedSection(key)
 	end
 end
 
+local AUTO_TEXT = setmetatable({}, { __index = function(_, k)
+	if k == "consumable" then return T("Fills itself with food, drink, potions, elixirs, scrolls, bandages and enchants.")
+	elseif k == "profession" then return T("Fills itself with trade goods and recipes.")
+	elseif k == "gear" then return T("Fills itself with weapons and armor you can wear.") end
+	return ""
+end })
+
 local function SectionList()
 	local list = {}
 	for _, key in ipairs(FixOrder()) do
@@ -797,7 +873,7 @@ local function SectionList()
 			if c.mailTo and c.mailTo ~= "" then title = title .. "  |cff888888(" .. T("mail: %s"):format(c.mailTo) .. ")|r" end
 			list[#list + 1] = { key = c.key, title = title, plus = true, byValue = (c.mailTo and c.mailTo ~= "") and "ah" or nil,
 				tip = T("Drop an item here: that kind of item belongs to %s from now on."):format(c.name),
-				rules = T("Your category. Drop items on its + slot. Rename it, reorder it or give it a mail address in the options.") }
+				rules = (c.auto and (AUTO_TEXT[c.auto] .. " ") or "") .. T("Your category. Drop items on its + slot. Rename it, reorder it or give it a mail address in the options.") }
 		end
 	end
 	if showHidden then
@@ -910,12 +986,6 @@ local function Layout()
 			frozen[sec.key] = order
 		end
 		local title = sec.title
-		if sec.byValue and #groups > 0 then
-			local sum = 0
-			for _, g in ipairs(groups) do sum = sum + g[field] end
-			title = title .. "  |cffffffff" .. (GetMoneyString and GetMoneyString(sum, true) or sum) .. "|r"
-			if sec.byValue == "ah" then title = title .. ((Auctionator and " |cff888888(AH)|r") or " |cff888888(vendor)|r") end
-		end
 		-- Ook een groep met alleen nog gaten blijft staan tot je de tassen sluit.
 		if #cells > 0 then
 			full[#full + 1] = { sec = sec, cells = cells, title = title }
@@ -1459,23 +1529,28 @@ end
 -- Post naar je alts
 ---------------------------------------------------------------------------
 
-mail = { busy = false, plan = nil, step = false }
+mail = { busy = false, plan = nil, step = false, skipped = {} }
 
+-- Per categorie: wat gaat waarheen. De volgorde is die van je groepen.
+-- Je krijgt per categorie de vraag of hij verstuurd moet worden.
 local function BuildMailPlan()
 	local items = Scan()
-	local plan, order = {}, {}
+	local plan = {}
 	for _, e in ipairs(items) do
 		local to, sec = MailTarget(e)
-		if to then
-			local key = to:lower()
-			if not plan[key] then plan[key] = { to = to, items = {}, secs = {} }; order[#order + 1] = key end
-			local p = plan[key]
+		if to and not mail.skipped[sec] then
+			if not plan[sec] then
+				local c = CatByKey(sec)
+				plan[sec] = { key = sec, cat = c and c.name or "BoE", to = to, items = {} }
+			end
+			local p = plan[sec]
 			p.items[#p.items + 1] = { bag = e.bag, slot = e.slot, itemID = e.itemID, name = e.name, count = e.count }
-			p.secs[sec] = true
 		end
 	end
 	local list = {}
-	for _, k in ipairs(order) do list[#list + 1] = plan[k] end
+	for _, sec in ipairs(SectionList()) do
+		if plan[sec.key] then list[#list + 1] = plan[sec.key] end
+	end
 	return list
 end
 
@@ -1495,7 +1570,13 @@ local function MailPack()
 		table.remove(mail.queue, 1)
 		p = mail.queue[1]
 	end
-	if not p then MailStop(T("all mail has been sent.")); return false end
+	if not p then
+		local done = mail.cat
+		mail.cat = nil
+		if #BuildMailPlan() == 0 then MailStop(T("all mail has been sent."))
+		else MailStop(T("%s sent."):format(done or "")) end
+		return false
+	end
 	if MailFrameTab_OnClick then pcall(MailFrameTab_OnClick, nil, 2) end
 	ClearCursor()
 	local n = 0
@@ -1526,11 +1607,13 @@ local function MailSend()
 	SendMail(c.to, "CarefreeBag: " .. c.n .. " item(s)", "")
 end
 
+-- Verstuurt alleen de categorie waar nu de vraag over staat.
 local function MailStart()
 	if mail.busy then return end
 	local plan = BuildMailPlan()
 	if #plan == 0 then Print(T("nothing to send.")); return end
-	mail.queue = plan
+	mail.queue = { plan[1] }
+	mail.cat = plan[1].cat
 	mail.busy = true
 	if MailPack() then
 		if mail.step then
@@ -1554,20 +1637,31 @@ local function MailButtonClick()
 	MailStart()
 end
 
+local function MailSkip()
+	if mail.busy then return end
+	local plan = BuildMailPlan()
+	if plan[1] then mail.skipped[plan[1].key] = true end
+	UpdateMailPanel()
+end
+
 UpdateMailPanel = function()
 	if not mailPanel or not mailPanel:IsShown() then return end
 	local plan = mail.busy and mail.queue or BuildMailPlan()
 	local lines = {}
-	local any = false
-	for _, p in ipairs(plan) do
-		if #p.items > 0 then
-			any = true
-			lines[#lines + 1] = "|cffffd100" .. T("To %s:"):format(p.to) .. "|r " .. #p.items .. " item(s)"
-			for i = 1, math.min(6, #p.items) do
-				local it = p.items[i]
-				lines[#lines + 1] = "  " .. it.name .. (it.count > 1 and (" x" .. it.count) or "")
-			end
-			if #p.items > 6 then lines[#lines + 1] = "  |cff888888+" .. (#p.items - 6) .. " " .. T("more") .. "|r" end
+	local p = plan[1]
+	local any = p ~= nil and #p.items > 0
+	if any then
+		lines[#lines + 1] = "|cffffd100" .. T("Send %s to %s?"):format(p.cat, p.to) .. "|r"
+		for i = 1, math.min(8, #p.items) do
+			local it = p.items[i]
+			lines[#lines + 1] = "  " .. it.name .. (it.count > 1 and (" x" .. it.count) or "")
+		end
+		if #p.items > 8 then lines[#lines + 1] = "  |cff888888+" .. (#p.items - 8) .. " " .. T("more") .. "|r" end
+		if not mail.busy and #plan > 1 then
+			local nxt = {}
+			for i = 2, #plan do nxt[#nxt + 1] = plan[i].cat end
+			lines[#lines + 1] = " "
+			lines[#lines + 1] = "|cff888888" .. T("After that: %s"):format(table.concat(nxt, ", ")) .. "|r"
 		end
 	end
 	if not any and not mail.busy then lines[1] = "|cff888888" .. T("Nothing to send.") .. "|r" end
@@ -1581,9 +1675,10 @@ UpdateMailPanel = function()
 	elseif mail.busy then
 		mailPanel.send:SetText("Stop")
 	else
-		mailPanel.send:SetText(T("Send"))
+		mailPanel.send:SetText(T("Yes, send"))
 	end
 	mailPanel.send:SetEnabled(any or mail.busy)
+	mailPanel.skip:SetShown(any and not mail.busy)
 	mailPanel:SetHeight(math.max(120, mailPanel.text:GetStringHeight() + 80))
 end
 
@@ -1598,10 +1693,13 @@ local function BuildMailPanel()
 	mailPanel.text:SetPoint("TOPLEFT", mailPanel, "TOPLEFT", PAD, -30)
 	mailPanel.text:SetWidth(260 - 2 * PAD)
 	mailPanel.text:SetJustifyH("LEFT")
-	mailPanel.send = MakeButton(mailPanel, T("Send"), 140)
-	mailPanel.send:SetPoint("BOTTOM", mailPanel, "BOTTOM", 0, 16)
+	mailPanel.send = MakeButton(mailPanel, T("Yes, send"), 110)
+	mailPanel.send:SetPoint("BOTTOMLEFT", mailPanel, "BOTTOMLEFT", PAD, 16)
 	mailPanel.send:SetScript("OnClick", MailButtonClick)
-	Tooltip(mailPanel.send, T("Send"), T("Sends every category that has a mail address to that address, and BoEs to the BoE address."),
+	mailPanel.skip = MakeButton(mailPanel, T("Skip"), 110)
+	mailPanel.skip:SetPoint("BOTTOMRIGHT", mailPanel, "BOTTOMRIGHT", -PAD, 16)
+	mailPanel.skip:SetScript("OnClick", MailSkip)
+	Tooltip(mailPanel.send, T("Send"), T("Asks per category whether to send it to its mail address. BoEs go to the BoE address."),
 		T("Hidden items are never sent. Costs 30 copper per item."))
 	mailPanel:SetScript("OnShow", function() UpdateMailPanel() end)
 end
@@ -1808,7 +1906,10 @@ local function BuildConfig()
 			local c, idx = CatByKey(r.key)
 			if c then
 				table.remove(DB.cats, idx)
-				for id, k in pairs(DB.assign) do if k == c.key then DB.assign[id] = nil end end
+				for _, ch in pairs(DB.chars) do
+					for id, k in pairs(ch.assign) do if k == c.key then ch.assign[id] = nil end end
+				end
+				if DB.assign then for id, k in pairs(DB.assign) do if k == c.key then DB.assign[id] = nil end end end
 				Print(T("category '%s' removed. Its items are back in Other."):format(c.name))
 			end
 			ResetOrder(); Refresh(); RefreshConfig()
@@ -2081,6 +2182,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		if mail.busy then Log("game message during mail: " .. tostring(a2)) end
 	elseif event == "MAIL_SHOW" then
 		mail.step = false -- nieuw bezoek: eerst weer automatisch proberen
+		mail.skipped = {}  -- en alle categorieën worden weer gevraagd
 		if not DB.enabled then return end
 		if not mailPanel then Try("mail", BuildMailPanel) end
 		if mailPanel then mailPanel:Show(); UpdateMailPanel() end
