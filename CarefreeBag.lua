@@ -10,11 +10,11 @@
 
 local ADDON, ns = ...
 ns = ns or {}
-local VERSION = "1.2.2"
+local VERSION = "1.2.3"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
-	if v and v ~= "" and not v:find("@") then VERSION = v end
+	if v and v ~= "" and not v:find("@") then VERSION = (v:gsub("^v", "")) end -- tag "v1.2.3" -> "1.2.3"
 end
 
 local DB

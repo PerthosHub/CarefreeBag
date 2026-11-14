@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- The version number in game is correct again (no more "vv1.2.2").
 - "+ Add group" sits at the top of the groups panel.
 - Clearer mail question: "Send everything in [group] to [alt]?" with the group and alt in their own colour.
 - The bag width setting now really sets the number of columns (it only grew when the screen was full before).
