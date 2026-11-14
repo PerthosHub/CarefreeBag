@@ -10,7 +10,7 @@
 
 local ADDON, ns = ...
 ns = ns or {}
-local VERSION = "1.2.1"
+local VERSION = "1.2.2"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -2321,6 +2321,13 @@ local function BuildConfig()
 			end
 		end)
 		Tooltip(b, T(en.name), T(en.tip))
+		if en.id == "own" then
+			-- Eigen groep valt op: groen in plaats van rood, met wat ruimte erboven.
+			for _, tex in ipairs({ b.Left, b.Middle, b.Right, b.GetNormalTexture and b:GetNormalTexture() or nil }) do
+				if tex and tex.SetVertexColor then tex:SetVertexColor(0.35, 0.85, 0.35) end
+			end
+			b.gap = 6
+		end
 		pm.buttons[i] = b
 	end
 	config.presetMenu = pm
@@ -2332,10 +2339,10 @@ local function BuildConfig()
 		for _, b in ipairs(pm.buttons) do
 			b:ClearAllPoints()
 			if b.presetID == "own" or free[b.presetID] then
-				b:SetPoint("TOP", pm, "TOP", 0, -4 - n * 22); b:Show(); n = n + 1
+				b:SetPoint("TOP", pm, "TOP", 0, -4 - n * 22 - (b.gap or 0)); b:Show(); n = n + 1
 			else b:Hide() end
 		end
-		pm:SetSize(180, n * 22 + 8)
+		pm:SetSize(180, n * 22 + 14)
 		pm:ClearAllPoints()
 		pm:SetPoint("TOPLEFT", config.pickBtn, "BOTTOMLEFT", 0, -2)
 		pm:Show()
