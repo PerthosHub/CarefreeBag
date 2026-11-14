@@ -7,6 +7,6 @@
 ## OptionalDeps: Auctionator
 ## IconTexture: Interface\Icons\INV_Misc_Bag_08
 ## X-License: MIT
-## X-Curse-Project-ID: VUL_HIER_HET_PROJECT_ID_IN
+## X-Curse-Project-ID: 1803698
 
 CarefreeBag.lua
