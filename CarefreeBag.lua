@@ -2324,7 +2324,7 @@ local function BuildConfig()
 		if en.id == "own" then
 			-- Eigen groep valt op: groen in plaats van rood, met wat ruimte erboven.
 			for _, tex in ipairs({ b.Left, b.Middle, b.Right, b.GetNormalTexture and b:GetNormalTexture() or nil }) do
-				if tex and tex.SetVertexColor then tex:SetVertexColor(0.35, 0.85, 0.35) end
+				if type(tex) == "table" and tex.SetVertexColor then tex:SetVertexColor(0.35, 0.85, 0.35) end
 			end
 			b.gap = 6
 		end
