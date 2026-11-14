@@ -2186,6 +2186,9 @@ local function BuildConfig()
 	end
 	config.groupBg:SetPoint("TOPLEFT", config, "TOPLEFT", PAD - 4, y + 6)
 	config.groupBg:SetWidth(CW - 2 * PAD + 8)
+	-- "+ Groep toevoegen" bovenaan het vak, boven alle groepen.
+	config.addTop = y - 4
+	y = y - 32
 	local colA = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	colA:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 12, y)
 	colA:SetText(T("Name"))
@@ -2468,20 +2471,17 @@ RefreshConfig = function()
 
 	local order = FixOrder()
 	local y = config.catTop
-	-- "Toevoegen" komt na de laatste eigen categorie (daar komt een nieuwe ook terecht).
-	local addAfter = 0
-	for i, k in ipairs(order) do if not FIXED[k] then addAfter = i end end
+	-- "+ Groep toevoegen" staat bovenaan het groepenvak.
 	local function PlaceAdd()
 		config.ShowChoice()
 		config.pickBtn:ClearAllPoints()
-		config.pickBtn:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 8, y - 2)
+		config.pickBtn:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 8, config.addTop)
 		config.newEdit:ClearAllPoints()
 		config.newEdit:SetPoint("LEFT", config.pickBtn, "RIGHT", 10, 0)
 		config.addBtn:ClearAllPoints()
 		config.addBtn:SetPoint("LEFT", config.newEdit, "RIGHT", 8, 0)
-		y = y - 30
 	end
-	if addAfter == 0 then PlaceAdd() end
+	PlaceAdd()
 	for i, r in ipairs(catRows) do
 		local key = order[i]
 		if key then
@@ -2529,13 +2529,12 @@ RefreshConfig = function()
 			r.stripe:SetShown(i % 2 == 0)
 			r:Show()
 			y = y - 26
-			if i == addAfter then PlaceAdd() end
 		else
 			r:Hide()
 		end
 	end
 	y = y - 6
-	config.groupBg:SetHeight(config.catTop + 20 - y)
+	config.groupBg:SetHeight(config.catTop + 52 - y)
 	config:SetHeight(-y + 40)
 end
 

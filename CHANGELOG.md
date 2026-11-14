@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- "+ Add group" sits at the top of the groups panel.
 - Clearer mail question: "Send everything in [group] to [alt]?" with the group and alt in their own colour.
 - The bag width setting now really sets the number of columns (it only grew when the screen was full before).
 - Cleaner options window: a General section on top (on/off, language, bag width, sort options) and the groups in their own panel.
