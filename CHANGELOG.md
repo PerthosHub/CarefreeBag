@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- With Auctionator, the item tooltip keeps showing what the stack earns on the AH after the 5% cut, and whether the AH or the vendor pays more.
 - The version number in game is correct again (no more "vv1.2.2").
 - "+ Add group" sits at the top of the groups panel.
 - Clearer mail question: "Send everything in [group] to [alt]?" with the group and alt in their own colour.

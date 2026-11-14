@@ -121,6 +121,8 @@ NL["grey"] = "grijs"
 
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["Better on the AH: +%s"] = "Beter op het AH: +%s"
+NL["Better at the vendor"] = "Beter bij de vendor"
 NL["General"] = "Algemeen"
 NL["Bag width: %d columns"] = "Breedte van de tas: %d kolommen"
 NL["Predefined groups"] = "Kant-en-klare groepen"
@@ -403,7 +405,40 @@ local function AHPrice(link)
 	return nil
 end
 
-local AH_CUT = 0.05 -- het AH houdt 5% van de verkoopprijs in (de borg krijg je terug)
+local AH_CUT = 0.05
+
+-- Onze regels onder de item-tooltip: wat de stack op het AH oplevert na kosten,
+-- en of het AH of de vendor meer geeft.
+local function AddAHLines(tt, g)
+	if not g then return end
+	local each = AHPrice(g.link)
+	if not each then return end
+	local money = function(m) return GetMoneyString and GetMoneyString(math.floor(m), true) or tostring(math.floor(m)) end
+	local net = each * g.count * (1 - AH_CUT)
+	local vendor = g.value or 0
+	tt:AddLine(" ")
+	tt:AddLine("CarefreeBag: " .. T("AH value after 5%% cut: %s"):format(money(net)), 0.4, 0.8, 1)
+	if net > vendor then
+		tt:AddLine(T("Better on the AH: +%s"):format(money(net - vendor)), 0.25, 1, 0.25)
+	else
+		tt:AddLine(T("Better at the vendor"), 1, 0.82, 0)
+	end
+end
+local ahHooked
+local function HookAHTooltip()
+	if ahHooked then return end
+	ahHooked = true
+	local function post(tt)
+		if tt ~= GameTooltip or not tt.GetOwner then return end
+		local owner = tt:GetOwner()
+		if owner and owner.isCarefreeItem and owner.group then AddAHLines(tt, owner.group) end
+	end
+	if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
+		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, post)
+	elseif GameTooltip.HookScript then
+		pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetItem", post)
+	end
+end -- het AH houdt 5% van de verkoopprijs in (de borg krijg je terug)
 
 local function IsBoE(e)
 	return e.bindType == 2 and not e.bound and (e.quality or 0) >= 2
@@ -649,6 +684,8 @@ end
 local function NewItemButton(i)
 	local b = CreateFrame("ItemButton", "CarefreeBagItem" .. i, main.content, "ContainerFrameItemButtonTemplate")
 	b:SetSize(TILE, TILE)
+	b.isCarefreeItem = true
+	HookAHTooltip()
 	-- Volgorde aanpassen: sleep een item op een ander item in dezelfde groep.
 	-- Links op de tegel = ertussen zetten (gouden streep), rest = omwisselen (gouden rand).
 	b.insertMark = b:CreateTexture(nil, "OVERLAY", nil, 7)
@@ -707,15 +744,6 @@ local function NewItemButton(i)
 	b:SetScript("OnReceiveDrag", function(self, ...)
 		if Reorder(self) then return end
 		if origDrag then return origDrag(self, ...) end
-	end)
-	b:HookScript("OnEnter", function(self)
-		local g = self.group
-		local each = g and AHPrice(g.link)
-		if not each or not GameTooltip:IsOwned(self) then return end
-		local net = math.floor(each * g.count * (1 - AH_CUT))
-		GameTooltip:AddLine(T("AH value after 5%% cut: %s"):format(
-			GetMoneyString and GetMoneyString(net, true) or tostring(net)), 0.4, 0.8, 1)
-		GameTooltip:Show()
 	end)
 	b.multi = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
 	b.multi:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -2)
