@@ -19,6 +19,7 @@ end
 
 local DB
 local Refresh -- vooruit gedeclareerd
+local SavePos -- vooruit
 
 local function Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99CarefreeBag|r: " .. tostring(msg))
@@ -231,6 +232,8 @@ NL["Off = this group is not used; its items go to Other."] = "Uit = deze groep w
 NL["On/off"] = "Aan/uit"
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["At a mailbox you are asked per category whether to send it."] = "Bij de mailbox krijg je per categorie de vraag of hij weg moet."
+NL["Choose how this group is sorted: type, stack price, newest last or manual."] = "Kies hoe deze groep gesorteerd wordt: soort, stackprijs, nieuwste als laatst of handmatig."
 NL["Sort: %s"] = "Sortering: %s"
 NL["type"] = "soort"
 NL["stack price"] = "stackprijs"
@@ -795,6 +798,55 @@ local function GetItemButton()
 end
 
 local MAIL_ICON = "|TInterface\\Minimap\\Tracking\\Mailbox:14:14|t"
+local CHECK_ICON = "|TInterface\\Buttons\\UI-CheckBox-Check:14:14|t"
+local ARROW_ICON = "|TInterface\\ChatFrame\\ChatFrameExpandArrow:10:10:0:0:16:16:0:16:0:16|t"
+local keepHeader -- na in-/uitklappen: dit kopje moet op dezelfde plek blijven
+
+-- Keuzelijstje voor sorteren (één lijstje, gedeeld door alle groepen).
+local sortMenu
+local function OpenSortMenu(anchor, sec)
+	if not sec then return end
+	if not sortMenu then
+		sortMenu = CreateFrame("Frame", "CarefreeBagSortMenu", UIParent, "BackdropTemplate")
+		sortMenu:SetFrameStrata("DIALOG")
+		sortMenu:SetClampedToScreen(true)
+		if sortMenu.SetBackdrop then
+			sortMenu:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+				edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
+				insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+			sortMenu:SetBackdropColor(0, 0, 0, 0.95)
+		end
+		sortMenu:SetSize(170, #SORTS * 20 + 10)
+		sortMenu.buttons = {}
+		for i, m in ipairs(SORTS) do
+			local b = CreateFrame("Button", nil, sortMenu)
+			b:SetSize(160, 20)
+			b:SetPoint("TOPLEFT", sortMenu, "TOPLEFT", 5, -5 - (i - 1) * 20)
+			b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+			b.fs = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+			b.fs:SetPoint("LEFT", b, "LEFT", 4, 0)
+			b.mode = m
+			b:SetScript("OnClick", function(self)
+				DB.sort = DB.sort or {}
+				DB.sort[sortMenu.sec.key] = self.mode
+				Log("sort " .. sortMenu.sec.key .. ": " .. self.mode)
+				sortMenu:Hide()
+				ResetOrder(); Refresh()
+			end)
+			sortMenu.buttons[i] = b
+		end
+		sortMenu:Hide()
+	end
+	if sortMenu:IsShown() and sortMenu.sec == sec then sortMenu:Hide(); return end
+	sortMenu.sec = sec
+	local cur = SortMode(sec)
+	for _, b in ipairs(sortMenu.buttons) do
+		b.fs:SetText((b.mode == cur and CHECK_ICON or "    ") .. " " .. T(SORT_NAME[b.mode]))
+	end
+	sortMenu:ClearAllPoints()
+	sortMenu:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -2)
+	sortMenu:Show()
+end
 
 local function GetHeader()
 	usedHeaders = usedHeaders + 1
@@ -812,30 +864,43 @@ local function GetHeader()
 			if not h.key then return end
 			DB.collapsed = DB.collapsed or {}
 			DB.collapsed[h.key] = not DB.collapsed[h.key] or nil
+			keepHeader = { key = h.key, top = h:GetTop() } -- het minnetje blijft onder je muis
 			Refresh()
 		end)
 		h.fs = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 		h.fs:SetPoint("LEFT", h, "LEFT", 18, 0)
 		h.fs:SetJustifyH("LEFT")
 		h.SetText = function(self, t) self.fs:SetText(t) end
+		-- "Auto" + envelop: alleen hier staat de post-info in de tooltip
+		h.mail = CreateFrame("Button", nil, h)
+		h.mail:SetSize(50, 14)
+		h.mail:SetPoint("LEFT", h.fs, "RIGHT", 6, 0)
+		h.mail.fs = h.mail:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		h.mail.fs:SetPoint("LEFT")
+		h.mail.fs:SetText("|cff888888Auto|r " .. MAIL_ICON)
+		h.mail:SetScript("OnEnter", function(self)
+			if not (h.sec and h.sec.mailTo) then return end
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:AddLine(MAIL_ICON .. " " .. T("Auto mail to: %s"):format(h.sec.mailTo), 0.4, 0.8, 1, true)
+			GameTooltip:AddLine(T("At a mailbox you are asked per category whether to send it."), 1, 1, 1, true)
+			GameTooltip:Show()
+		end)
+		h.mail:SetScript("OnLeave", function() GameTooltip:Hide() end)
 		-- Sorteerknop rechts: klik = volgende manier van sorteren
 		h.sort = CreateFrame("Button", nil, h)
 		h.sort:SetSize(80, 14)
 		h.sort:SetPoint("RIGHT", h, "RIGHT", 0, 0)
+		h.sort.bg = h.sort:CreateTexture(nil, "BACKGROUND")
+		h.sort.bg:SetAllPoints(h.sort)
+		h.sort.bg:SetColorTexture(0, 0, 0, 0.45)
+		h.sort:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
 		h.sort.fs = h.sort:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-		h.sort.fs:SetPoint("RIGHT")
-		h.sort:SetScript("OnClick", function()
-			if not h.sec then return end
-			local cur, nxt = SortMode(h.sec), SORTS[1]
-			for i, m in ipairs(SORTS) do if m == cur then nxt = SORTS[i % #SORTS + 1] end end
-			DB.sort[h.sec.key] = nxt
-			Log("sort " .. h.sec.key .. ": " .. nxt)
-			ResetOrder(); Refresh()
-		end)
+		h.sort.fs:SetPoint("RIGHT", h.sort, "RIGHT", -4, 0)
+		h.sort:SetScript("OnClick", function(self) OpenSortMenu(self, h.sec) end)
 		h.sort:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 			GameTooltip:AddLine(T("Sorting"))
-			GameTooltip:AddLine(T("Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."), 1, 1, 1, true)
+			GameTooltip:AddLine(T("Choose how this group is sorted: type, stack price, newest last or manual."), 1, 1, 1, true)
 			GameTooltip:AddLine(T("Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."), 0.8, 0.8, 0.8, true)
 			GameTooltip:Show()
 		end)
@@ -845,10 +910,6 @@ local function GetHeader()
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 			GameTooltip:AddLine(self.ruleTitle or "")
 			GameTooltip:AddLine(self.rules, 1, 1, 1, true)
-			if self.sec and self.sec.mailTo then
-				GameTooltip:AddLine(" ")
-				GameTooltip:AddLine(MAIL_ICON .. " " .. T("Auto mail to: %s"):format(self.sec.mailTo), 0.4, 0.8, 1, true)
-			end
 			GameTooltip:Show()
 		end)
 		h:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1179,8 +1240,8 @@ local function Layout()
 		-- Ook een groep met alleen nog gaten blijft staan tot je de tassen sluit.
 		elseif #cells > 0 then
 			full[#full + 1] = { sec = sec, cells = cells, title = title }
-		elseif sec.plus then
-			-- Lege groep: gewone regel met alleen het lege +vakje.
+		elseif sec.plus or (sec.fixed and sec.key ~= "hidden" and (sec.key ~= "keys" or KeyringBag())) then
+			-- Lege groep: gewone regel (met het lege +vakje als die er een heeft).
 			full[#full + 1] = { sec = sec, cells = cells, title = title }
 		end
 	end
@@ -1224,13 +1285,13 @@ local function Layout()
 		h:SetWidth(width)
 		h.key, h.sec = f.sec.key, f.sec
 		local t = f.sec.fixed and (BLUE .. f.title .. "|r") or f.title
-		if f.sec.mailTo then t = t .. "  |cff888888Auto|r " .. MAIL_ICON end
 		if f.collapsed and f.n > 0 then t = t .. "  |cff888888(" .. f.n .. ")|r" end
 		h:SetText(t)
 		h.toggle:SetNormalTexture(f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
 		h.sort:SetShown(not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys")
-		h.sort.fs:SetText("|cff888888" .. T("Sort: %s"):format(T(SORT_NAME[SortMode(f.sec)])) .. "|r")
-		h.sort:SetWidth((h.sort.fs.GetStringWidth and h.sort.fs:GetStringWidth() or 80) + 4)
+		h.mail:SetShown(f.sec.mailTo ~= nil)
+		h.sort.fs:SetText("|cffbbbbbb" .. T(SORT_NAME[SortMode(f.sec)]) .. "|r " .. ARROW_ICON)
+		h.sort:SetWidth((h.sort.fs.GetStringWidth and h.sort.fs:GetStringWidth() or 80) + 10)
 		h.rules, h.ruleTitle = f.sec.rules, StripColors(f.sec.title)
 		y = y - 18
 		local col = 0
@@ -1267,6 +1328,7 @@ local function Layout()
 	for i = usedGaps + 1, #gapPool do gapPool[i]:Hide() end
 
 	-- 7. Scrollgebied en venstergrootte.
+	local keep = keepHeader
 	contentH = -y
 	local viewH = math.min(contentH, maxView)
 	main.content:SetSize(width, contentH)
@@ -1277,14 +1339,32 @@ local function Layout()
 	local cur = main.scroll.GetVerticalScroll and main.scroll:GetVerticalScroll() or 0
 	if cur > main.scrollMax then main.scroll:SetVerticalScroll(main.scrollMax) end
 	main.scrollHint:SetShown(main.scrollMax > 0)
+	if keep then
+		keepHeader = nil
+		for i = 1, usedHeaders do
+			local h = headerPool[i]
+			if h.key == keep.key and keep.top then
+				local now = h:GetTop()
+				local p, rel, rp, x, yy = main:GetPoint(1)
+				if now and p then
+					main:ClearAllPoints()
+					main:SetPoint(p, rel, rp, x, yy + (keep.top - now))
+					SavePos()
+				end
+			end
+		end
+	end
 
 	-- Voetregel: vrije vakjes + goud, altijd onderaan in beeld.
 	local used = math.max(0, total - #free)
 	local frac = total > 0 and used / total or 0
 	main.freeBar:SetValue(frac)
-	if frac < 0.75 then main.freeBar:SetStatusBarColor(0.2, 0.75, 0.2)
-	elseif frac < 0.9 then main.freeBar:SetStatusBarColor(1, 0.65, 0)
-	else main.freeBar:SetStatusBarColor(0.9, 0.15, 0.1) end
+	-- vloeiend van groen naar oranje naar rood
+	local r, g, bl
+	if frac < 0.6 then r, g, bl = 0.30, 0.80, 0.40
+	elseif frac < 0.85 then local t = (frac - 0.6) / 0.25; r, g, bl = 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t
+	else local t = math.min(1, (frac - 0.85) / 0.15); r, g, bl = 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t end
+	main.freeBar:SetStatusBarColor(r, g, bl)
 	main.freeBar.text:SetText(used .. "/" .. total)
 	main.freeBar.free, main.freeBar.total = #free, total
 	main.money:SetText(GetMoneyString and GetMoneyString(GetMoney(), true) or tostring(GetMoney()))
@@ -1320,7 +1400,7 @@ local function ShowMain()
 	Refresh()
 end
 
-local function SavePos()
+SavePos = function()
 	local point, _, rel, x, y = main:GetPoint(1)
 	DB.pos = { point = point, rel = rel, x = x, y = y }
 end
@@ -1360,7 +1440,7 @@ local function BuildMain()
 		b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
 		return b
 	end
-	main.optBtn = IconButton("CarefreeBagOptionsButton", "questlog-icon-setting", "Interface\\Icons\\Trade_Engineering")
+	main.optBtn = IconButton("CarefreeBagOptionsButton", "OptionsIcon-Brown", "Interface\\Icons\\Trade_Engineering")
 	main.optBtn:SetPoint("TOPRIGHT", main, "TOPRIGHT", -PAD, -33)
 	main.optBtn:SetScript("OnClick", function() ToggleConfig() end)
 	Tooltip(main.optBtn, T("Options"))
@@ -1416,16 +1496,21 @@ local function BuildMain()
 	main.scrollHint:Hide()
 
 	-- Balk die laat zien hoe vol je tassen zitten (groen, oranje, rood).
-	local bar = CreateFrame("StatusBar", nil, main)
-	bar:SetSize(140, 14)
-	bar:SetPoint("LEFT", main, "BOTTOMLEFT", PAD + 2, PAD - 2 + TILE / 2)
-	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+	-- Plat en strak: dunne balk met een fijne rand, het getal klein ernaast.
+	local bar = CreateFrame("StatusBar", "CarefreeBagFreeBar", main)
+	bar:SetSize(150, 6)
+	bar:SetPoint("LEFT", main, "BOTTOMLEFT", PAD + 4, PAD - 2 + TILE / 2)
+	bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
 	bar:SetMinMaxValues(0, 1)
 	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-	bar.bg:SetAllPoints(bar)
-	bar.bg:SetColorTexture(0, 0, 0, 0.6)
-	bar.text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	bar.text:SetPoint("CENTER", bar, "CENTER", 0, 0)
+	bar.bg:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
+	bar.bg:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 1, -1)
+	bar.bg:SetColorTexture(0, 0, 0, 0.75)
+	bar.track = bar:CreateTexture(nil, "BORDER")
+	bar.track:SetAllPoints(bar)
+	bar.track:SetColorTexture(1, 1, 1, 0.08)
+	bar.text = bar:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	bar.text:SetPoint("LEFT", bar, "RIGHT", 6, 0)
 	bar:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:AddLine(T("Free slots: %s of %s"):format(tostring(self.free or "?"), tostring(self.total or "?")))

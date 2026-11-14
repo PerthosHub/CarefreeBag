@@ -139,6 +139,8 @@ ns.L.de = {
 	["Sorting set to manual for this group."] = "Sortierung für diese Gruppe auf manuell gestellt.",
 	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Klick Items an, um sie auszublenden, oder ein ausgeblendetes Item, um es wieder anzuzeigen. Klick nochmal aufs Auge, wenn du fertig bist.",
 	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Zieh ein Item auf ein anderes Item derselben Gruppe: am linken Rand kommt es dazwischen (goldene Linie), sonst tauschen sie (goldener Rand).",
+	["At a mailbox you are asked per category whether to send it."] = "Am Briefkasten wirst du pro Kategorie gefragt, ob sie verschickt werden soll.",
+	["Choose how this group is sorted: type, stack price, newest last or manual."] = "Wähl, wie diese Gruppe sortiert wird: Typ, Stackpreis, neueste zuletzt oder manuell.",
 }
 
 ns.L.fr = {
@@ -277,6 +279,8 @@ ns.L.fr = {
 	["Sorting set to manual for this group."] = "Tri de ce groupe passé en manuel.",
 	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Clique sur des objets pour les masquer, ou sur un objet masqué pour le réafficher. Reclique sur l'œil quand tu as fini.",
 	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Glisse un objet sur un autre objet du même groupe : sur le bord gauche il se place entre les deux (ligne dorée), ailleurs ils s'échangent (bordure dorée).",
+	["At a mailbox you are asked per category whether to send it."] = "À la boîte aux lettres, on te demande pour chaque catégorie si tu veux l'envoyer.",
+	["Choose how this group is sorted: type, stack price, newest last or manual."] = "Choisis comment ce groupe est trié : type, prix de la pile, plus récents à la fin ou manuel.",
 }
 
 ns.L.es = {
@@ -415,6 +419,8 @@ ns.L.es = {
 	["Sorting set to manual for this group."] = "Orden de este grupo cambiado a manual.",
 	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Haz clic en objetos para ocultarlos, o en un objeto oculto para volver a mostrarlo. Haz clic otra vez en el ojo cuando termines.",
 	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Arrastra un objeto sobre otro del mismo grupo: en el borde izquierdo se coloca entre ellos (línea dorada), en otro sitio se intercambian (borde dorado).",
+	["At a mailbox you are asked per category whether to send it."] = "En el buzón se te pregunta por cada categoría si quieres enviarla.",
+	["Choose how this group is sorted: type, stack price, newest last or manual."] = "Elige cómo se ordena este grupo: tipo, precio del montón, más nuevos al final o manual.",
 }
 
 ns.L.pt = {
@@ -553,6 +559,8 @@ ns.L.pt = {
 	["Sorting set to manual for this group."] = "Ordem deste grupo mudada para manual.",
 	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Clique em itens para ocultá-los, ou em um item oculto para mostrá-lo de novo. Clique no olho de novo quando terminar.",
 	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Arraste um item sobre outro do mesmo grupo: na borda esquerda ele entra no meio (linha dourada), em outro lugar eles trocam (borda dourada).",
+	["At a mailbox you are asked per category whether to send it."] = "Na caixa de correio, você é perguntado para cada categoria se quer enviá-la.",
+	["Choose how this group is sorted: type, stack price, newest last or manual."] = "Escolha como este grupo é ordenado: tipo, preço da pilha, mais novos no fim ou manual.",
 }
 
 ns.L.it = {
@@ -691,6 +699,8 @@ ns.L.it = {
 	["Sorting set to manual for this group."] = "Ordine di questo gruppo impostato su manuale.",
 	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Clicca sugli oggetti per nasconderli, o su un oggetto nascosto per mostrarlo di nuovo. Clicca di nuovo sull'occhio quando hai finito.",
 	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Trascina un oggetto su un altro dello stesso gruppo: sul bordo sinistro va in mezzo (linea dorata), altrove si scambiano (bordo dorato).",
+	["At a mailbox you are asked per category whether to send it."] = "Alla cassetta della posta ti viene chiesto per ogni categoria se spedirla.",
+	["Choose how this group is sorted: type, stack price, newest last or manual."] = "Scegli come ordinare questo gruppo: tipo, prezzo della pila, più recenti in fondo o manuale.",
 }
 
 ns.L.ru = {
@@ -829,4 +839,6 @@ ns.L.ru = {
 	["Sorting set to manual for this group."] = "Сортировка этой группы переключена на ручную.",
 	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Нажимайте на предметы, чтобы скрыть их, или на скрытый предмет, чтобы снова показать. Нажмите на глаз ещё раз, когда закончите.",
 	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Перетащите предмет на другой предмет той же группы: у левого края он встанет между ними (золотая линия), иначе они поменяются местами (золотая рамка).",
+	["At a mailbox you are asked per category whether to send it."] = "У почтового ящика вас спросят по каждой категории, отправлять ли её.",
+	["Choose how this group is sorted: type, stack price, newest last or manual."] = "Выберите, как сортировать эту группу: по типу, по цене стопки, новые в конце или вручную.",
 }
