@@ -123,6 +123,8 @@ ns.L.de = {
 	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': Umbenennen verschiebt keine Items. Die %d gelernten Items landen weiterhin hier.",
 	["Learned: %d items"] = "Gelernt: %d Items",
 	["Renaming does not change which items go here."] = "Umbenennen ändert nicht, welche Items hier landen.",
+	["Predefined groups"] = "Vordefinierte Gruppen",
+	["Ready-made groups that fill themselves."] = "Fertige Gruppen, die sich selbst füllen.",
 }
 
 ns.L.fr = {
@@ -245,6 +247,8 @@ ns.L.fr = {
 	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s' : renommer ne déplace pas d'objets. Les %d objets appris vont toujours ici.",
 	["Learned: %d items"] = "Appris : %d objets",
 	["Renaming does not change which items go here."] = "Renommer ne change pas les objets qui vont ici.",
+	["Predefined groups"] = "Groupes prédéfinis",
+	["Ready-made groups that fill themselves."] = "Des groupes tout prêts qui se remplissent tout seuls.",
 }
 
 ns.L.es = {
@@ -367,6 +371,8 @@ ns.L.es = {
 	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': cambiar el nombre no mueve objetos. Los %d objetos aprendidos siguen yendo aquí.",
 	["Learned: %d items"] = "Aprendidos: %d objetos",
 	["Renaming does not change which items go here."] = "Cambiar el nombre no cambia qué objetos van aquí.",
+	["Predefined groups"] = "Grupos predefinidos",
+	["Ready-made groups that fill themselves."] = "Grupos listos que se llenan solos.",
 }
 
 ns.L.pt = {
@@ -489,6 +495,8 @@ ns.L.pt = {
 	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': renomear não move itens. Os %d itens aprendidos continuam indo para cá.",
 	["Learned: %d items"] = "Aprendidos: %d itens",
 	["Renaming does not change which items go here."] = "Renomear não muda quais itens vão para cá.",
+	["Predefined groups"] = "Grupos predefinidos",
+	["Ready-made groups that fill themselves."] = "Grupos prontos que se enchem sozinhos.",
 }
 
 ns.L.it = {
@@ -611,6 +619,8 @@ ns.L.it = {
 	["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': rinominare non sposta oggetti. I %d oggetti imparati continuano ad andare qui.",
 	["Learned: %d items"] = "Imparati: %d oggetti",
 	["Renaming does not change which items go here."] = "Rinominare non cambia quali oggetti vanno qui.",
+	["Predefined groups"] = "Gruppi predefiniti",
+	["Ready-made groups that fill themselves."] = "Gruppi pronti che si riempiono da soli.",
 }
 
 ns.L.ru = {
@@ -733,4 +743,6 @@ ns.L.ru = {
 	["'%s': renaming does not move items. The %d items it learned still go here."] = "«%s»: переименование не перемещает предметы. Выученные предметы (%d) по-прежнему попадают сюда.",
 	["Learned: %d items"] = "Выучено предметов: %d",
 	["Renaming does not change which items go here."] = "Переименование не меняет, какие предметы попадают сюда.",
+	["Predefined groups"] = "Готовые группы",
+	["Ready-made groups that fill themselves."] = "Готовые группы, которые наполняются сами.",
 }

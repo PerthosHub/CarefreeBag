@@ -122,6 +122,8 @@ NL["grey"] = "grijs"
 
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["Predefined groups"] = "Kant-en-klare groepen"
+NL["Ready-made groups that fill themselves."] = "Kant-en-klare groepen die zichzelf vullen."
 NL["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': hernoemen verplaatst geen items. De %d geleerde items komen hier nog steeds."
 NL["Learned: %d items"] = "Geleerd: %d items"
 NL["Renaming does not change which items go here."] = "Hernoemen verandert niet welke items hierheen gaan."
@@ -2343,43 +2345,64 @@ local function BuildConfig()
 	config.newEdit:SetScript("OnEnterPressed", add)
 	config.addBtn:SetScript("OnClick", add)
 
+	-- Lijstje met twee keuzes: "Custom group" en "Predefined groups >" (opent een tweede lijstje).
 	local pm = NewMenu("CarefreeBagPresetMenu") -- aan UIParent: anders vallen klikken weg achter het optievenster
+	local sub = NewMenu("CarefreeBagPresetSubMenu")
+	sub:SetScript("OnHide", nil)
+	pm:HookScript("OnHide", function() sub:Hide() end)
 	config:HookScript("OnHide", function() pm:Hide() end)
-	pm.buttons = {}
-	local entries = { { id = "own", name = "Custom group", tip = "Name it yourself. It learns: every item you drag onto it goes there from now on." } }
-	for _, p in ipairs(PRESETS) do entries[#entries + 1] = { id = p.id, name = p.name, tip = p.tip } end
-	for i, en in ipairs(entries) do
-		local b = MakeButton(pm, T(en.name), 170)
-		b.presetID = en.id
+	pm:SetSize(180, 2 * 22 + 8)
+
+	local ownBtn = MakeButton(pm, T("Custom group"), 170)
+	ownBtn:SetPoint("TOP", pm, "TOP", 0, -4)
+	ownBtn.presetID = "own"
+	TintBlue(ownBtn)
+	ownBtn:SetScript("OnClick", function()
+		pm:Hide()
+		config.choice = "own"
+		RefreshConfig()
+		config.newEdit:SetFocus()
+	end)
+	Tooltip(ownBtn, T("Custom group"), T("Name it yourself. It learns: every item you drag onto it goes there from now on."))
+
+	local preBtn = MakeButton(pm, T("Predefined groups") .. "  >", 170)
+	preBtn:SetPoint("TOP", ownBtn, "BOTTOM", 0, 0)
+	Tooltip(preBtn, T("Predefined groups"), T("Ready-made groups that fill themselves."))
+
+	sub.buttons = {}
+	for i, p in ipairs(PRESETS) do
+		local b = MakeButton(sub, T(p.name), 170)
+		b.presetID = p.id
 		b:SetScript("OnClick", function()
 			pm:Hide()
-			if en.id == "own" then
-				config.choice = "own"
-				RefreshConfig()
-				config.newEdit:SetFocus()
-			else
-				config.choice = nil
-				AddPreset(en.id)
-			end
+			config.choice = nil
+			AddPreset(p.id)
 		end)
-		Tooltip(b, T(en.name), T(en.tip))
-		if en.id == "own" then TintBlue(b) end -- eigen groep = blauw, kant-en-klaar = standaard rood
-		if en.id == "own" then b.after = 6 end    -- wat ruimte onder de eigen groep
-		pm.buttons[i] = b
+		Tooltip(b, T(p.name), T(p.tip))
+		sub.buttons[i] = b
 	end
-	config.presetMenu = pm
-	config.pickBtn:SetScript("OnClick", function()
+	local function OpenSub()
 		local free = {}
 		for _, p in ipairs(FreePresets()) do free[p.id] = true end
-		local n, extra = 0, 0
-		for _, b in ipairs(pm.buttons) do
+		local n = 0
+		for _, b in ipairs(sub.buttons) do
 			b:ClearAllPoints()
-			if b.presetID == "own" or free[b.presetID] then
-				b:SetPoint("TOP", pm, "TOP", 0, -4 - n * 22 - extra); b:Show(); n = n + 1
-				extra = extra + (b.after or 0)
+			if free[b.presetID] then
+				b:SetPoint("TOP", sub, "TOP", 0, -4 - n * 22); b:Show(); n = n + 1
 			else b:Hide() end
 		end
-		pm:SetSize(180, n * 22 + 8 + extra)
+		if n == 0 then sub:Hide(); return end
+		sub:SetSize(180, n * 22 + 8)
+		sub:ClearAllPoints()
+		sub:SetPoint("TOPLEFT", preBtn, "TOPRIGHT", 6, 4)
+		sub:Show()
+	end
+	preBtn:SetScript("OnClick", OpenSub)
+	preBtn:HookScript("OnEnter", OpenSub)
+
+	config.presetMenu = pm
+	config.pickBtn:SetScript("OnClick", function()
+		preBtn:SetEnabled(#FreePresets() > 0)
 		pm:ClearAllPoints()
 		pm:SetPoint("TOPLEFT", config.pickBtn, "BOTTOMLEFT", 0, -2)
 		ShowMenu(pm)

@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Dropdowns (add group, sorting, language) share one style: blue Blizzard buttons, "Custom group" on top, and they close when you click next to them.
+- "+ Add group" offers "Custom group" (blue) and "Predefined groups", which opens a second list. Dropdowns close when you click next to them.
 - The alt's name stands out in the Auto mail tooltip.
 - Group tooltips show how many items the group learned. Renaming a group warns that its learned items stay.
 
