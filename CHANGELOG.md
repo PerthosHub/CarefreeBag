@@ -3,7 +3,10 @@
 ## 1.1.0 – works out of the box, more languages
 - Ready-made categories that fill themselves: Food & Drink, Potions & Elixirs, Scrolls, Consumables, Professions and Gear. New installs start with Consumables, Professions and Gear; add others from the "Ready-made" list in the options. Their names are fixed so it's always clear what goes in. Your own categories are still filled by dragging.
 - Anything you drag onto a category goes there from now on, ready-made or your own.
-- Bag fill bar at the bottom (green, orange, red) and a language icon in the options.
+- Bag fill bar at the bottom (green, orange, red) instead of the free-slot tile; icon buttons for Hide (eye) and Options (gear); a language icon in the options.
+- Collapse a group with the [-] in its header.
+- Sort per group: type, stack price, newest last or manual. Drag an item onto another item in the same group to reorder: on the left edge it goes in between (gold line), elsewhere they swap (gold border).
+- Groups that are mailed automatically show "Auto" with an envelope; hover the header to see where they go.
 - "selling is off" only shows after you said No at the first vendor.
 - What you drag into a category is now remembered per character.
 - Mail asks per category: "Send Professions to Thrall Stormrage?" Yes, send or Skip, until every category is done.

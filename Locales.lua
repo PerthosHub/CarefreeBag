@@ -128,6 +128,17 @@ ns.L.de = {
 	["Ready-made category"] = "Fertige Kategorie",
 	["Ready-made"] = "Fertig",
 	["Add a ready-made category that fills itself. Its name is fixed."] = "Füg eine fertige Kategorie hinzu, die sich selbst füllt. Ihr Name steht fest.",
+	["Sort: %s"] = "Sortierung: %s",
+	["type"] = "Typ",
+	["stack price"] = "Stackpreis",
+	["newest last"] = "neueste zuletzt",
+	["manual"] = "manuell",
+	["Sorting"] = "Sortierung",
+	["Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."] = "Klick zum Wechseln: Typ, Stackpreis, neueste zuletzt oder manuell. Bei manuell ziehst du Items in deine eigene Reihenfolge.",
+	["Auto mail to: %s"] = "Auto-Post an: %s",
+	["Sorting set to manual for this group."] = "Sortierung für diese Gruppe auf manuell gestellt.",
+	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Klick Items an, um sie auszublenden, oder ein ausgeblendetes Item, um es wieder anzuzeigen. Klick nochmal aufs Auge, wenn du fertig bist.",
+	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Zieh ein Item auf ein anderes Item derselben Gruppe: am linken Rand kommt es dazwischen (goldene Linie), sonst tauschen sie (goldener Rand).",
 }
 
 ns.L.fr = {
@@ -255,6 +266,17 @@ ns.L.fr = {
 	["Ready-made category"] = "Catégorie toute prête",
 	["Ready-made"] = "Toute prête",
 	["Add a ready-made category that fills itself. Its name is fixed."] = "Ajoute une catégorie toute prête qui se remplit toute seule. Son nom est fixe.",
+	["Sort: %s"] = "Tri : %s",
+	["type"] = "type",
+	["stack price"] = "prix de la pile",
+	["newest last"] = "plus récents à la fin",
+	["manual"] = "manuel",
+	["Sorting"] = "Tri",
+	["Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."] = "Clique pour changer : type, prix de la pile, plus récents à la fin ou manuel. En manuel, tu glisses les objets dans ton propre ordre.",
+	["Auto mail to: %s"] = "Courrier auto vers : %s",
+	["Sorting set to manual for this group."] = "Tri de ce groupe passé en manuel.",
+	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Clique sur des objets pour les masquer, ou sur un objet masqué pour le réafficher. Reclique sur l'œil quand tu as fini.",
+	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Glisse un objet sur un autre objet du même groupe : sur le bord gauche il se place entre les deux (ligne dorée), ailleurs ils s'échangent (bordure dorée).",
 }
 
 ns.L.es = {
@@ -382,6 +404,17 @@ ns.L.es = {
 	["Ready-made category"] = "Categoría predefinida",
 	["Ready-made"] = "Predefinida",
 	["Add a ready-made category that fills itself. Its name is fixed."] = "Añade una categoría predefinida que se llena sola. Su nombre es fijo.",
+	["Sort: %s"] = "Orden: %s",
+	["type"] = "tipo",
+	["stack price"] = "precio del montón",
+	["newest last"] = "más nuevos al final",
+	["manual"] = "manual",
+	["Sorting"] = "Orden",
+	["Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."] = "Haz clic para cambiar: tipo, precio del montón, más nuevos al final o manual. En manual arrastras los objetos a tu propio orden.",
+	["Auto mail to: %s"] = "Correo automático a: %s",
+	["Sorting set to manual for this group."] = "Orden de este grupo cambiado a manual.",
+	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Haz clic en objetos para ocultarlos, o en un objeto oculto para volver a mostrarlo. Haz clic otra vez en el ojo cuando termines.",
+	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Arrastra un objeto sobre otro del mismo grupo: en el borde izquierdo se coloca entre ellos (línea dorada), en otro sitio se intercambian (borde dorado).",
 }
 
 ns.L.pt = {
@@ -509,6 +542,17 @@ ns.L.pt = {
 	["Ready-made category"] = "Categoria pronta",
 	["Ready-made"] = "Pronta",
 	["Add a ready-made category that fills itself. Its name is fixed."] = "Adiciona uma categoria pronta que se enche sozinha. O nome dela é fixo.",
+	["Sort: %s"] = "Ordem: %s",
+	["type"] = "tipo",
+	["stack price"] = "preço da pilha",
+	["newest last"] = "mais novos no fim",
+	["manual"] = "manual",
+	["Sorting"] = "Ordem",
+	["Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."] = "Clique para trocar: tipo, preço da pilha, mais novos no fim ou manual. No manual você arrasta os itens para a sua própria ordem.",
+	["Auto mail to: %s"] = "Correio automático para: %s",
+	["Sorting set to manual for this group."] = "Ordem deste grupo mudada para manual.",
+	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Clique em itens para ocultá-los, ou em um item oculto para mostrá-lo de novo. Clique no olho de novo quando terminar.",
+	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Arraste um item sobre outro do mesmo grupo: na borda esquerda ele entra no meio (linha dourada), em outro lugar eles trocam (borda dourada).",
 }
 
 ns.L.it = {
@@ -636,6 +680,17 @@ ns.L.it = {
 	["Ready-made category"] = "Categoria pronta",
 	["Ready-made"] = "Pronta",
 	["Add a ready-made category that fills itself. Its name is fixed."] = "Aggiungi una categoria pronta che si riempie da sola. Il suo nome è fisso.",
+	["Sort: %s"] = "Ordine: %s",
+	["type"] = "tipo",
+	["stack price"] = "prezzo della pila",
+	["newest last"] = "più recenti in fondo",
+	["manual"] = "manuale",
+	["Sorting"] = "Ordine",
+	["Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."] = "Clicca per cambiare: tipo, prezzo della pila, più recenti in fondo o manuale. In manuale trascini gli oggetti nel tuo ordine.",
+	["Auto mail to: %s"] = "Posta automatica a: %s",
+	["Sorting set to manual for this group."] = "Ordine di questo gruppo impostato su manuale.",
+	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Clicca sugli oggetti per nasconderli, o su un oggetto nascosto per mostrarlo di nuovo. Clicca di nuovo sull'occhio quando hai finito.",
+	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Trascina un oggetto su un altro dello stesso gruppo: sul bordo sinistro va in mezzo (linea dorata), altrove si scambiano (bordo dorato).",
 }
 
 ns.L.ru = {
@@ -763,4 +818,15 @@ ns.L.ru = {
 	["Ready-made category"] = "Готовая категория",
 	["Ready-made"] = "Готовые",
 	["Add a ready-made category that fills itself. Its name is fixed."] = "Добавить готовую категорию, которая наполняется сама. Её название не меняется.",
+	["Sort: %s"] = "Сортировка: %s",
+	["type"] = "по типу",
+	["stack price"] = "по цене стопки",
+	["newest last"] = "новые в конце",
+	["manual"] = "вручную",
+	["Sorting"] = "Сортировка",
+	["Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."] = "Нажмите, чтобы сменить: по типу, по цене стопки, новые в конце или вручную. Вручную — перетаскивайте предметы в свой порядок.",
+	["Auto mail to: %s"] = "Автопочта для: %s",
+	["Sorting set to manual for this group."] = "Сортировка этой группы переключена на ручную.",
+	["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Нажимайте на предметы, чтобы скрыть их, или на скрытый предмет, чтобы снова показать. Нажмите на глаз ещё раз, когда закончите.",
+	["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Перетащите предмет на другой предмет той же группы: у левого края он встанет между ними (золотая линия), иначе они поменяются местами (золотая рамка).",
 }

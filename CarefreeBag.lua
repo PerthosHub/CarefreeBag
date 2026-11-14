@@ -231,6 +231,17 @@ NL["Off = this group is not used; its items go to Other."] = "Uit = deze groep w
 NL["On/off"] = "Aan/uit"
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["Sort: %s"] = "Sortering: %s"
+NL["type"] = "soort"
+NL["stack price"] = "stackprijs"
+NL["newest last"] = "nieuwste als laatst"
+NL["manual"] = "handmatig"
+NL["Sorting"] = "Sortering"
+NL["Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."] = "Klik om te wisselen: soort, stackprijs, nieuwste als laatst of handmatig. Bij handmatig sleep je items in je eigen volgorde."
+NL["Auto mail to: %s"] = "Automatisch mailen naar: %s"
+NL["Sorting set to manual for this group."] = "Sortering van deze groep staat nu op handmatig."
+NL["Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."] = "Klik items aan om ze te verbergen, of een verborgen item om het weer te tonen. Klik nog een keer op het oog als je klaar bent."
+NL["Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."] = "Sleep een item op een ander item in dezelfde groep: op de linkerrand komt het ertussen (gouden streep), ergens anders wisselen ze om (gouden rand)."
 NL["Food & Drink"] = "Eten & drinken"
 NL["Potions & Elixirs"] = "Potions & elixirs"
 NL["Scrolls"] = "Scrolls"
@@ -386,21 +397,26 @@ end
 
 -- Wat jij versleept onthoudt CarefreeBag per karakter. Van voor 1.1.0 was dat
 -- één lijst voor het hele account (DB.assign); elk karakter begint met een kopie daarvan.
-local assignCache
-local function Assign()
-	if assignCache then return assignCache end
-	local name = UnitName and UnitName("player")
-	if not name or name == "" or name == UNKNOWNOBJECT then return DB.assign or {} end
-	local realm = (GetRealmName and GetRealmName()) or ""
-	local key = name .. "-" .. realm
-	local ch = DB.chars[key]
+local charKey
+local function CharEntry()
+	if not charKey then
+		local name = UnitName and UnitName("player")
+		if not name or name == "" or name == UNKNOWNOBJECT then return nil end
+		charKey = name .. "-" .. ((GetRealmName and GetRealmName()) or "")
+	end
+	local ch = DB.chars[charKey]
 	if not ch then
 		ch = { assign = {} }
 		for id, k in pairs(DB.assign or {}) do ch.assign[id] = k end
-		DB.chars[key] = ch
+		DB.chars[charKey] = ch
 	end
-	assignCache = ch.assign
-	return assignCache
+	ch.seen = ch.seen or {}
+	ch.manual = ch.manual or {}
+	return ch
+end
+local function Assign()
+	local ch = CharEntry()
+	return ch and ch.assign or (DB.assign or {})
 end
 
 local function CatByKey(key)
@@ -632,11 +648,103 @@ local function CursorItemID()
 	if kind == "item" then return id end
 end
 
+-- Sorteren per categorie: soort, stapelprijs, nieuwste als laatst of handmatig.
+local SORTS = { "type", "value", "newest", "manual" }
+local SORT_NAME = { type = "type", value = "stack price", newest = "newest last", manual = "manual" }
+local function SortMode(sec)
+	DB.sort = DB.sort or {}
+	return DB.sort[sec.key] or (sec.byValue and "value" or "type")
+end
+
+-- Per karakter: wanneer is een item voor het eerst gezien, en jouw eigen volgorde.
+local function CharData()
+	return CharEntry() or { seen = {}, manual = {} }
+end
+
 local SetHidden -- vooruit
+local lastOrder = {} -- per groep: de item-ID's in de volgorde zoals ze nu in beeld staan
+
+-- Komt het item op de cursor uit dezelfde groep als deze tegel?
+local function ReorderTarget(b)
+	local id = CursorItemID()
+	local g = b.group
+	if not id or not g or id == g.itemID or not b.secKey then return false end
+	for _, e in ipairs(lastItems or {}) do
+		if e.itemID == id then return SectionOf(e) == b.secKey end
+	end
+	return false
+end
+
+local function Reorder(b)
+	if not ReorderTarget(b) then return false end
+	local id, target, key = CursorItemID(), b.group.itemID, b.secKey
+	local list = {}
+	for _, v in ipairs(lastOrder[key] or {}) do list[#list + 1] = v end
+	local from, to
+	for i, v in ipairs(list) do
+		if v == id and not from then from = i end
+		if v == target and not to then to = i end
+	end
+	if not from or not to then return false end
+	if (b.dropMode or "swap") == "swap" then
+		list[from], list[to] = list[to], list[from]
+	else
+		table.remove(list, from)
+		if from < to then to = to - 1 end
+		table.insert(list, to, id)
+	end
+	DB.sort = DB.sort or {}
+	if DB.sort[key] ~= "manual" then
+		DB.sort[key] = "manual"
+		Print(T("Sorting set to manual for this group."))
+	end
+	CharData().manual[key] = list
+	Log("reorder " .. key .. ": " .. id .. " " .. (b.dropMode or "swap") .. " " .. target)
+	ClearCursor()
+	b.insertMark:Hide(); b.swapMark:Hide(); b.watch:Hide()
+	ResetOrder(); Refresh()
+	return true
+end
 
 local function NewItemButton(i)
 	local b = CreateFrame("ItemButton", "CarefreeBagItem" .. i, main.content, "ContainerFrameItemButtonTemplate")
 	b:SetSize(TILE, TILE)
+	-- Volgorde aanpassen: sleep een item op een ander item in dezelfde groep.
+	-- Links op de tegel = ertussen zetten (gouden streep), rest = omwisselen (gouden rand).
+	b.insertMark = b:CreateTexture(nil, "OVERLAY", nil, 7)
+	b.insertMark:SetColorTexture(1, 0.82, 0, 1)
+	b.insertMark:SetPoint("TOPLEFT", b, "TOPLEFT", -3, 2)
+	b.insertMark:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", -3, -2)
+	b.insertMark:SetWidth(3)
+	b.insertMark:Hide()
+	b.swapMark = b:CreateTexture(nil, "OVERLAY", nil, 7)
+	b.swapMark:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+	b.swapMark:SetBlendMode("ADD")
+	b.swapMark:SetVertexColor(1, 0.82, 0)
+	b.swapMark:SetPoint("CENTER")
+	b.swapMark:SetSize(TILE * 1.8, TILE * 1.8)
+	b.swapMark:Hide()
+	b.watch = CreateFrame("Frame", nil, b)
+	b.watch:Hide()
+	b.watch:SetScript("OnUpdate", function()
+		if not CursorHasItem() or not b:IsMouseOver() then
+			b.insertMark:Hide(); b.swapMark:Hide(); b.dropMode = nil; b.watch:Hide(); return
+		end
+		local x = GetCursorPosition() / (b:GetEffectiveScale() or 1)
+		local left, w = b:GetLeft() or 0, b:GetWidth() or TILE
+		b.dropMode = ((x - left) / w < 0.35) and "insert" or "swap"
+		b.insertMark:SetShown(b.dropMode == "insert")
+		b.swapMark:SetShown(b.dropMode == "swap")
+	end)
+	b:HookScript("OnEnter", function(self)
+		if ReorderTarget(self) then self.watch:Show() end
+	end)
+	b:HookScript("OnLeave", function(self) self.insertMark:Hide(); self.swapMark:Hide(); self.watch:Hide() end)
+	local origDrag = b:GetScript("OnReceiveDrag")
+	b:SetScript("OnReceiveDrag", function(self, ...)
+		if Reorder(self) then return end
+		if origDrag then return origDrag(self, ...) end
+	end)
 	b:HookScript("OnEnter", function(self)
 		local g = self.group
 		local each = g and AHPrice(g.link)
@@ -686,26 +794,61 @@ local function GetItemButton()
 	return b
 end
 
+local MAIL_ICON = "|TInterface\\Minimap\\Tracking\\Mailbox:14:14|t"
+
 local function GetHeader()
 	usedHeaders = usedHeaders + 1
 	local h = headerPool[usedHeaders]
 	if not h then
 		h = CreateFrame("Frame", nil, main.content)
-		h:SetSize(200, 14)
+		h:SetSize(200, 16)
 		h:EnableMouse(true)
+		-- [-] / [+]: groep in- of uitklappen
+		h.toggle = CreateFrame("Button", nil, h)
+		h.toggle:SetSize(14, 14)
+		h.toggle:SetPoint("LEFT", h, "LEFT", 0, 0)
+		h.toggle:SetHighlightTexture("Interface\\Buttons\\UI-PlusButton-Hilight", "ADD")
+		h.toggle:SetScript("OnClick", function()
+			if not h.key then return end
+			DB.collapsed = DB.collapsed or {}
+			DB.collapsed[h.key] = not DB.collapsed[h.key] or nil
+			Refresh()
+		end)
 		h.fs = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		h.fs:SetPoint("LEFT", h, "LEFT", 0, 0)
+		h.fs:SetPoint("LEFT", h, "LEFT", 18, 0)
 		h.fs:SetJustifyH("LEFT")
-		h.SetText = function(self, t)
-			self.fs:SetText(t)
-			local w = self.fs.GetStringWidth and self.fs:GetStringWidth()
-			self:SetWidth(math.max(40, (w or 200) + 4))
-		end
+		h.SetText = function(self, t) self.fs:SetText(t) end
+		-- Sorteerknop rechts: klik = volgende manier van sorteren
+		h.sort = CreateFrame("Button", nil, h)
+		h.sort:SetSize(80, 14)
+		h.sort:SetPoint("RIGHT", h, "RIGHT", 0, 0)
+		h.sort.fs = h.sort:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		h.sort.fs:SetPoint("RIGHT")
+		h.sort:SetScript("OnClick", function()
+			if not h.sec then return end
+			local cur, nxt = SortMode(h.sec), SORTS[1]
+			for i, m in ipairs(SORTS) do if m == cur then nxt = SORTS[i % #SORTS + 1] end end
+			DB.sort[h.sec.key] = nxt
+			Log("sort " .. h.sec.key .. ": " .. nxt)
+			ResetOrder(); Refresh()
+		end)
+		h.sort:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:AddLine(T("Sorting"))
+			GameTooltip:AddLine(T("Click to switch: type, stack price, newest last or manual. In manual you drag items into your own order."), 1, 1, 1, true)
+			GameTooltip:AddLine(T("Drag an item onto another item in the same group: on the left edge it goes in between (gold line), elsewhere they swap (gold border)."), 0.8, 0.8, 0.8, true)
+			GameTooltip:Show()
+		end)
+		h.sort:SetScript("OnLeave", function() GameTooltip:Hide() end)
 		h:SetScript("OnEnter", function(self)
 			if not self.rules then return end
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 			GameTooltip:AddLine(self.ruleTitle or "")
 			GameTooltip:AddLine(self.rules, 1, 1, 1, true)
+			if self.sec and self.sec.mailTo then
+				GameTooltip:AddLine(" ")
+				GameTooltip:AddLine(MAIL_ICON .. " " .. T("Auto mail to: %s"):format(self.sec.mailTo), 0.4, 0.8, 1, true)
+			end
 			GameTooltip:Show()
 		end)
 		h:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -863,8 +1006,7 @@ local function FixedSection(key)
 		return { key = "keys", title = T("Keys"), plus = false, fixed = true,
 			rules = T("Fixed group. Everything on your keyring.") }
 	elseif key == "boe" then
-		local to = (DB.boeMail ~= "" and ("  |cff888888(" .. T("mail: %s"):format(DB.boeMail) .. ")|r") or "")
-		return { key = "boe", title = "BoE" .. to, plus = false, fixed = true,
+		return { key = "boe", title = "BoE", mailTo = (DB.boeMail ~= "" and DB.boeMail or nil), plus = false, fixed = true,
 			rules = T("Fixed group. Unbound Bind on Equip items, green and better. Mailed to the BoE address from the options, if you set one.") }
 	elseif key == "grey" then
 		return { key = "grey", title = "Auto Sell" .. ((DB.autoSell or not DB.autoSellAsked) and "" or ("  |cff888888(" .. T("selling is off") .. ")|r")), plus = true, byValue = true, fixed = true,
@@ -886,8 +1028,8 @@ local function SectionList()
 		else
 			local c = CatByKey(key)
 			local title = c.name
-			if c.mailTo and c.mailTo ~= "" then title = title .. "  |cff888888(" .. T("mail: %s"):format(c.mailTo) .. ")|r" end
 			list[#list + 1] = { key = c.key, title = title, plus = true, byValue = (c.mailTo and c.mailTo ~= "") and "ah" or nil,
+				mailTo = (c.mailTo and c.mailTo ~= "") and c.mailTo or nil,
 				tip = T("Drop an item here: that kind of item belongs to %s from now on."):format(c.name),
 				rules = c.preset and (T(PRESET[c.preset].tip) .. " " .. T("Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."))
 					or T("Your category. Drop items on its + slot. Rename it, reorder it or give it a mail address in the options.") }
@@ -971,16 +1113,44 @@ local function Layout()
 		if not g.rep or e.count < g.rep.count then g.rep = e end
 	end
 
+	-- Nieuwste als laatst: onthoud wanneer een item voor het eerst in je tassen kwam.
+	do
+		local ch, now, present = CharData(), (time and time()) or 0, {}
+		for _, e in ipairs(items) do
+			present[e.itemID] = true
+			if not ch.seen[e.itemID] then ch.seen[e.itemID] = now end
+		end
+		for id in pairs(ch.seen) do if not present[id] then ch.seen[id] = nil end end
+	end
+
 	-- 2. Per sectie sorteren, of de vaste volgorde aanhouden zolang het venster open is.
 	local full = {}
 	for _, sec in ipairs(SectionList()) do
 		local s = bySection[sec.key]
 		local groups = s and s.groups or {}
 		local field = (sec.byValue == "ah") and "ahValue" or "value"
-		if sec.byValue then
+		local mode = SortMode(sec)
+		local ch = CharData()
+		local function newer(a, b)
+			local ta, tb = ch.seen[a.itemID] or 0, ch.seen[b.itemID] or 0
+			if ta ~= tb then return ta < tb end
+			return a.name < b.name
+		end
+		if mode == "value" then
 			table.sort(groups, function(a, b)
 				if a[field] ~= b[field] then return a[field] > b[field] end
 				return a.name < b.name
+			end)
+		elseif mode == "newest" then
+			table.sort(groups, newer)
+		elseif mode == "manual" then
+			local pos = {}
+			for i, id in ipairs(ch.manual[sec.key] or {}) do pos[id] = pos[id] or i end
+			table.sort(groups, function(a, b)
+				local pa, pb = pos[a.itemID], pos[b.itemID]
+				if pa and pb then if pa ~= pb then return pa < pb end return a.key < b.key end
+				if pa or pb then return pa ~= nil end
+				return newer(a, b)
 			end)
 		else
 			table.sort(groups, SortGroups)
@@ -1003,8 +1173,11 @@ local function Layout()
 			frozen[sec.key] = order
 		end
 		local title = sec.title
+		DB.collapsed = DB.collapsed or {}
+		if DB.collapsed[sec.key] then
+			full[#full + 1] = { sec = sec, cells = {}, title = title, collapsed = true, n = #groups }
 		-- Ook een groep met alleen nog gaten blijft staan tot je de tassen sluit.
-		if #cells > 0 then
+		elseif #cells > 0 then
 			full[#full + 1] = { sec = sec, cells = cells, title = title }
 		elseif sec.plus then
 			-- Lege groep: gewone regel met alleen het lege +vakje.
@@ -1018,14 +1191,14 @@ local function Layout()
 	local function Measure(cols)
 		local h = 8
 		for _, f in ipairs(full) do
-			local n = #f.cells + (f.sec.plus and 1 or 0)
-			h = h + 16 + math.ceil(n / cols) * (TILE + GAP) + 6
+			local n = f.collapsed and 0 or (#f.cells + (f.sec.plus and 1 or 0))
+			h = h + 18 + math.ceil(n / cols) * (TILE + GAP) + 6
 		end
 		return h
 	end
 
 	-- 5. Kolommen kiezen: eerst breder (tot het maximum), dan pas scrollen.
-	local top = showHidden and 90 or 74
+	local top = showHidden and 78 or 62
 	local screenH = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 768
 	if screenH <= 0 then screenH = 768 end
 	local maxView = math.floor(screenH * 0.8) - top - FOOTER_H - PAD
@@ -1048,23 +1221,36 @@ local function Layout()
 		local h = GetHeader()
 		h:ClearAllPoints()
 		h:SetPoint("TOPLEFT", main.content, "TOPLEFT", 0, y)
-		h:SetText(f.sec.fixed and (BLUE .. f.title .. "|r") or f.title)
+		h:SetWidth(width)
+		h.key, h.sec = f.sec.key, f.sec
+		local t = f.sec.fixed and (BLUE .. f.title .. "|r") or f.title
+		if f.sec.mailTo then t = t .. "  |cff888888Auto|r " .. MAIL_ICON end
+		if f.collapsed and f.n > 0 then t = t .. "  |cff888888(" .. f.n .. ")|r" end
+		h:SetText(t)
+		h.toggle:SetNormalTexture(f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
+		h.sort:SetShown(not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys")
+		h.sort.fs:SetText("|cff888888" .. T("Sort: %s"):format(T(SORT_NAME[SortMode(f.sec)])) .. "|r")
+		h.sort:SetWidth((h.sort.fs.GetStringWidth and h.sort.fs:GetStringWidth() or 80) + 4)
 		h.rules, h.ruleTitle = f.sec.rules, StripColors(f.sec.title)
-		y = y - 16
+		y = y - 18
 		local col = 0
-		for _, cell in ipairs(f.cells) do
+		local ids = {}
+		lastOrder[f.sec.key] = ids
+		for _, cell in ipairs(f.collapsed and {} or f.cells) do
 			local b
 			if cell.gap then
 				b = GetGap()
 			else
 				b = GetItemButton()
 				SetupItemButton(b, cell)
+				b.secKey = f.sec.key
+				ids[#ids + 1] = cell.itemID
 			end
 			place(b, col)
 			col = col + 1
 			if col == cols then col = 0; y = y - (TILE + GAP) end
 		end
-		if f.sec.plus then
+		if f.sec.plus and not f.collapsed then
 			local p = GetPlus()
 			p.section = f.sec.key
 			p.tipTitle = T("Empty slot: %s"):format(StripColors(f.sec.title))
@@ -1093,8 +1279,6 @@ local function Layout()
 	main.scrollHint:SetShown(main.scrollMax > 0)
 
 	-- Voetregel: vrije vakjes + goud, altijd onderaan in beeld.
-	main.free.text:SetText(#free)
-	main.free.total = total
 	local used = math.max(0, total - #free)
 	local frac = total > 0 and used / total or 0
 	main.freeBar:SetValue(frac)
@@ -1105,7 +1289,8 @@ local function Layout()
 	main.freeBar.free, main.freeBar.total = #free, total
 	main.money:SetText(GetMoneyString and GetMoneyString(GetMoney(), true) or tostring(GetMoney()))
 
-	main.hiddenBtn:SetText(showHidden and T("Done") or (T("Hide items") .. (hiddenCount > 0 and (" (" .. hiddenCount .. ")") or "")))
+	main.hiddenBtn.count:SetText(hiddenCount > 0 and hiddenCount or "")
+	if showHidden then main.hiddenBtn:LockHighlight() else main.hiddenBtn:UnlockHighlight() end
 	main.hint:SetShown(showHidden)
 
 	main:SetSize(width + 2 * PAD, top + viewH + FOOTER_H + PAD)
@@ -1164,23 +1349,40 @@ local function BuildMain()
 		if PlaySound and SOUNDKIT then pcall(PlaySound, SOUNDKIT.IG_BACKPACK_CLOSE) end
 	end)
 
-	main.hiddenBtn = MakeButton(main, T("Hide items"), 120)
-	main.hiddenBtn:SetPoint("TOPLEFT", main, "TOPLEFT", PAD, -22)
-	main.hiddenBtn:SetScript("OnClick", function() showHidden = not showHidden; Refresh() end)
-	Tooltip(main.hiddenBtn, T("Hide items"), T("Click items to hide them, or click a hidden item to show it again. Click Done when you are finished."))
-
-
-	main.optBtn = MakeButton(main, T("Options"), 70)
-	main.optBtn:SetPoint("LEFT", main.hiddenBtn, "RIGHT", 4, 0)
+	-- Twee icoonknoppen rechtsboven: oog met streep (verbergen) en tandwiel (opties).
+	local function HasAtlas(a) return C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(a) ~= nil end
+	local function IconButton(name, atlas, fallback)
+		local b = CreateFrame("Button", name, main)
+		b:SetSize(22, 22)
+		b.icon = b:CreateTexture(nil, "ARTWORK")
+		b.icon:SetAllPoints(b)
+		if HasAtlas(atlas) then b.icon:SetAtlas(atlas) else b.icon:SetTexture(fallback) end
+		b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+		return b
+	end
+	main.optBtn = IconButton("CarefreeBagOptionsButton", "questlog-icon-setting", "Interface\\Icons\\Trade_Engineering")
+	main.optBtn:SetPoint("TOPRIGHT", main, "TOPRIGHT", -PAD, -33)
 	main.optBtn:SetScript("OnClick", function() ToggleConfig() end)
+	Tooltip(main.optBtn, T("Options"))
+	main.hiddenBtn = IconButton("CarefreeBagHideButton", "friends-icon-eye", "Interface\\Icons\\Spell_Shadow_EvilEye")
+	main.hiddenBtn:SetPoint("RIGHT", main.optBtn, "LEFT", -4, 0)
+	main.hiddenBtn.slash = main.hiddenBtn:CreateTexture(nil, "OVERLAY")
+	main.hiddenBtn.slash:SetColorTexture(0.9, 0.15, 0.1, 1)
+	main.hiddenBtn.slash:SetSize(26, 2)
+	main.hiddenBtn.slash:SetPoint("CENTER")
+	if main.hiddenBtn.slash.SetRotation then main.hiddenBtn.slash:SetRotation(math.rad(45)) end
+	main.hiddenBtn.count = main.hiddenBtn:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+	main.hiddenBtn.count:SetPoint("BOTTOMRIGHT", main.hiddenBtn, "BOTTOMRIGHT", 2, -2)
+	main.hiddenBtn:SetScript("OnClick", function() showHidden = not showHidden; Refresh() end)
+	Tooltip(main.hiddenBtn, T("Hide items"), T("Click items to hide them, or a hidden item to show it again. Click the eye again when you are done."))
 
 	-- Zoekbalk: typ een naam, alles wat niet past wordt grijs.
 	local okS, sb = pcall(CreateFrame, "EditBox", "CarefreeBagSearch", main, "SearchBoxTemplate")
 	if not okS then sb = CreateFrame("EditBox", "CarefreeBagSearch", main, "InputBoxTemplate") end
 	sb:SetSize(200, 20)
 	sb:SetAutoFocus(false)
-	sb:SetPoint("TOPLEFT", main, "TOPLEFT", PAD + 6, -48)
-	sb:SetPoint("RIGHT", main, "RIGHT", -PAD, 0)
+	sb:SetPoint("TOPLEFT", main, "TOPLEFT", PAD + 6, -34)
+	sb:SetPoint("RIGHT", main.hiddenBtn, "LEFT", -8, 0)
 	sb:HookScript("OnTextChanged", function(self)
 		local t = (self:GetText() or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
 		if t ~= searchText then searchText = t; Refresh() end
@@ -1191,13 +1393,13 @@ local function BuildMain()
 	main.search = sb
 
 	main.hint = main:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	main.hint:SetPoint("TOPLEFT", main, "TOPLEFT", PAD, -72)
+	main.hint:SetPoint("TOPLEFT", main, "TOPLEFT", PAD, -60)
 	main.hint:SetText(T("|cffffd100Hiding:|r click an item to hide it or show it again."))
 	main.hint:Hide()
 
 	-- Scrollgebied: alleen nodig als het venster op zijn breedst nog te hoog is.
 	main.scroll = CreateFrame("ScrollFrame", nil, main)
-	main.scroll:SetPoint("TOPLEFT", main, "TOPLEFT", PAD, -74)
+	main.scroll:SetPoint("TOPLEFT", main, "TOPLEFT", PAD, -62)
 	main.scroll:SetSize(100, 100)
 	main.content = CreateFrame("Frame", nil, main.scroll)
 	main.content:SetSize(100, 100)
@@ -1213,28 +1415,10 @@ local function BuildMain()
 	main.scrollHint:SetText(T("scroll for more"))
 	main.scrollHint:Hide()
 
-	-- Vrij-tegel: laat een item hierop vallen = naar het eerste lege vakje.
-	main.free = NewSlotTile(main)
-	main.free:SetPoint("BOTTOMLEFT", main, "BOTTOMLEFT", PAD, PAD - 2)
-	main.free.text:SetTextColor(1, 1, 1)
-	local function dropFree()
-		if not CursorHasItem() then return end
-		local f = FirstFreeSlot()
-		if f then C_Container.PickupContainerItem(f.bag, f.slot) end
-	end
-	main.free:SetScript("OnReceiveDrag", dropFree)
-	main.free:SetScript("OnClick", dropFree)
-	main.free:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine(T("Free slots: %s of %s"):format(self.text:GetText(), tostring(self.total or "?")))
-		GameTooltip:AddLine(T("Drop an item here to put it in an empty slot (for example to split a stack)."), 1, 1, 1, true)
-		GameTooltip:Show()
-	end)
-	main.free:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	-- Balk die laat zien hoe vol je tassen zitten (groen, oranje, rood).
 	local bar = CreateFrame("StatusBar", nil, main)
-	bar:SetSize(120, 12)
-	bar:SetPoint("LEFT", main.free, "RIGHT", 8, 0)
+	bar:SetSize(140, 14)
+	bar:SetPoint("LEFT", main, "BOTTOMLEFT", PAD + 2, PAD - 2 + TILE / 2)
 	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
 	bar:SetMinMaxValues(0, 1)
 	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
