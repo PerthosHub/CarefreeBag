@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Dropdowns (add group, sorting, language) share one style: blue Blizzard buttons, "Custom group" on top, and they close when you click next to them.
+- The alt's name stands out in the Auto mail tooltip.
+
 ## 1.2.2
 - Changing the language now asks to reload the interface (WoW Forever blocks addons from reloading by themselves).
 - One "+ Add group" button: pick a ready-made group or a custom group (green) that learns from what you drag onto it.

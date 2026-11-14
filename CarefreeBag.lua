@@ -780,29 +780,63 @@ local MAIL_ICON = "|TInterface\\Minimap\\Tracking\\Mailbox:14:14|t"
 local CHECK_ICON = "|TInterface\\Buttons\\UI-CheckBox-Check:14:14|t"
 local keepHeader -- na in-/uitklappen: dit kopje moet op dezelfde plek blijven
 
+-- Blauwe knop in Blizzard-stijl: de rode paneelknop, ontkleurd en blauw getint.
+local function TintBlue(b)
+	for _, tex in ipairs({ b.Left, b.Middle, b.Right, b.GetNormalTexture and b:GetNormalTexture() or nil,
+			b.GetPushedTexture and b:GetPushedTexture() or nil }) do
+		if type(tex) == "table" and tex.SetVertexColor then
+			if tex.SetDesaturated then tex:SetDesaturated(true) end
+			tex:SetVertexColor(0.45, 0.7, 1)
+		end
+	end
+end
+
+-- Keuzelijst: zelfde stijl overal; klik je ernaast, dan gaat hij dicht.
+local menuCatcher
+local function NewMenu(name, parent)
+	local m = CreateFrame("Frame", name, parent or UIParent, "BackdropTemplate")
+	m:SetFrameStrata("FULLSCREEN_DIALOG")
+	m:SetClampedToScreen(true)
+	if m.SetBackdrop then
+		m:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
+			insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+		m:SetBackdropColor(0, 0, 0, 0.95)
+	end
+	m:SetScript("OnHide", function() if menuCatcher and menuCatcher.menu == m then menuCatcher:Hide() end end)
+	m:Hide()
+	return m
+end
+local function ShowMenu(m)
+	if not menuCatcher then
+		menuCatcher = CreateFrame("Button", "CarefreeBagMenuCatcher", UIParent)
+		menuCatcher:SetAllPoints(UIParent)
+		menuCatcher:SetFrameStrata("FULLSCREEN")
+		menuCatcher:RegisterForClicks("AnyUp")
+		menuCatcher:SetScript("OnClick", function(self)
+			if self.menu then self.menu:Hide() end
+			self:Hide()
+		end)
+		menuCatcher:Hide()
+	end
+	if menuCatcher.menu and menuCatcher.menu ~= m then menuCatcher.menu:Hide() end
+	menuCatcher.menu = m
+	menuCatcher:Show()
+	m:Show()
+end
+
 -- Keuzelijstje voor sorteren (één lijstje, gedeeld door alle groepen).
 local sortMenu
 local function OpenSortMenu(anchor, sec)
 	if not sec then return end
 	if not sortMenu then
-		sortMenu = CreateFrame("Frame", "CarefreeBagSortMenu", UIParent, "BackdropTemplate")
-		sortMenu:SetFrameStrata("DIALOG")
-		sortMenu:SetClampedToScreen(true)
-		if sortMenu.SetBackdrop then
-			sortMenu:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-				edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
-				insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-			sortMenu:SetBackdropColor(0, 0, 0, 0.95)
-		end
-		sortMenu:SetSize(170, #SORTS * 20 + 10)
+		sortMenu = NewMenu("CarefreeBagSortMenu")
+		sortMenu:SetSize(180, #SORTS * 22 + 8)
 		sortMenu.buttons = {}
 		for i, m in ipairs(SORTS) do
-			local b = CreateFrame("Button", nil, sortMenu)
-			b:SetSize(160, 20)
-			b:SetPoint("TOPLEFT", sortMenu, "TOPLEFT", 5, -5 - (i - 1) * 20)
-			b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-			b.fs = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-			b.fs:SetPoint("LEFT", b, "LEFT", 4, 0)
+			local b = MakeButton(sortMenu, "", 170)
+			b:SetPoint("TOP", sortMenu, "TOP", 0, -4 - (i - 1) * 22)
+			TintBlue(b)
 			b.mode = m
 			b:SetScript("OnClick", function(self)
 				DB.sort = DB.sort or {}
@@ -820,17 +854,17 @@ local function OpenSortMenu(anchor, sec)
 			b:SetScript("OnLeave", function() GameTooltip:Hide() end)
 			sortMenu.buttons[i] = b
 		end
-		sortMenu:Hide()
+		main:HookScript("OnHide", function() sortMenu:Hide() end)
 	end
-	if sortMenu:IsShown() and sortMenu.sec == sec then sortMenu:Hide(); return end
 	sortMenu.sec = sec
 	local cur = SortMode(sec)
 	for _, b in ipairs(sortMenu.buttons) do
-		b.fs:SetText((b.mode == cur and CHECK_ICON or "    ") .. " " .. T(SORT_NAME[b.mode]))
+		-- de huidige keuze met een vinkje
+		b:SetText((b.mode == cur and (CHECK_ICON .. " ") or "") .. T(SORT_NAME[b.mode]))
 	end
 	sortMenu:ClearAllPoints()
 	sortMenu:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -2)
-	sortMenu:Show()
+	ShowMenu(sortMenu)
 end
 
 local function GetHeader()
@@ -864,7 +898,7 @@ local function GetHeader()
 		h.mail:SetScript("OnEnter", function(self)
 			if not (h.sec and h.sec.mailTo) then return end
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:AddLine(T("These items are mailed to %s when you open a mailbox."):format(h.sec.mailTo), 1, 1, 1, true)
+			GameTooltip:AddLine(T("These items are mailed to %s when you open a mailbox."):format("|cffffd100" .. h.sec.mailTo .. "|r"), 1, 1, 1, true)
 			GameTooltip:Show()
 		end)
 		h.mail:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -2086,20 +2120,13 @@ local function BuildConfig()
 	langBtn:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Down")
 	langBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
 	-- keuzelijstje met alle talen; kiezen = opslaan + interface herladen
-	local langMenu = CreateFrame("Frame", "CarefreeBagLangMenu", config, "BackdropTemplate")
-	langMenu:SetSize(150, #LANGS * 22 + 8)
+	local langMenu = NewMenu("CarefreeBagLangMenu", config)
+	langMenu:SetSize(160, #LANGS * 22 + 8)
 	langMenu:SetPoint("TOPRIGHT", langBtn, "BOTTOMRIGHT", 0, -2)
-	langMenu:SetFrameStrata("DIALOG")
-	if langMenu.SetBackdrop then
-		langMenu:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
-			insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-		langMenu:SetBackdropColor(0, 0, 0, 0.95)
-	end
-	langMenu:Hide()
 	for i, l in ipairs(LANGS) do
-		local b = MakeButton(langMenu, l[2], 140)
+		local b = MakeButton(langMenu, l[2], 150)
 		b:SetPoint("TOP", langMenu, "TOP", 0, -4 - (i - 1) * 22)
+		TintBlue(b)
 		b.langCode = l[1]
 		b:SetScript("OnClick", function()
 			langMenu:Hide()
@@ -2110,7 +2137,7 @@ local function BuildConfig()
 		end)
 	end
 	langBtn:SetScript("OnClick", function()
-		if langMenu:IsShown() then langMenu:Hide() else langMenu:Show() end
+		ShowMenu(langMenu)
 	end)
 	Tooltip(langBtn, "Language: " .. LangName(DB.lang))
 	y = y - 34
@@ -2293,19 +2320,10 @@ local function BuildConfig()
 	config.newEdit:SetScript("OnEnterPressed", add)
 	config.addBtn:SetScript("OnClick", add)
 
-	local pm = CreateFrame("Frame", "CarefreeBagPresetMenu", config, "BackdropTemplate")
-	pm:SetFrameStrata("DIALOG")
-	if pm.SetBackdrop then
-		pm:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
-			insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-		pm:SetBackdropColor(0, 0, 0, 0.95)
-	end
-	pm:Hide()
+	local pm = NewMenu("CarefreeBagPresetMenu", config)
 	pm.buttons = {}
-	local entries = {}
+	local entries = { { id = "own", name = "Custom group", tip = "Name it yourself. It learns: every item you drag onto it goes there from now on." } }
 	for _, p in ipairs(PRESETS) do entries[#entries + 1] = { id = p.id, name = p.name, tip = p.tip } end
-	entries[#entries + 1] = { id = "own", name = "Custom group", tip = "Name it yourself. It learns: every item you drag onto it goes there from now on." }
 	for i, en in ipairs(entries) do
 		local b = MakeButton(pm, T(en.name), 170)
 		b.presetID = en.id
@@ -2321,31 +2339,26 @@ local function BuildConfig()
 			end
 		end)
 		Tooltip(b, T(en.name), T(en.tip))
-		if en.id == "own" then
-			-- Eigen groep valt op: groen in plaats van rood, met wat ruimte erboven.
-			for _, tex in ipairs({ b.Left, b.Middle, b.Right, b.GetNormalTexture and b:GetNormalTexture() or nil }) do
-				if type(tex) == "table" and tex.SetVertexColor then tex:SetVertexColor(0.35, 0.85, 0.35) end
-			end
-			b.gap = 6
-		end
+		if en.id ~= "own" then TintBlue(b) end -- kant-en-klaar = blauw, eigen groep = rood
+		if en.id == "own" then b.after = 6 end    -- wat ruimte onder de eigen groep
 		pm.buttons[i] = b
 	end
 	config.presetMenu = pm
 	config.pickBtn:SetScript("OnClick", function()
-		if pm:IsShown() then pm:Hide(); return end
 		local free = {}
 		for _, p in ipairs(FreePresets()) do free[p.id] = true end
-		local n = 0
+		local n, extra = 0, 0
 		for _, b in ipairs(pm.buttons) do
 			b:ClearAllPoints()
 			if b.presetID == "own" or free[b.presetID] then
-				b:SetPoint("TOP", pm, "TOP", 0, -4 - n * 22 - (b.gap or 0)); b:Show(); n = n + 1
+				b:SetPoint("TOP", pm, "TOP", 0, -4 - n * 22 - extra); b:Show(); n = n + 1
+				extra = extra + (b.after or 0)
 			else b:Hide() end
 		end
-		pm:SetSize(180, n * 22 + 14)
+		pm:SetSize(180, n * 22 + 8 + extra)
 		pm:ClearAllPoints()
 		pm:SetPoint("TOPLEFT", config.pickBtn, "BOTTOMLEFT", 0, -2)
-		pm:Show()
+		ShowMenu(pm)
 	end)
 
 	-- Alles hieronder schuift mee met het aantal groepen.
