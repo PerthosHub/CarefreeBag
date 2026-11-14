@@ -122,6 +122,13 @@ NL["grey"] = "grijs"
 
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["Type /reload to switch language."] = "Typ /reload om van taal te wisselen."
+NL["Reload the interface to switch language."] = "Herlaad de interface om van taal te wisselen."
+NL["Reload"] = "Herladen"
+NL["Later"] = "Later"
+NL["Add group"] = "Groep toevoegen"
+NL["Custom group"] = "Eigen groep"
+NL["Name it yourself. It learns: every item you drag onto it goes there from now on."] = "Je geeft hem zelf een naam. Hij leert: elk item dat je erheen sleept, komt hier voortaan."
 NL["Stack price"] = "Stackprijs"
 NL["Newest last"] = "Nieuwste als laatst"
 NL["Manual"] = "Handmatig"
@@ -130,8 +137,6 @@ NL["What you got last is at the end."] = "Wat je het laatst kreeg staat achteraa
 NL["Your own order: drag items onto each other."] = "Je eigen volgorde: sleep items op elkaar."
 NL["Sort buttons in the bag"] = "Sorteerknopjes in de tas"
 NL["Choose per group how it is sorted."] = "Kies per groep hoe hij gesorteerd wordt."
-NL["Own category"] = "Eigen categorie"
-NL["Fills only with what you drag onto it."] = "Bevat alleen wat je erheen sleept."
 NL["Drop an item: it goes here from now on."] = "Sleep een item hierheen: het komt hier voortaan."
 NL["Quest items. Never sold or mailed."] = "Quest-items. Nooit verkocht of gemaild."
 NL["Your keyring."] = "Je keyring."
@@ -1608,6 +1613,47 @@ end
 ---------------------------------------------------------------------------
 
 local UpdateMinimapIcon, RefreshConfig, mailPanel -- vooruit
+local AskReload
+
+-- Herladen mag een addon in Forever niet zelf (ReloadUI wordt geblokkeerd).
+-- Daarom een los venstertje met een beveiligde knop die de macro /reload uitvoert.
+local reloadPrompt
+AskReload = function()
+	if InCombatLockdown() then Print(T("Type /reload to switch language.")); return end
+	if not reloadPrompt then
+		local f = CreateFrame("Frame", "CarefreeBagReloadPrompt", UIParent, "BackdropTemplate")
+		f:SetSize(280, 96)
+		f:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
+		f:SetFrameStrata("DIALOG")
+		if f.SetBackdrop then
+			f:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+				edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", edgeSize = 24,
+				insets = { left = 6, right = 6, top = 6, bottom = 6 } })
+		end
+		f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+		f.text:SetPoint("TOP", f, "TOP", 0, -18)
+		f.text:SetWidth(250)
+		local ok, rb = pcall(CreateFrame, "Button", "CarefreeBagReloadButton", f, "SecureActionButtonTemplate, UIPanelButtonTemplate")
+		if not ok then rb = CreateFrame("Button", "CarefreeBagReloadButton", f, "UIPanelButtonTemplate") end
+		rb:SetSize(110, 22)
+		rb:SetPoint("BOTTOMRIGHT", f, "BOTTOM", -4, 16)
+		rb:RegisterForClicks("AnyUp", "AnyDown")
+		rb:SetAttribute("type", "macro")
+		rb:SetAttribute("macrotext", "/reload")
+		f.reload = rb
+		local later = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+		later:SetSize(110, 22)
+		later:SetPoint("BOTTOMLEFT", f, "BOTTOM", 4, 16)
+		later:SetScript("OnClick", function() f:Hide() end)
+		f.later = later
+		f:Hide()
+		reloadPrompt = f
+	end
+	reloadPrompt.text:SetText(T("Reload the interface to switch language."))
+	reloadPrompt.reload:SetText(T("Reload"))
+	reloadPrompt.later:SetText(T("Later"))
+	reloadPrompt:Show()
+end
 
 local function SetEnabled(v)
 	DB.enabled = v and true or false
@@ -2060,7 +2106,7 @@ local function BuildConfig()
 			if DB.lang == l[1] then return end
 			DB.lang = l[1]
 			Log("language: " .. DB.lang)
-			ReloadUI()
+			AskReload()
 		end)
 	end
 	langBtn:SetScript("OnClick", function()
@@ -2203,11 +2249,11 @@ local function BuildConfig()
 		catRows[i] = r
 	end
 
-	-- Toevoegen: links een keuzeveld met de kant-en-klare categorieën en "Eigen categorie".
-	-- Kies je Eigen categorie, dan verschijnt een naamveld.
-	config.choice = nil -- preset-id, of "own"
-	config.pickBtn = MakeButton(config, "", 160)
-	config.newEdit = NewEdit(config, 110)
+	-- Groep toevoegen: één knop met een lijstje. Kant-en-klaar = direct toegevoegd;
+	-- Custom group = je typt een naam en klikt op Toevoegen.
+	config.choice = nil
+	config.pickBtn = MakeButton(config, "+ " .. T("Add group"), 160)
+	config.newEdit = NewEdit(config, 130)
 	config.addBtn = MakeButton(config, T("Add"), 80)
 	local function FreePresets()
 		local list = {}
@@ -2219,31 +2265,29 @@ local function BuildConfig()
 		return list
 	end
 	local function ShowChoice()
-		local free = FreePresets()
-		local ok = config.choice == "own"
-		for _, p in ipairs(free) do if p.id == config.choice then ok = true end end
-		if not ok then config.choice = free[1] and free[1].id or "own" end
-		local label = config.choice == "own" and T("Own category") or T(PRESET[config.choice].name)
-		config.pickBtn:SetText(label .. " v")
-		config.newEdit:SetShown(config.choice == "own")
+		local own = config.choice == "own"
+		config.newEdit:SetShown(own)
+		config.addBtn:SetShown(own)
 	end
 	config.ShowChoice = ShowChoice
+	local function AddPreset(id)
+		local p = PRESET[id]
+		if not p then return end
+		if #DB.cats >= 12 then Print(T("at most 12 categories.")); return end
+		local key = p.id
+		if CatByKey(key) then key = NewCatKey("p" .. p.id) end
+		DB.cats[#DB.cats + 1] = { key = key, preset = p.id, name = T(p.name) }
+		Log("preset added: " .. p.id)
+		ResetOrder(); Refresh(); RefreshConfig()
+	end
 	local function add()
 		if #DB.cats >= 12 then Print(T("at most 12 categories.")); return end
-		if config.choice == "own" then
-			local name = Trim(config.newEdit:GetText())
-			if name == "" then config.newEdit:SetFocus(); return end
-			DB.cats[#DB.cats + 1] = { key = NewCatKey(name), name = name }
-			config.newEdit:SetText("")
-			config.newEdit:ClearFocus()
-		else
-			local p = PRESET[config.choice]
-			if not p then return end
-			local key = p.id
-			if CatByKey(key) then key = NewCatKey("p" .. p.id) end
-			DB.cats[#DB.cats + 1] = { key = key, preset = p.id, name = T(p.name) }
-			Log("preset added: " .. p.id)
-		end
+		local name = Trim(config.newEdit:GetText())
+		if name == "" then config.newEdit:SetFocus(); return end
+		DB.cats[#DB.cats + 1] = { key = NewCatKey(name), name = name }
+		config.newEdit:SetText("")
+		config.newEdit:ClearFocus()
+		config.choice = nil
 		ResetOrder(); Refresh(); RefreshConfig()
 	end
 	config.newEdit:SetScript("OnEnterPressed", add)
@@ -2261,15 +2305,20 @@ local function BuildConfig()
 	pm.buttons = {}
 	local entries = {}
 	for _, p in ipairs(PRESETS) do entries[#entries + 1] = { id = p.id, name = p.name, tip = p.tip } end
-	entries[#entries + 1] = { id = "own", name = "Own category", tip = "Fills only with what you drag onto it." }
+	entries[#entries + 1] = { id = "own", name = "Custom group", tip = "Name it yourself. It learns: every item you drag onto it goes there from now on." }
 	for i, en in ipairs(entries) do
-		local b = MakeButton(pm, T(en.name), 150)
+		local b = MakeButton(pm, T(en.name), 170)
 		b.presetID = en.id
 		b:SetScript("OnClick", function()
 			pm:Hide()
-			config.choice = en.id
-			RefreshConfig()
-			if en.id == "own" then config.newEdit:SetFocus() end
+			if en.id == "own" then
+				config.choice = "own"
+				RefreshConfig()
+				config.newEdit:SetFocus()
+			else
+				config.choice = nil
+				AddPreset(en.id)
+			end
 		end)
 		Tooltip(b, T(en.name), T(en.tip))
 		pm.buttons[i] = b
@@ -2286,7 +2335,7 @@ local function BuildConfig()
 				b:SetPoint("TOP", pm, "TOP", 0, -4 - n * 22); b:Show(); n = n + 1
 			else b:Hide() end
 		end
-		pm:SetSize(160, n * 22 + 8)
+		pm:SetSize(180, n * 22 + 8)
 		pm:ClearAllPoints()
 		pm:SetPoint("TOPLEFT", config.pickBtn, "BOTTOMLEFT", 0, -2)
 		pm:Show()
@@ -2364,7 +2413,7 @@ RefreshConfig = function()
 		config.newEdit:ClearAllPoints()
 		config.newEdit:SetPoint("LEFT", config.pickBtn, "RIGHT", 10, 0)
 		config.addBtn:ClearAllPoints()
-		config.addBtn:SetPoint("LEFT", config.pickBtn, "RIGHT", config.choice == "own" and 128 or 8, 0)
+		config.addBtn:SetPoint("LEFT", config.newEdit, "RIGHT", 8, 0)
 		y = y - 30
 	end
 	if addAfter == 0 then PlaceAdd() end

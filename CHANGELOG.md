@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Changing the language now asks to reload the interface (WoW Forever blocks addons from reloading by themselves).
+- One "+ Add group" button: pick a ready-made group or a custom group that learns from what you drag onto it.
+
 ## 1.2.1
 - CarefreeBag opens with every bag key you use (open all bags, backpack, single bags) and when you click a bag button.
 - New items get a clear pulsing gold border until you hover them.
