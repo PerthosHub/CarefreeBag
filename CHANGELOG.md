@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- CarefreeBag opens with every bag key you use (open all bags, backpack, single bags) and when you click a bag button.
+- New items get a clear pulsing gold border until you hover them.
+
 ## 1.2.0 – works out of the box
 - **Ready-made categories** that fill themselves: Consumables, Professions and Gear for new installs; add Food & Drink, Potions & Elixirs, Scrolls or your own category from the options.
 - **Mail asks per category** at the mailbox: Yes, send or Skip. Mailed groups show "Auto" with an envelope.

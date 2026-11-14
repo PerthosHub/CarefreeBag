@@ -87,7 +87,7 @@ NL["scroll for more"] = "scroll voor meer"
 NL["selling is off"] = "verkopen staat uit"
 NL["sending failed (not enough gold or wrong name?). The items are still in the mail window."] = "versturen mislukt (te weinig geld of verkeerde naam?). De items staan nog in het mailvenster."
 NL["stopped."] = "gestopt."
-NL["v%s loaded. Press B, or type /cfb for options."] = "v%s geladen. Druk op B, of /cfb voor de opties."
+NL["v%s loaded. Open your bags as usual, or type /cfb for options."] = "v%s geladen. Open je tassen zoals altijd, of typ /cfb voor de opties."
 
 NL["CarefreeBag and %s both want to replace your bags. Which one do you want to use?"] = "CarefreeBag en %s willen allebei je tassen overnemen. Welke wil je gebruiken?"
 NL["CarefreeBag: automatically sell everything in the Auto Sell group whenever you open a vendor?\n\nYou can change this later in the options."] = "CarefreeBag: alles in de groep Auto Sell automatisch verkopen zodra je een vendor opent?\n\nJe kunt dit later aanpassen in de opties."
@@ -647,6 +647,29 @@ local function NewItemButton(i)
 	b.swapMark:SetPoint("CENTER")
 	b.swapMark:SetSize(TILE * 1.8, TILE * 1.8)
 	b.swapMark:Hide()
+	-- Nieuw item: pulserende gouden rand, tot je er met de muis overheen gaat.
+	b.newGlow = b:CreateTexture(nil, "OVERLAY", nil, 6)
+	b.newGlow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+	b.newGlow:SetBlendMode("ADD")
+	b.newGlow:SetVertexColor(1, 0.85, 0.2)
+	b.newGlow:SetPoint("CENTER")
+	b.newGlow:SetSize(TILE * 1.9, TILE * 1.9)
+	b.newGlow:Hide()
+	local okA, ag = pcall(b.newGlow.CreateAnimationGroup, b.newGlow)
+	if okA and ag then
+		ag:SetLooping("BOUNCE")
+		local a = ag:CreateAnimation("Alpha")
+		a:SetFromAlpha(1); a:SetToAlpha(0.25); a:SetDuration(0.6)
+		b.newPulse = ag
+	end
+	b:HookScript("OnEnter", function(self)
+		if self.newGlow:IsShown() then
+			self.newGlow:Hide()
+			if self.newPulse then self.newPulse:Stop() end
+			local g = self.group
+			if g and C_NewItems and C_NewItems.RemoveNewItem then pcall(C_NewItems.RemoveNewItem, g.rep.bag, g.rep.slot) end
+		end
+	end)
 	b.watch = CreateFrame("Frame", nil, b)
 	b.watch:Hide()
 	b.watch:SetScript("OnUpdate", function()
@@ -959,6 +982,15 @@ local function SetupItemButton(b, g)
 	SetItemButtonCount(b, g.count)
 	SetItemButtonDesaturated(b, info.isLocked)
 	pcall(b.UpdateNewItem, b, info.quality)
+	local isNew = false
+	if C_NewItems and C_NewItems.IsNewItem then
+		local okN, n = pcall(C_NewItems.IsNewItem, e.bag, e.slot)
+		isNew = (okN and n) and true or false
+	end
+	if b.newGlow then
+		b.newGlow:SetShown(isNew)
+		if isNew then if b.newPulse then b.newPulse:Play() end elseif b.newPulse then b.newPulse:Stop() end
+	end
 	pcall(b.UpdateJunkItem, b, info.quality, info.hasNoValue)
 	pcall(b.UpdateCooldown, b, info.iconFileID)
 	local match = searchText == "" or (g.name or ""):lower():find(searchText, 1, true) ~= nil
@@ -1518,7 +1550,7 @@ local function OnCloseAll(frame)
 	end
 end
 
--- De B-toets (en de backpack-toets) direct aan CarefreeBag koppelen. Zo hoeft de toets
+-- De tas-toetsen van de speler (alle tassen, rugzak, losse tassen) direct aan CarefreeBag koppelen. Zo hoeft de toets
 -- niet via Blizzards eigen tasfuncties, en is het altijd: open <-> dicht.
 local BindKeys -- hieronder ingevuld
 local toggleBtn, binding, bindPending = nil, false, false
@@ -1543,7 +1575,8 @@ BindKeys = function()
 	ClearOverrideBindings(toggleBtn)
 	local keys = {}
 	if DB.enabled then
-		for _, action in ipairs({ "OPENALLBAGS", "TOGGLEBACKPACK" }) do
+		-- Elke toets waarmee jij je tassen opent: alles, rugzak of een losse tas.
+		for _, action in ipairs({ "OPENALLBAGS", "TOGGLEBACKPACK", "TOGGLEBAG1", "TOGGLEBAG2", "TOGGLEBAG3", "TOGGLEBAG4" }) do
 			for _, k in ipairs({ GetBindingKey(action) }) do
 				SetOverrideBindingClick(toggleBtn, true, k, "CarefreeBagToggleButton")
 				keys[#keys + 1] = k
@@ -1564,6 +1597,7 @@ local function HookBags()
 	BindKeys()
 	if ToggleAllBags then hooksecurefunc("ToggleAllBags", OnToggle) end
 	if ToggleBackpack then hooksecurefunc("ToggleBackpack", OnToggle) end
+	if ToggleBag then hooksecurefunc("ToggleBag", OnToggle) end -- klik op een tas onderin beeld
 	if OpenAllBags then hooksecurefunc("OpenAllBags", OnOpenAll) end
 	if OpenBackpack then hooksecurefunc("OpenBackpack", function() OnOpenAll(nil) end) end
 	if CloseAllBags then hooksecurefunc("CloseAllBags", OnCloseAll) end
@@ -2499,7 +2533,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 			"ADDON_ACTION_FORBIDDEN" }) do
 			pcall(driver.RegisterEvent, driver, ev)
 		end
-		Print(T("v%s loaded. Press B, or type /cfb for options."):format(VERSION))
+		Print(T("v%s loaded. Open your bags as usual, or type /cfb for options."):format(VERSION))
 		local sep = SurnameSep()
 		Log("v" .. VERSION .. " loaded as '" .. tostring(MyFullName()) .. "', name separator: '" .. tostring(sep) .. "'")
 		pcall(driver.RegisterEvent, driver, "UI_ERROR_MESSAGE")

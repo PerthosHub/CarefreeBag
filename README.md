@@ -23,7 +23,7 @@ CarefreeBag is a simple bag addon for WoW Forever. It does the boring bag chores
 - English, Nederlands, Deutsch, Français, Español, Italiano, Português and Русский. Picks your client language automatically.
 
 ## Usage
-- **B** opens and closes your bags.
+- Open your bags the way you always do (B, the backpack key or a bag button): CarefreeBag opens instead.
 - Minimap button: **left-click** bags, **right-click** options, **Shift-click** turns CarefreeBag on or off.
 - `/cfb` options · `/cfb log` shows the log (handy for bug reports).
 
