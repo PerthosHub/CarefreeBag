@@ -49,7 +49,6 @@ ns.L.de = {
 	["CarefreeBag: click to show this item again"] = "CarefreeBag: klicken, um dieses Item wieder anzuzeigen",
 	["Hide items"] = "Items ausblenden",
 	["Mail to"] = "Post an",
-	["Maximum width: %d columns"] = "Maximale Breite: %d Spalten",
 	["Name"] = "Name",
 	["|cffffd100Hiding:|r click an item to hide it or show it again."] = "|cffffd100Ausblenden:|r Klick auf ein Item, um es auszublenden oder wieder anzuzeigen.",
 	["on"] = "an",
@@ -103,7 +102,6 @@ ns.L.de = {
 	["Off: items go to Other."] = "Aus: Items kommen nach Sonstiges.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Voller Name deines Twinks, z. B. 'Thrall Stormrage'. Leer = keine Post.",
 	["Items go back to Other."] = "Items kommen zurück nach Sonstiges.",
-	["Window width before you scroll."] = "Fensterbreite, bevor du scrollst.",
 	["Sell at a vendor. Shift = skip once."] = "Beim Händler verkaufen. Shift = einmal überspringen.",
 	["Stack price"] = "Stackpreis",
 	["Newest last"] = "Neueste zuletzt",
@@ -125,6 +123,8 @@ ns.L.de = {
 	["Renaming does not change which items go here."] = "Umbenennen ändert nicht, welche Items hier landen.",
 	["Predefined groups"] = "Vordefinierte Gruppen",
 	["Ready-made groups that fill themselves."] = "Fertige Gruppen, die sich selbst füllen.",
+	["General"] = "Allgemein",
+	["Bag width: %d columns"] = "Taschenbreite: %d Spalten",
 }
 
 ns.L.fr = {
@@ -173,7 +173,6 @@ ns.L.fr = {
 	["CarefreeBag: click to show this item again"] = "CarefreeBag : clique pour réafficher cet objet",
 	["Hide items"] = "Masquer des objets",
 	["Mail to"] = "Envoyer à",
-	["Maximum width: %d columns"] = "Largeur maximale : %d colonnes",
 	["Name"] = "Nom",
 	["|cffffd100Hiding:|r click an item to hide it or show it again."] = "|cffffd100Masquage :|r clique sur un objet pour le masquer ou le réafficher.",
 	["on"] = "activé",
@@ -227,7 +226,6 @@ ns.L.fr = {
 	["Off: items go to Other."] = "Désactivé : les objets vont dans Autres.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Nom complet de ton reroll, ex. 'Thrall Stormrage'. Vide = pas de courrier.",
 	["Items go back to Other."] = "Les objets retournent dans Autres.",
-	["Window width before you scroll."] = "Largeur de la fenêtre avant de faire défiler.",
 	["Sell at a vendor. Shift = skip once."] = "Vendre chez le marchand. Maj = passer une fois.",
 	["Stack price"] = "Prix de la pile",
 	["Newest last"] = "Plus récents à la fin",
@@ -249,6 +247,8 @@ ns.L.fr = {
 	["Renaming does not change which items go here."] = "Renommer ne change pas les objets qui vont ici.",
 	["Predefined groups"] = "Groupes prédéfinis",
 	["Ready-made groups that fill themselves."] = "Des groupes tout prêts qui se remplissent tout seuls.",
+	["General"] = "Général",
+	["Bag width: %d columns"] = "Largeur du sac : %d colonnes",
 }
 
 ns.L.es = {
@@ -297,7 +297,6 @@ ns.L.es = {
 	["CarefreeBag: click to show this item again"] = "CarefreeBag: haz clic para volver a mostrar este objeto",
 	["Hide items"] = "Ocultar objetos",
 	["Mail to"] = "Enviar a",
-	["Maximum width: %d columns"] = "Anchura máxima: %d columnas",
 	["Name"] = "Nombre",
 	["|cffffd100Hiding:|r click an item to hide it or show it again."] = "|cffffd100Ocultando:|r haz clic en un objeto para ocultarlo o volver a mostrarlo.",
 	["on"] = "activado",
@@ -351,7 +350,6 @@ ns.L.es = {
 	["Off: items go to Other."] = "Desactivado: los objetos van a Otros.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Nombre completo de tu alter, p. ej. 'Thrall Stormrage'. Vacío = sin correo.",
 	["Items go back to Other."] = "Los objetos vuelven a Otros.",
-	["Window width before you scroll."] = "Anchura de la ventana antes de desplazarte.",
 	["Sell at a vendor. Shift = skip once."] = "Vender en el vendedor. Shift = saltar una vez.",
 	["Stack price"] = "Precio del montón",
 	["Newest last"] = "Más nuevos al final",
@@ -373,6 +371,8 @@ ns.L.es = {
 	["Renaming does not change which items go here."] = "Cambiar el nombre no cambia qué objetos van aquí.",
 	["Predefined groups"] = "Grupos predefinidos",
 	["Ready-made groups that fill themselves."] = "Grupos listos que se llenan solos.",
+	["General"] = "General",
+	["Bag width: %d columns"] = "Ancho de la bolsa: %d columnas",
 }
 
 ns.L.pt = {
@@ -421,7 +421,6 @@ ns.L.pt = {
 	["CarefreeBag: click to show this item again"] = "CarefreeBag: clique para mostrar este item de novo",
 	["Hide items"] = "Ocultar itens",
 	["Mail to"] = "Enviar para",
-	["Maximum width: %d columns"] = "Largura máxima: %d colunas",
 	["Name"] = "Nome",
 	["|cffffd100Hiding:|r click an item to hide it or show it again."] = "|cffffd100Ocultando:|r clique em um item para ocultá-lo ou mostrá-lo de novo.",
 	["on"] = "ligado",
@@ -475,7 +474,6 @@ ns.L.pt = {
 	["Off: items go to Other."] = "Desligado: os itens vão para Outros.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Nome completo do seu alt, ex. 'Thrall Stormrage'. Vazio = sem correio.",
 	["Items go back to Other."] = "Os itens voltam para Outros.",
-	["Window width before you scroll."] = "Largura da janela antes de rolar.",
 	["Sell at a vendor. Shift = skip once."] = "Vender no vendedor. Shift = pular uma vez.",
 	["Stack price"] = "Preço da pilha",
 	["Newest last"] = "Mais novos no fim",
@@ -497,6 +495,8 @@ ns.L.pt = {
 	["Renaming does not change which items go here."] = "Renomear não muda quais itens vão para cá.",
 	["Predefined groups"] = "Grupos predefinidos",
 	["Ready-made groups that fill themselves."] = "Grupos prontos que se enchem sozinhos.",
+	["General"] = "Geral",
+	["Bag width: %d columns"] = "Largura da bolsa: %d colunas",
 }
 
 ns.L.it = {
@@ -545,7 +545,6 @@ ns.L.it = {
 	["CarefreeBag: click to show this item again"] = "CarefreeBag: clicca per mostrare di nuovo questo oggetto",
 	["Hide items"] = "Nascondi oggetti",
 	["Mail to"] = "Spedisci a",
-	["Maximum width: %d columns"] = "Larghezza massima: %d colonne",
 	["Name"] = "Nome",
 	["|cffffd100Hiding:|r click an item to hide it or show it again."] = "|cffffd100Nascondi:|r clicca su un oggetto per nasconderlo o mostrarlo di nuovo.",
 	["on"] = "attivo",
@@ -599,7 +598,6 @@ ns.L.it = {
 	["Off: items go to Other."] = "Disattivato: gli oggetti vanno in Altro.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Nome completo del tuo alt, es. 'Thrall Stormrage'. Vuoto = niente posta.",
 	["Items go back to Other."] = "Gli oggetti tornano in Altro.",
-	["Window width before you scroll."] = "Larghezza della finestra prima di scorrere.",
 	["Sell at a vendor. Shift = skip once."] = "Vendi dal mercante. Shift = salta una volta.",
 	["Stack price"] = "Prezzo della pila",
 	["Newest last"] = "Più recenti in fondo",
@@ -621,6 +619,8 @@ ns.L.it = {
 	["Renaming does not change which items go here."] = "Rinominare non cambia quali oggetti vanno qui.",
 	["Predefined groups"] = "Gruppi predefiniti",
 	["Ready-made groups that fill themselves."] = "Gruppi pronti che si riempiono da soli.",
+	["General"] = "Generale",
+	["Bag width: %d columns"] = "Larghezza della borsa: %d colonne",
 }
 
 ns.L.ru = {
@@ -669,7 +669,6 @@ ns.L.ru = {
 	["CarefreeBag: click to show this item again"] = "CarefreeBag: нажмите, чтобы снова показать этот предмет",
 	["Hide items"] = "Скрыть предметы",
 	["Mail to"] = "Отправлять",
-	["Maximum width: %d columns"] = "Макс. ширина (столбцов): %d",
 	["Name"] = "Название",
 	["|cffffd100Hiding:|r click an item to hide it or show it again."] = "|cffffd100Скрытие:|r нажмите на предмет, чтобы скрыть его или снова показать.",
 	["on"] = "вкл.",
@@ -723,7 +722,6 @@ ns.L.ru = {
 	["Off: items go to Other."] = "Выкл.: предметы попадают в «Прочее».",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Полное имя вашего твинка, например 'Thrall Stormrage'. Пусто = без почты.",
 	["Items go back to Other."] = "Предметы вернутся в «Прочее».",
-	["Window width before you scroll."] = "Ширина окна до прокрутки.",
 	["Sell at a vendor. Shift = skip once."] = "Продавать торговцу. Shift = пропустить один раз.",
 	["Stack price"] = "По цене стопки",
 	["Newest last"] = "Новые в конце",
@@ -745,4 +743,6 @@ ns.L.ru = {
 	["Renaming does not change which items go here."] = "Переименование не меняет, какие предметы попадают сюда.",
 	["Predefined groups"] = "Готовые группы",
 	["Ready-made groups that fill themselves."] = "Готовые группы, которые наполняются сами.",
+	["General"] = "Общие",
+	["Bag width: %d columns"] = "Ширина сумки (столбцов): %d",
 }

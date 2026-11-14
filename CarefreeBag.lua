@@ -98,7 +98,6 @@ NL["CarefreeBag: click to hide this item"] = "CarefreeBag: klik om dit item te v
 NL["CarefreeBag: click to show this item again"] = "CarefreeBag: klik om dit item weer te tonen"
 NL["Hide items"] = "Verbergen"
 NL["Mail to"] = "Post naar"
-NL["Maximum width: %d columns"] = "Maximale breedte: %d kolommen"
 NL["Name"] = "Naam"
 NL["|cffffd100Hiding:|r click an item to hide it or show it again."] = "|cffffd100Verbergen:|r klik op een item om het te verbergen of terug te halen."
 
@@ -122,6 +121,8 @@ NL["grey"] = "grijs"
 
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["General"] = "Algemeen"
+NL["Bag width: %d columns"] = "Breedte van de tas: %d kolommen"
 NL["Predefined groups"] = "Kant-en-klare groepen"
 NL["Ready-made groups that fill themselves."] = "Kant-en-klare groepen die zichzelf vullen."
 NL["'%s': renaming does not move items. The %d items it learned still go here."] = "'%s': hernoemen verplaatst geen items. De %d geleerde items komen hier nog steeds."
@@ -156,7 +157,6 @@ NL["Off = your normal bags."] = "Uit = je gewone tassen."
 NL["Off: items go to Other."] = "Uit: items gaan naar Overig."
 NL["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Volledige naam van je alt, bijv. 'Thrall Stormrage'. Leeg = niet mailen."
 NL["Items go back to Other."] = "Items gaan terug naar Overig."
-NL["Window width before you scroll."] = "Vensterbreedte voordat je gaat scrollen."
 NL["Sell at a vendor. Shift = skip once."] = "Verkopen bij de vendor. Shift = één keer overslaan."
 NL["Sort: %s"] = "Sortering: %s"
 NL["manual"] = "handmatig"
@@ -1280,13 +1280,10 @@ local function Layout()
 	local screenH = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 768
 	if screenH <= 0 then screenH = 768 end
 	local maxView = math.floor(screenH * 0.8) - top - FOOTER_H - PAD
-	local maxCols = DB.maxCols
-	local minCols = math.min(8, maxCols)
-	local cols, contentH = minCols, Measure(minCols)
-	while contentH > maxView and cols < maxCols do
-		cols = cols + 1
-		contentH = Measure(cols)
-	end
+	-- Breedte = het aantal kolommen uit de opties, maar nooit breder dan je scherm.
+	local fit = math.floor(((UIParent:GetWidth() or 1200) - 80) / (TILE + GAP))
+	local cols = math.max(5, math.min(DB.maxCols, fit))
+	local contentH = Measure(cols)
 	local width = cols * (TILE + GAP) - GAP
 
 	-- 6. Plaatsen.
@@ -2102,12 +2099,22 @@ local function BuildConfig()
 	config.checks, config.edits = {}, {}
 
 	local y = -32
+	-- Kopje: gouden tekst met een dunne lijn ernaast.
 	local function Heading(parent, text, yy)
-		local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 		h:SetPoint("TOPLEFT", parent, "TOPLEFT", PAD + 4, yy)
 		h:SetText(text)
+		local line = parent:CreateTexture(nil, "ARTWORK")
+		line:SetColorTexture(1, 0.82, 0, 0.35)
+		line:SetHeight(1)
+		line:SetPoint("LEFT", h, "RIGHT", 8, 0)
+		line:SetPoint("RIGHT", parent, "RIGHT", -PAD - 4, 0)
 		return h
 	end
+
+	-- 0. Algemeen ------------------------------------------------------------
+	Heading(config, T("General"), y)
+	y = y - 26
 
 	-- 0. Aan/uit -------------------------------------------------------------
 	local onCb = NewCheck(config, T("CarefreeBag on"), T("Off = your normal bags."),
@@ -2142,11 +2149,41 @@ local function BuildConfig()
 		ShowMenu(langMenu)
 	end)
 	Tooltip(langBtn, "Language: " .. LangName(DB.lang))
-	y = y - 34
+	y = y - 28
+
+	-- Breedte van de tas
+	config.colsLabel = config:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	config.colsLabel:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 10, y - 4)
+	local minus = MakeButton(config, "-", 24)
+	minus:SetPoint("TOPRIGHT", config, "TOPRIGHT", -PAD - 32, y)
+	minus:SetScript("OnClick", function() DB.maxCols = math.max(5, DB.maxCols - 1); ResetOrder(); Refresh(); RefreshConfig() end)
+	local plus = MakeButton(config, "+", 24)
+	plus:SetPoint("LEFT", minus, "RIGHT", 2, 0)
+	plus:SetScript("OnClick", function() DB.maxCols = math.min(30, DB.maxCols + 1); ResetOrder(); Refresh(); RefreshConfig() end)
+	y = y - 28
+
+	-- Sorteeropties in de tas
+	local sortCb = NewCheck(config, T("Show sort options"), T("Choose per group how it is sorted."),
+		function() return DB.showSort end, function(v) DB.showSort = v; Refresh() end)
+	sortCb:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 4, y)
+	config.checks[#config.checks + 1] = sortCb
+	y = y - 38
 
 	-- 1. Groepen: eigen categorieën en vaste groepen in één lijst ---------------
 	Heading(config, T("Groups"), y)
-	y = y - 20
+	y = y - 24
+	-- Eigen vak achter de groepen, zodat ze los staan van de opties hierboven.
+	config.groupBg = CreateFrame("Frame", nil, config, "BackdropTemplate")
+	config.groupBg:SetFrameLevel(config:GetFrameLevel())
+	if config.groupBg.SetBackdrop then
+		config.groupBg:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8",
+			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
+			insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+		config.groupBg:SetBackdropColor(0, 0, 0, 0.35)
+		config.groupBg:SetBackdropBorderColor(0.6, 0.6, 0.6, 0.6)
+	end
+	config.groupBg:SetPoint("TOPLEFT", config, "TOPLEFT", PAD - 4, y + 6)
+	config.groupBg:SetWidth(CW - 2 * PAD + 8)
 	local colA = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	colA:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 12, y)
 	colA:SetText(T("Name"))
@@ -2394,33 +2431,6 @@ local function BuildConfig()
 		ShowMenu(pm)
 	end)
 
-	-- Alles hieronder schuift mee met het aantal groepen.
-	local low = CreateFrame("Frame", nil, config)
-	low:SetSize(CW, 100)
-	config.low = low
-	local ly = -6
-
-	-- 2. Breedte ---------------------------------------------------------------
-	config.colsLabel = low:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	config.colsLabel:SetPoint("TOPLEFT", low, "TOPLEFT", PAD + 8, ly - 3)
-	local minus = MakeButton(low, "-", 24)
-	minus:SetPoint("TOPLEFT", low, "TOPLEFT", 294, ly)
-	minus:SetScript("OnClick", function() DB.maxCols = math.max(5, DB.maxCols - 1); ResetOrder(); Refresh(); RefreshConfig() end)
-	local plus = MakeButton(low, "+", 24)
-	plus:SetPoint("LEFT", minus, "RIGHT", 2, 0)
-	plus:SetScript("OnClick", function() DB.maxCols = math.min(30, DB.maxCols + 1); ResetOrder(); Refresh(); RefreshConfig() end)
-	Tooltip(minus, T("Window width before you scroll."))
-	Tooltip(plus, T("Window width before you scroll."))
-	ly = ly - 34
-
-	-- 3. Sorteerknopjes in de tas
-	local sortCb = NewCheck(low, T("Show sort options"), T("Choose per group how it is sorted."),
-		function() return DB.showSort end, function(v) DB.showSort = v; Refresh() end)
-	sortCb:SetPoint("TOPLEFT", low, "TOPLEFT", PAD + 4, ly)
-	config.checks[#config.checks + 1] = sortCb
-	ly = ly - 30
-	low:SetHeight(-ly)
-
 	config.version = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	config.version:SetPoint("BOTTOMRIGHT", config, "BOTTOMRIGHT", -PAD, 14)
 	config.version:SetText("CarefreeBag " .. VERSION)
@@ -2452,7 +2462,7 @@ end
 RefreshConfig = function()
 	if not config or not config:IsShown() then return end
 	for _, cb in ipairs(config.checks) do cb:SetChecked(cb.get() and true or false) end
-	config.colsLabel:SetText(T("Maximum width: %d columns"):format(DB.maxCols))
+	config.colsLabel:SetText(T("Bag width: %d columns"):format(DB.maxCols))
 
 	local order = FixOrder()
 	local y = config.catTop
@@ -2509,6 +2519,12 @@ RefreshConfig = function()
 			r.down:SetEnabled(i < #order)
 			r:ClearAllPoints()
 			r:SetPoint("TOPLEFT", config, "TOPLEFT", PAD, y)
+			if not r.stripe then
+				r.stripe = r:CreateTexture(nil, "BACKGROUND")
+				r.stripe:SetAllPoints(r)
+				r.stripe:SetColorTexture(1, 1, 1, 0.04)
+			end
+			r.stripe:SetShown(i % 2 == 0)
 			r:Show()
 			y = y - 26
 			if i == addAfter then PlaceAdd() end
@@ -2516,10 +2532,9 @@ RefreshConfig = function()
 			r:Hide()
 		end
 	end
-	y = y - 8
-	config.low:ClearAllPoints()
-	config.low:SetPoint("TOPLEFT", config, "TOPLEFT", 0, y)
-	config:SetHeight(-y + config.low:GetHeight() + 24)
+	y = y - 6
+	config.groupBg:SetHeight(config.catTop + 20 - y)
+	config:SetHeight(-y + 40)
 end
 
 ToggleConfig = function()
