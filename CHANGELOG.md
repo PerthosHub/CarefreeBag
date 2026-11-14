@@ -1,7 +1,10 @@
 # Changelog
 
 ## 1.1.0 – works out of the box, more languages
-- New installs start with three categories that fill themselves: Consumables (food, drink, potions, elixirs, scrolls, bandages, enchants), Professions (trade goods, recipes) and Gear (weapons and armor you can wear). Rename, move or remove them as you like.
+- Ready-made categories that fill themselves: Food & Drink, Potions & Elixirs, Scrolls, Consumables, Professions and Gear. New installs start with Consumables, Professions and Gear; add others from the "Ready-made" list in the options. Their names are fixed so it's always clear what goes in. Your own categories are still filled by dragging.
+- Anything you drag onto a category goes there from now on, ready-made or your own.
+- Bag fill bar at the bottom (green, orange, red) and a language icon in the options.
+- "selling is off" only shows after you said No at the first vendor.
 - What you drag into a category is now remembered per character.
 - Mail asks per category: "Send Professions to Thrall Stormrage?" Yes, send or Skip, until every category is done.
 - Item tooltips show the AH value of the stack after the 5% AH cut (needs Auctionator).

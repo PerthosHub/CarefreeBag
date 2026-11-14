@@ -231,6 +231,16 @@ NL["Off = this group is not used; its items go to Other."] = "Uit = deze groep w
 NL["On/off"] = "Aan/uit"
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["Food & Drink"] = "Eten & drinken"
+NL["Potions & Elixirs"] = "Potions & elixirs"
+NL["Scrolls"] = "Scrolls"
+NL["Fills itself with food and drink."] = "Vult zichzelf met eten en drinken."
+NL["Fills itself with potions, elixirs and flasks."] = "Vult zichzelf met potions, elixirs en flasks."
+NL["Fills itself with scrolls."] = "Vult zichzelf met scrolls."
+NL["Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."] = "Kant-en-klare categorie: de naam staat vast. Items die je erop sleept gaan voortaan hierheen, ook als ze eigenlijk iets anders zijn."
+NL["Ready-made category"] = "Kant-en-klare categorie"
+NL["Ready-made"] = "Kant-en-klaar"
+NL["Add a ready-made category that fills itself. Its name is fixed."] = "Voeg een kant-en-klare categorie toe die zichzelf vult. De naam staat vast."
 NL["Consumables"] = "Consumables"
 NL["Professions"] = "Beroepen"
 NL["Gear"] = "Gear"
@@ -258,27 +268,31 @@ end
 -- Instellingen
 ---------------------------------------------------------------------------
 
--- Nieuwe installaties: drie categorieën die zichzelf vullen op itemsoort.
--- Je kunt ze hernoemen, verplaatsen, een postadres geven of weghalen.
-local DEFAULT_CATS = {
-	{ key = "consum", name = "Consumables", auto = "consumable" },
-	{ key = "prof", name = "Professions", auto = "profession" },
-	{ key = "gear", name = "Gear", auto = "gear" },
+-- Kant-en-klare categorieën: vullen zichzelf op itemsoort (zoals WoW die in de
+-- tooltip toont). De naam staat vast, zodat altijd duidelijk is wat erin komt.
+-- Itemsoort (Enum.ItemClass): 0 Consumable, 2 Weapon, 3 Gem, 4 Armor, 7 Tradegoods,
+-- 8 ItemEnhancement, 9 Recipe, 19 Profession. Consumable-subsoort: 1 Potion,
+-- 2 Elixir, 3 Flask, 4 Scroll, 5 Food & Drink.
+-- Volgorde = voorrang: Food & Drink wint van het bredere Consumables.
+local PRESETS = {
+	{ id = "food", name = "Food & Drink", tip = "Fills itself with food and drink.",
+		match = function(e) return e.classID == 0 and e.subclassID == 5 end },
+	{ id = "potions", name = "Potions & Elixirs", tip = "Fills itself with potions, elixirs and flasks.",
+		match = function(e) return e.classID == 0 and (e.subclassID == 1 or e.subclassID == 2 or e.subclassID == 3) end },
+	{ id = "scrolls", name = "Scrolls", tip = "Fills itself with scrolls.",
+		match = function(e) return e.classID == 0 and e.subclassID == 4 end },
+	{ id = "consum", name = "Consumables", tip = "Fills itself with food, drink, potions, elixirs, scrolls, bandages and enchants.",
+		match = function(e) return e.classID == 0 or e.classID == 8 end },
+	{ id = "prof", name = "Professions", tip = "Fills itself with trade goods and recipes.",
+		match = function(e) return e.classID == 3 or e.classID == 7 or e.classID == 9 or e.classID == 19 end },
+	{ id = "gear", name = "Gear", tip = "Fills itself with weapons and armor you can wear.",
+		match = function(e) return (e.classID == 2 or e.classID == 4) and (e.equipLoc or "") ~= "" end },
 }
+local PRESET = {}
+for i, p in ipairs(PRESETS) do p.rank = i; PRESET[p.id] = p end
 
--- Itemsoorten (Enum.ItemClass): 0 Consumable, 2 Weapon, 3 Gem, 4 Armor,
--- 7 Tradegoods, 8 ItemEnhancement, 9 Recipe, 19 Profession.
-local AUTO_CLASSES = {
-	consumable = { [0] = true, [8] = true },
-	profession = { [3] = true, [7] = true, [9] = true, [19] = true },
-	gear = { [2] = true, [4] = true },
-}
-local function AutoMatch(auto, e)
-	local set = AUTO_CLASSES[auto]
-	if not (set and e.classID and set[e.classID]) then return false end
-	if auto == "gear" then return (e.equipLoc or "") ~= "" end -- alleen wat je kunt dragen
-	return true
-end
+-- Nieuwe installaties beginnen met drie kant-en-klare categorieën.
+local DEFAULT_CATS = { "consum", "prof", "gear" }
 
 local function Defaults()
 	local fresh = (CarefreeBagDB == nil) or (next(CarefreeBagDB) == nil)
@@ -294,9 +308,15 @@ local function Defaults()
 	DB.locked = nil               -- locken is weggehaald in 0.3.0
 	if not DB.cats then
 		DB.cats = {}
-		for _, c in ipairs(DEFAULT_CATS) do
-			DB.cats[#DB.cats + 1] = { key = c.key, name = T(c.name), auto = c.auto }
+		for _, id in ipairs(DEFAULT_CATS) do
+			DB.cats[#DB.cats + 1] = { key = id, preset = id }
 		end
+	end
+	-- 1.1.0-test had "auto"; kant-en-klare categorieën krijgen hun vaste naam in jouw taal.
+	local OLD = { consumable = "consum", profession = "prof", gear = "gear" }
+	for _, c in ipairs(DB.cats) do
+		if c.auto then c.preset = OLD[c.auto]; c.auto = nil end
+		if c.preset and PRESET[c.preset] then c.name = T(PRESET[c.preset].name) else c.preset = nil end
 	end
 	-- Post: elke categorie heeft zijn eigen adres (mailTo). Oude instellingen omzetten.
 	if DB.bankAlt ~= nil or DB.boeAlt ~= nil then
@@ -408,11 +428,11 @@ local LAST_BAG = NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
 local needInfo = false
 
 local function ItemExtra(itemID)
-	local ok, name, _, _, _, _, _, _, stack, equipLoc, _, price, classID, _, bind = pcall(C_Item.GetItemInfo, itemID)
-	if ok and name then return stack or 1, bind or 0, price or 0, classID, equipLoc end
+	local ok, name, _, _, _, _, _, _, stack, equipLoc, _, price, classID, subclassID, bind = pcall(C_Item.GetItemInfo, itemID)
+	if ok and name then return stack or 1, bind or 0, price or 0, classID, equipLoc, subclassID end
 	needInfo = true
 	if C_Item.RequestLoadItemDataByID then pcall(C_Item.RequestLoadItemDataByID, itemID) end
-	return nil, nil, 0, nil, nil
+	return nil, nil, 0, nil, nil, nil
 end
 
 local QUEST_CLASS = (Enum and Enum.ItemClass and Enum.ItemClass.Questitem) or 12
@@ -467,7 +487,7 @@ local function Scan()
 			if not isKey then total = total + 1 end
 			local info = C_Container.GetContainerItemInfo(bag, slot)
 			if info and info.itemID then
-				local stack, bind, price, classID, equipLoc = ItemExtra(info.itemID)
+				local stack, bind, price, classID, equipLoc, subclassID = ItemExtra(info.itemID)
 				local link = info.hyperlink
 				items[#items + 1] = {
 					bag = bag, slot = slot, info = info, itemID = info.itemID,
@@ -479,7 +499,7 @@ local function Scan()
 					bindType = bind or 0,
 					price = price or 0,
 					quest = IsQuestItem(bag, slot, classID),
-					classID = classID, equipLoc = equipLoc,
+					classID = classID, subclassID = subclassID, equipLoc = equipLoc,
 					key = isKey,
 				}
 			elseif not isKey then
@@ -503,9 +523,12 @@ local function SectionOf(e)
 	if On("quest") and DB.questAuto and e.quest then return "quest" end
 	if On("grey") and DB.greyAuto and e.quality == 0 then return "grey" end
 	if On("boe") and IsBoE(e) then return "boe" end
+	local best, bestKey
 	for _, c in ipairs(DB.cats) do
-		if c.auto and AutoMatch(c.auto, e) then return c.key end
+		local p = c.preset and PRESET[c.preset]
+		if p and (not best or p.rank < best.rank) and p.match(e) then best, bestKey = p, c.key end
 	end
+	if bestKey then return bestKey end
 	return "other"
 end
 
@@ -854,13 +877,6 @@ local function FixedSection(key)
 	end
 end
 
-local AUTO_TEXT = setmetatable({}, { __index = function(_, k)
-	if k == "consumable" then return T("Fills itself with food, drink, potions, elixirs, scrolls, bandages and enchants.")
-	elseif k == "profession" then return T("Fills itself with trade goods and recipes.")
-	elseif k == "gear" then return T("Fills itself with weapons and armor you can wear.") end
-	return ""
-end })
-
 local function SectionList()
 	local list = {}
 	for _, key in ipairs(FixOrder()) do
@@ -873,7 +889,8 @@ local function SectionList()
 			if c.mailTo and c.mailTo ~= "" then title = title .. "  |cff888888(" .. T("mail: %s"):format(c.mailTo) .. ")|r" end
 			list[#list + 1] = { key = c.key, title = title, plus = true, byValue = (c.mailTo and c.mailTo ~= "") and "ah" or nil,
 				tip = T("Drop an item here: that kind of item belongs to %s from now on."):format(c.name),
-				rules = (c.auto and (AUTO_TEXT[c.auto] .. " ") or "") .. T("Your category. Drop items on its + slot. Rename it, reorder it or give it a mail address in the options.") }
+				rules = c.preset and (T(PRESET[c.preset].tip) .. " " .. T("Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."))
+					or T("Your category. Drop items on its + slot. Rename it, reorder it or give it a mail address in the options.") }
 		end
 	end
 	if showHidden then
@@ -1875,8 +1892,15 @@ local function BuildConfig()
 		r.fixedName.fs:SetPoint("LEFT")
 		r.fixedName:SetScript("OnEnter", function(self)
 			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:AddLine(T("Fixed group"))
-			GameTooltip:AddLine(FIXED_TIPS[r.key] or "", 1, 1, 1, true)
+			local c = CatByKey(r.key)
+			if c and c.preset then
+				GameTooltip:AddLine(T("Ready-made category"))
+				GameTooltip:AddLine(T(PRESET[c.preset].tip), 1, 1, 1, true)
+				GameTooltip:AddLine(T("Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."), 1, 1, 1, true)
+			else
+				GameTooltip:AddLine(T("Fixed group"))
+				GameTooltip:AddLine(FIXED_TIPS[r.key] or "", 1, 1, 1, true)
+			end
 			GameTooltip:Show()
 		end)
 		r.fixedName:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1961,6 +1985,54 @@ local function BuildConfig()
 	config.addBtn:SetScript("OnClick", add)
 	Tooltip(config.addBtn, T("Add"), T("Type a name on the left and click Add to make your own category."))
 
+	-- Kant-en-klare categorie kiezen uit een lijstje.
+	config.presetBtn = MakeButton(config, T("Ready-made") .. " v", 110)
+	local pm = CreateFrame("Frame", "CarefreeBagPresetMenu", config, "BackdropTemplate")
+	pm:SetFrameStrata("DIALOG")
+	if pm.SetBackdrop then
+		pm:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
+			insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+		pm:SetBackdropColor(0, 0, 0, 0.95)
+	end
+	pm:Hide()
+	pm.buttons = {}
+	for i, p in ipairs(PRESETS) do
+		local b = MakeButton(pm, T(p.name), 150)
+		b.presetID = p.id
+		b:SetScript("OnClick", function()
+			pm:Hide()
+			for _, c in ipairs(DB.cats) do if c.preset == p.id then return end end
+			if #DB.cats >= 12 then Print(T("at most 12 categories.")); return end
+			local key = p.id
+			if CatByKey(key) then key = NewCatKey("p" .. p.id) end
+			DB.cats[#DB.cats + 1] = { key = key, preset = p.id, name = T(p.name) }
+			Log("preset added: " .. p.id)
+			ResetOrder(); Refresh(); RefreshConfig()
+		end)
+		Tooltip(b, T(p.name), T(p.tip))
+		pm.buttons[i] = b
+	end
+	config.presetMenu = pm
+	config.presetBtn:SetScript("OnClick", function()
+		if pm:IsShown() then pm:Hide(); return end
+		local n = 0
+		for _, b in ipairs(pm.buttons) do
+			local used = false
+			for _, c in ipairs(DB.cats) do if c.preset == b.presetID then used = true end end
+			b:ClearAllPoints()
+			if used then b:Hide() else
+				b:SetPoint("TOP", pm, "TOP", 0, -4 - n * 22); b:Show(); n = n + 1
+			end
+		end
+		if n == 0 then return end
+		pm:SetSize(160, n * 22 + 8)
+		pm:ClearAllPoints()
+		pm:SetPoint("TOPLEFT", config.presetBtn, "BOTTOMLEFT", 0, -2)
+		pm:Show()
+	end)
+	Tooltip(config.presetBtn, T("Ready-made category"), T("Add a ready-made category that fills itself. Its name is fixed."))
+
 	-- Alles hieronder schuift mee met het aantal groepen.
 	local low = CreateFrame("Frame", nil, config)
 	low:SetSize(CW, 100)
@@ -2024,6 +2096,15 @@ RefreshConfig = function()
 		config.newEdit:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 12, y - 2)
 		config.addBtn:ClearAllPoints()
 		config.addBtn:SetPoint("LEFT", config.newEdit, "RIGHT", 8, 0)
+		config.presetBtn:ClearAllPoints()
+		config.presetBtn:SetPoint("LEFT", config.addBtn, "RIGHT", 8, 0)
+		local free = false
+		for _, p in ipairs(PRESETS) do
+			local used = false
+			for _, c in ipairs(DB.cats) do if c.preset == p.id then used = true end end
+			if not used then free = true end
+		end
+		config.presetBtn:SetEnabled(free)
 		y = y - 30
 	end
 	if addAfter == 0 then PlaceAdd() end
@@ -2032,8 +2113,12 @@ RefreshConfig = function()
 		if key then
 			r.index, r.key = i, key
 			local fixed = FIXED[key]
-			r.name:SetShown(not fixed)
-			r.fixedName:SetShown(fixed and true or false)
+			local cc = not fixed and CatByKey(key)
+			local preset = cc and cc.preset
+			r.name:SetShown(not fixed and not preset)
+			r.fixedName:SetShown((fixed or preset) and true or false)
+			r.fixedName:ClearAllPoints()
+			r.fixedName:SetPoint("LEFT", r, "LEFT", preset and 14 or 34, 0)
 			r.onCb:SetShown(fixed and key ~= "other" and true or false)
 			if fixed then r.onCb:SetChecked(On(key)) end
 			r.del:SetShown(not fixed)
@@ -2054,7 +2139,8 @@ RefreshConfig = function()
 				SetupCheck(r, r.cb1, "cb1Field", nil)
 				SetupCheck(r, r.cb2, "cb2Field", nil)
 				r.mail:Show()
-				if not r.name:HasFocus() then r.name:SetText(c.name) end
+				if preset then r.fixedName.fs:SetText("|cffffd100" .. c.name .. "|r")
+				elseif not r.name:HasFocus() then r.name:SetText(c.name) end
 				if not r.mail:HasFocus() then r.mail:SetText(c.mailTo or "") end
 			end
 			r.up:SetEnabled(i > 1)

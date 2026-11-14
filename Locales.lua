@@ -118,6 +118,16 @@ ns.L.de = {
 	["Yes, send"] = "Ja, schicken",
 	["Skip"] = "Überspringen",
 	["Asks per category whether to send it to its mail address. BoEs go to the BoE address."] = "Fragt pro Kategorie, ob sie an ihre Postadresse geschickt werden soll. BoEs gehen an die BoE-Adresse.",
+	["Food & Drink"] = "Essen & Trinken",
+	["Potions & Elixirs"] = "Tränke & Elixiere",
+	["Scrolls"] = "Rollen",
+	["Fills itself with food and drink."] = "Füllt sich selbst mit Essen und Trinken.",
+	["Fills itself with potions, elixirs and flasks."] = "Füllt sich selbst mit Tränken, Elixieren und Fläschchen.",
+	["Fills itself with scrolls."] = "Füllt sich selbst mit Rollen.",
+	["Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."] = "Fertige Kategorie: Der Name steht fest. Items, die du hier ablegst, landen ab jetzt hier, auch wenn sie eigentlich etwas anderes sind.",
+	["Ready-made category"] = "Fertige Kategorie",
+	["Ready-made"] = "Fertig",
+	["Add a ready-made category that fills itself. Its name is fixed."] = "Füg eine fertige Kategorie hinzu, die sich selbst füllt. Ihr Name steht fest.",
 }
 
 ns.L.fr = {
@@ -235,6 +245,16 @@ ns.L.fr = {
 	["Yes, send"] = "Oui, envoyer",
 	["Skip"] = "Passer",
 	["Asks per category whether to send it to its mail address. BoEs go to the BoE address."] = "Demande pour chaque catégorie si elle doit être envoyée à son adresse. Les BoE vont à l'adresse BoE.",
+	["Food & Drink"] = "Nourriture & Boissons",
+	["Potions & Elixirs"] = "Potions & Élixirs",
+	["Scrolls"] = "Parchemins",
+	["Fills itself with food and drink."] = "Se remplit tout seul avec la nourriture et les boissons.",
+	["Fills itself with potions, elixirs and flasks."] = "Se remplit tout seul avec les potions, élixirs et flacons.",
+	["Fills itself with scrolls."] = "Se remplit tout seul avec les parchemins.",
+	["Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."] = "Catégorie toute prête : le nom est fixe. Les objets que tu y déposes y vont désormais, même s'ils sont d'un autre type.",
+	["Ready-made category"] = "Catégorie toute prête",
+	["Ready-made"] = "Toute prête",
+	["Add a ready-made category that fills itself. Its name is fixed."] = "Ajoute une catégorie toute prête qui se remplit toute seule. Son nom est fixe.",
 }
 
 ns.L.es = {
@@ -352,6 +372,16 @@ ns.L.es = {
 	["Yes, send"] = "Sí, enviar",
 	["Skip"] = "Saltar",
 	["Asks per category whether to send it to its mail address. BoEs go to the BoE address."] = "Pregunta por cada categoría si se envía a su dirección de correo. Los BoE van a la dirección BoE.",
+	["Food & Drink"] = "Comida y bebida",
+	["Potions & Elixirs"] = "Pociones y elixires",
+	["Scrolls"] = "Pergaminos",
+	["Fills itself with food and drink."] = "Se llena sola con comida y bebida.",
+	["Fills itself with potions, elixirs and flasks."] = "Se llena sola con pociones, elixires y frascos.",
+	["Fills itself with scrolls."] = "Se llena sola con pergaminos.",
+	["Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."] = "Categoría predefinida: el nombre es fijo. Los objetos que sueltes en ella van aquí a partir de ahora, aunque sean de otro tipo.",
+	["Ready-made category"] = "Categoría predefinida",
+	["Ready-made"] = "Predefinida",
+	["Add a ready-made category that fills itself. Its name is fixed."] = "Añade una categoría predefinida que se llena sola. Su nombre es fijo.",
 }
 
 ns.L.pt = {
@@ -469,6 +499,16 @@ ns.L.pt = {
 	["Yes, send"] = "Sim, enviar",
 	["Skip"] = "Pular",
 	["Asks per category whether to send it to its mail address. BoEs go to the BoE address."] = "Pergunta para cada categoria se ela deve ser enviada para o endereço de correio. Os BoE vão para o endereço BoE.",
+	["Food & Drink"] = "Comida & Bebida",
+	["Potions & Elixirs"] = "Poções & Elixires",
+	["Scrolls"] = "Pergaminhos",
+	["Fills itself with food and drink."] = "Se enche sozinha com comida e bebida.",
+	["Fills itself with potions, elixirs and flasks."] = "Se enche sozinha com poções, elixires e frascos.",
+	["Fills itself with scrolls."] = "Se enche sozinha com pergaminhos.",
+	["Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."] = "Categoria pronta: o nome é fixo. Os itens que você soltar nela vão para cá daqui em diante, mesmo que sejam de outro tipo.",
+	["Ready-made category"] = "Categoria pronta",
+	["Ready-made"] = "Pronta",
+	["Add a ready-made category that fills itself. Its name is fixed."] = "Adiciona uma categoria pronta que se enche sozinha. O nome dela é fixo.",
 }
 
 ns.L.it = {
@@ -586,6 +626,16 @@ ns.L.it = {
 	["Yes, send"] = "Sì, spedisci",
 	["Skip"] = "Salta",
 	["Asks per category whether to send it to its mail address. BoEs go to the BoE address."] = "Chiede per ogni categoria se spedirla al suo indirizzo di posta. I BoE vanno all'indirizzo BoE.",
+	["Food & Drink"] = "Cibo & Bevande",
+	["Potions & Elixirs"] = "Pozioni & Elisir",
+	["Scrolls"] = "Pergamene",
+	["Fills itself with food and drink."] = "Si riempie da sola con cibo e bevande.",
+	["Fills itself with potions, elixirs and flasks."] = "Si riempie da sola con pozioni, elisir e fiale.",
+	["Fills itself with scrolls."] = "Si riempie da sola con pergamene.",
+	["Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."] = "Categoria pronta: il nome è fisso. Gli oggetti che rilasci qui vanno qui d'ora in poi, anche se sono di un altro tipo.",
+	["Ready-made category"] = "Categoria pronta",
+	["Ready-made"] = "Pronta",
+	["Add a ready-made category that fills itself. Its name is fixed."] = "Aggiungi una categoria pronta che si riempie da sola. Il suo nome è fisso.",
 }
 
 ns.L.ru = {
@@ -703,4 +753,14 @@ ns.L.ru = {
 	["Yes, send"] = "Да, отправить",
 	["Skip"] = "Пропустить",
 	["Asks per category whether to send it to its mail address. BoEs go to the BoE address."] = "Спрашивает по каждой категории, отправлять ли её на адрес почты. BoE уходят на адрес BoE.",
+	["Food & Drink"] = "Еда и напитки",
+	["Potions & Elixirs"] = "Зелья и эликсиры",
+	["Scrolls"] = "Свитки",
+	["Fills itself with food and drink."] = "Сама наполняется едой и напитками.",
+	["Fills itself with potions, elixirs and flasks."] = "Сама наполняется зельями, эликсирами и настойками.",
+	["Fills itself with scrolls."] = "Сама наполняется свитками.",
+	["Ready-made category: the name is fixed. Items you drop on it go here from now on, even if they are another kind."] = "Готовая категория: название не меняется. Предметы, которые вы сюда кладёте, теперь попадают сюда, даже если они другого типа.",
+	["Ready-made category"] = "Готовая категория",
+	["Ready-made"] = "Готовые",
+	["Add a ready-made category that fills itself. Its name is fixed."] = "Добавить готовую категорию, которая наполняется сама. Её название не меняется.",
 }
