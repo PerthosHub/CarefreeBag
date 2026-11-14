@@ -124,9 +124,9 @@ ns.L.de = {
 	["Ready-made groups that fill themselves."] = "Fertige Gruppen, die sich selbst füllen.",
 	["General"] = "Allgemein",
 	["Bag width: %d columns"] = "Taschenbreite: %d Spalten",
-	["Better on the AH: +%s"] = "Besser im AH: +%s",
-	["Better at the vendor"] = "Besser beim Händler",
-	["AH after 5%% cut: %s (vendor: %s)"] = "AH nach 5%% Gebühr: %s (Händler: %s)",
+	["Sell on the AH"] = "Im AH verkaufen",
+	["Sell to a vendor"] = "Beim Händler verkaufen",
+	["AH after 5%% cut: %s, vendor: %s (%s more)"] = "AH nach 5%% Gebühr: %s, Händler: %s (%s mehr)",
 }
 
 ns.L.fr = {
@@ -250,9 +250,9 @@ ns.L.fr = {
 	["Ready-made groups that fill themselves."] = "Des groupes tout prêts qui se remplissent tout seuls.",
 	["General"] = "Général",
 	["Bag width: %d columns"] = "Largeur du sac : %d colonnes",
-	["Better on the AH: +%s"] = "Mieux à l'HV : +%s",
-	["Better at the vendor"] = "Mieux chez le marchand",
-	["AH after 5%% cut: %s (vendor: %s)"] = "HV après la taxe de 5%% : %s (marchand : %s)",
+	["Sell on the AH"] = "Vendre à l'HV",
+	["Sell to a vendor"] = "Vendre au marchand",
+	["AH after 5%% cut: %s, vendor: %s (%s more)"] = "HV après la taxe de 5%% : %s, marchand : %s (%s de plus)",
 }
 
 ns.L.es = {
@@ -376,9 +376,9 @@ ns.L.es = {
 	["Ready-made groups that fill themselves."] = "Grupos listos que se llenan solos.",
 	["General"] = "General",
 	["Bag width: %d columns"] = "Ancho de la bolsa: %d columnas",
-	["Better on the AH: +%s"] = "Mejor en la casa de subastas: +%s",
-	["Better at the vendor"] = "Mejor en el vendedor",
-	["AH after 5%% cut: %s (vendor: %s)"] = "Subasta tras el 5%%: %s (vendedor: %s)",
+	["Sell on the AH"] = "Vender en la casa de subastas",
+	["Sell to a vendor"] = "Vender al vendedor",
+	["AH after 5%% cut: %s, vendor: %s (%s more)"] = "Subasta tras el 5%%: %s, vendedor: %s (%s más)",
 }
 
 ns.L.pt = {
@@ -502,9 +502,9 @@ ns.L.pt = {
 	["Ready-made groups that fill themselves."] = "Grupos prontos que se enchem sozinhos.",
 	["General"] = "Geral",
 	["Bag width: %d columns"] = "Largura da bolsa: %d colunas",
-	["Better on the AH: +%s"] = "Melhor no leilão: +%s",
-	["Better at the vendor"] = "Melhor no vendedor",
-	["AH after 5%% cut: %s (vendor: %s)"] = "Leilão após 5%%: %s (vendedor: %s)",
+	["Sell on the AH"] = "Vender no leilão",
+	["Sell to a vendor"] = "Vender ao vendedor",
+	["AH after 5%% cut: %s, vendor: %s (%s more)"] = "Leilão após 5%%: %s, vendedor: %s (%s a mais)",
 }
 
 ns.L.it = {
@@ -628,9 +628,9 @@ ns.L.it = {
 	["Ready-made groups that fill themselves."] = "Gruppi pronti che si riempiono da soli.",
 	["General"] = "Generale",
 	["Bag width: %d columns"] = "Larghezza della borsa: %d colonne",
-	["Better on the AH: +%s"] = "Meglio all'AH: +%s",
-	["Better at the vendor"] = "Meglio dal mercante",
-	["AH after 5%% cut: %s (vendor: %s)"] = "AH dopo il 5%%: %s (mercante: %s)",
+	["Sell on the AH"] = "Vendi all'AH",
+	["Sell to a vendor"] = "Vendi al mercante",
+	["AH after 5%% cut: %s, vendor: %s (%s more)"] = "AH dopo il 5%%: %s, mercante: %s (%s in più)",
 }
 
 ns.L.ru = {
@@ -754,7 +754,7 @@ ns.L.ru = {
 	["Ready-made groups that fill themselves."] = "Готовые группы, которые наполняются сами.",
 	["General"] = "Общие",
 	["Bag width: %d columns"] = "Ширина сумки (столбцов): %d",
-	["Better on the AH: +%s"] = "Выгоднее на аукционе: +%s",
-	["Better at the vendor"] = "Выгоднее торговцу",
-	["AH after 5%% cut: %s (vendor: %s)"] = "Аукцион после 5%%: %s (торговец: %s)",
+	["Sell on the AH"] = "Продать на аукционе",
+	["Sell to a vendor"] = "Продать торговцу",
+	["AH after 5%% cut: %s, vendor: %s (%s more)"] = "Аукцион после 5%%: %s, торговец: %s (на %s больше)",
 }
