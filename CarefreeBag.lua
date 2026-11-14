@@ -2120,7 +2120,8 @@ local function BuildConfig()
 	langBtn:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Down")
 	langBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
 	-- keuzelijstje met alle talen; kiezen = opslaan + interface herladen
-	local langMenu = NewMenu("CarefreeBagLangMenu", config)
+	local langMenu = NewMenu("CarefreeBagLangMenu")
+	config:HookScript("OnHide", function() langMenu:Hide() end)
 	langMenu:SetSize(160, #LANGS * 22 + 8)
 	langMenu:SetPoint("TOPRIGHT", langBtn, "BOTTOMRIGHT", 0, -2)
 	for i, l in ipairs(LANGS) do
@@ -2320,7 +2321,8 @@ local function BuildConfig()
 	config.newEdit:SetScript("OnEnterPressed", add)
 	config.addBtn:SetScript("OnClick", add)
 
-	local pm = NewMenu("CarefreeBagPresetMenu", config)
+	local pm = NewMenu("CarefreeBagPresetMenu") -- aan UIParent: anders vallen klikken weg achter het optievenster
+	config:HookScript("OnHide", function() pm:Hide() end)
 	pm.buttons = {}
 	local entries = { { id = "own", name = "Custom group", tip = "Name it yourself. It learns: every item you drag onto it goes there from now on." } }
 	for _, p in ipairs(PRESETS) do entries[#entries + 1] = { id = p.id, name = p.name, tip = p.tip } end
@@ -2339,7 +2341,7 @@ local function BuildConfig()
 			end
 		end)
 		Tooltip(b, T(en.name), T(en.tip))
-		if en.id ~= "own" then TintBlue(b) end -- kant-en-klaar = blauw, eigen groep = rood
+		if en.id == "own" then TintBlue(b) end -- eigen groep = blauw, kant-en-klaar = standaard rood
 		if en.id == "own" then b.after = 6 end    -- wat ruimte onder de eigen groep
 		pm.buttons[i] = b
 	end
