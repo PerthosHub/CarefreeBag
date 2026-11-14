@@ -125,7 +125,7 @@ ns.L.de = {
 	["General"] = "Allgemein",
 	["Bag width: %d columns"] = "Taschenbreite: %d Spalten",
 	["Sell on the AH to earn %s more than at a vendor"] = "Im AH verkaufen, um %s mehr als beim Händler zu bekommen",
-	["Sell to a vendor to earn %s more than on the AH"] = "Beim Händler verkaufen, um %s mehr als im AH zu bekommen",
+	["Sell to a vendor for the best price"] = "Beim Händler verkaufen, da gibt's am meisten",
 }
 
 ns.L.fr = {
@@ -250,7 +250,7 @@ ns.L.fr = {
 	["General"] = "Général",
 	["Bag width: %d columns"] = "Largeur du sac : %d colonnes",
 	["Sell on the AH to earn %s more than at a vendor"] = "Vends à l'HV pour gagner %s de plus qu'au marchand",
-	["Sell to a vendor to earn %s more than on the AH"] = "Vends au marchand pour gagner %s de plus qu'à l'HV",
+	["Sell to a vendor for the best price"] = "Vends au marchand, c'est le meilleur prix",
 }
 
 ns.L.es = {
@@ -375,7 +375,7 @@ ns.L.es = {
 	["General"] = "General",
 	["Bag width: %d columns"] = "Ancho de la bolsa: %d columnas",
 	["Sell on the AH to earn %s more than at a vendor"] = "Vende en la subasta para ganar %s más que en el vendedor",
-	["Sell to a vendor to earn %s more than on the AH"] = "Vende al vendedor para ganar %s más que en la subasta",
+	["Sell to a vendor for the best price"] = "Vende al vendedor, es el mejor precio",
 }
 
 ns.L.pt = {
@@ -500,7 +500,7 @@ ns.L.pt = {
 	["General"] = "Geral",
 	["Bag width: %d columns"] = "Largura da bolsa: %d colunas",
 	["Sell on the AH to earn %s more than at a vendor"] = "Venda no leilão para ganhar %s a mais que no vendedor",
-	["Sell to a vendor to earn %s more than on the AH"] = "Venda ao vendedor para ganhar %s a mais que no leilão",
+	["Sell to a vendor for the best price"] = "Venda ao vendedor, é o melhor preço",
 }
 
 ns.L.it = {
@@ -625,7 +625,7 @@ ns.L.it = {
 	["General"] = "Generale",
 	["Bag width: %d columns"] = "Larghezza della borsa: %d colonne",
 	["Sell on the AH to earn %s more than at a vendor"] = "Vendi all'AH per guadagnare %s in più che dal mercante",
-	["Sell to a vendor to earn %s more than on the AH"] = "Vendi al mercante per guadagnare %s in più che all'AH",
+	["Sell to a vendor for the best price"] = "Vendi al mercante, è il prezzo migliore",
 }
 
 ns.L.ru = {
@@ -750,5 +750,5 @@ ns.L.ru = {
 	["General"] = "Общие",
 	["Bag width: %d columns"] = "Ширина сумки (столбцов): %d",
 	["Sell on the AH to earn %s more than at a vendor"] = "Продайте на аукционе: на %s больше, чем у торговца",
-	["Sell to a vendor to earn %s more than on the AH"] = "Продайте торговцу: на %s больше, чем на аукционе",
+	["Sell to a vendor for the best price"] = "Продайте торговцу — так выгоднее всего",
 }
