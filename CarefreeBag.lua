@@ -844,7 +844,7 @@ local function FixedSection(key)
 		return { key = "boe", title = "BoE" .. to, plus = false, fixed = true,
 			rules = T("Fixed group. Unbound Bind on Equip items, green and better. Mailed to the BoE address from the options, if you set one.") }
 	elseif key == "grey" then
-		return { key = "grey", title = "Auto Sell" .. (DB.autoSell and "" or ("  |cff888888(" .. T("selling is off") .. ")|r")), plus = true, byValue = true, fixed = true,
+		return { key = "grey", title = "Auto Sell" .. ((DB.autoSell or not DB.autoSellAsked) and "" or ("  |cff888888(" .. T("selling is off") .. ")|r")), plus = true, byValue = true, fixed = true,
 			tip = T("Drop an item here: it is sold automatically at a vendor from now on, even if it is not grey."),
 			rules = T("Fixed group. Grey items plus items you drop here, most valuable first. Sold when you open a vendor (hold Shift to skip). Items without a sell price stay.") }
 	elseif key == "other" then
@@ -1078,7 +1078,14 @@ local function Layout()
 	-- Voetregel: vrije vakjes + goud, altijd onderaan in beeld.
 	main.free.text:SetText(#free)
 	main.free.total = total
-	main.freeLabel:SetText(T("free of %d"):format(total))
+	local used = math.max(0, total - #free)
+	local frac = total > 0 and used / total or 0
+	main.freeBar:SetValue(frac)
+	if frac < 0.75 then main.freeBar:SetStatusBarColor(0.2, 0.75, 0.2)
+	elseif frac < 0.9 then main.freeBar:SetStatusBarColor(1, 0.65, 0)
+	else main.freeBar:SetStatusBarColor(0.9, 0.15, 0.1) end
+	main.freeBar.text:SetText(used .. "/" .. total)
+	main.freeBar.free, main.freeBar.total = #free, total
 	main.money:SetText(GetMoneyString and GetMoneyString(GetMoney(), true) or tostring(GetMoney()))
 
 	main.hiddenBtn:SetText(showHidden and T("Done") or (T("Hide items") .. (hiddenCount > 0 and (" (" .. hiddenCount .. ")") or "")))
@@ -1207,8 +1214,24 @@ local function BuildMain()
 		GameTooltip:Show()
 	end)
 	main.free:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	main.freeLabel = main:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	main.freeLabel:SetPoint("LEFT", main.free, "RIGHT", 6, 0)
+	-- Balk die laat zien hoe vol je tassen zitten (groen, oranje, rood).
+	local bar = CreateFrame("StatusBar", nil, main)
+	bar:SetSize(120, 12)
+	bar:SetPoint("LEFT", main.free, "RIGHT", 8, 0)
+	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+	bar:SetMinMaxValues(0, 1)
+	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
+	bar.bg:SetAllPoints(bar)
+	bar.bg:SetColorTexture(0, 0, 0, 0.6)
+	bar.text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	bar.text:SetPoint("CENTER", bar, "CENTER", 0, 0)
+	bar:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine(T("Free slots: %s of %s"):format(tostring(self.free or "?"), tostring(self.total or "?")))
+		GameTooltip:Show()
+	end)
+	bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	main.freeBar = bar
 	main.money = main:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	main.money:SetJustifyH("RIGHT")
 	main.money:SetPoint("RIGHT", main, "BOTTOMRIGHT", -PAD - 4, PAD - 2 + TILE / 2)
@@ -1758,8 +1781,13 @@ local function BuildConfig()
 		function() return DB.enabled end, function(v) SetEnabled(v) end)
 	onCb:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 4, y)
 	config.checks[#config.checks + 1] = onCb
-	local langBtn = MakeButton(config, "Language: " .. LangName(DB.lang), 150)
+	-- Taalknop: alleen een icoontje; de taal staat in de tooltip.
+	local langBtn = CreateFrame("Button", "CarefreeBagLangButton", config)
+	langBtn:SetSize(24, 24)
 	langBtn:SetPoint("TOPRIGHT", config, "TOPRIGHT", -PAD - 4, y)
+	langBtn:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Up")
+	langBtn:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Down")
+	langBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
 	-- keuzelijstje met alle talen; kiezen = opslaan + interface herladen
 	local langMenu = CreateFrame("Frame", "CarefreeBagLangMenu", config, "BackdropTemplate")
 	langMenu:SetSize(150, #LANGS * 22 + 8)
@@ -1787,7 +1815,7 @@ local function BuildConfig()
 	langBtn:SetScript("OnClick", function()
 		if langMenu:IsShown() then langMenu:Hide() else langMenu:Show() end
 	end)
-	Tooltip(langBtn, "Language", "Choose a language. The interface reloads.")
+	Tooltip(langBtn, "Language: " .. LangName(DB.lang), "Choose a language. The interface reloads.")
 	y = y - 34
 
 	-- 1. Groepen: eigen categorieën en vaste groepen in één lijst ---------------
