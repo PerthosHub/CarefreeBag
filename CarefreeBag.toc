@@ -2,7 +2,7 @@
 ## Title: CarefreeBag
 ## Notes: Carefree bags: questing or in a dungeon, you never have to think about your inventory. One window, drag-and-drop groups, Auto Sell, auto-restack and mail to your alts.
 ## Notes-deDE: Sorgenfreie Taschen: Beim Questen oder im Dungeon musst du nie an dein Inventar denken. Ein Fenster, Drag-and-Drop-Gruppen, Auto Sell, automatisches Stacken und Post an deine Twinks.
-## Notes-frFR: Des sacs sans souci : en quête ou en donjon, plus besoin de penser à votre inventaire. Une seule fenêtre, des groupes en glisser-déposer, Auto Sell, empilage automatique et courrier vers vos rerolls.
+## Notes-frFR: Des sacs sans prise de tête : en quête ou en donjon, plus besoin de penser à ton inventaire. Une seule fenêtre, des groupes en glisser-déposer, Auto Sell, empilage automatique et courrier vers tes rerolls.
 ## Notes-esES: Bolsas sin preocupaciones: de misiones o en una mazmorra, nunca tendrás que pensar en tu inventario. Una ventana, grupos de arrastrar y soltar, Auto Sell, apilado automático y correo a tus alters.
 ## Notes-esMX: Bolsas sin preocupaciones: de misiones o en una mazmorra, nunca tendrás que pensar en tu inventario. Una ventana, grupos de arrastrar y soltar, Auto Sell, apilado automático y correo a tus alters.
 ## Notes-itIT: Borse senza pensieri: in quest o in dungeon non devi mai pensare all'inventario. Una finestra, gruppi drag-and-drop, Auto Sell, impilamento automatico e posta ai tuoi alt.
