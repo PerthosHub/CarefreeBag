@@ -97,7 +97,6 @@ ns.L.de = {
 	["Drop an item to hide it."] = "Leg ein Item ab, um es auszublenden.",
 	["Your hidden items."] = "Deine ausgeblendeten Items.",
 	["These items are mailed to %s when you open a mailbox."] = "Diese Items gehen per Post an %s, wenn du einen Briefkasten öffnest.",
-	["AH value after 5%% cut: %s"] = "AH-Wert nach 5%% Gebühr: %s",
 	["Off = your normal bags."] = "Aus = deine normalen Taschen.",
 	["Off: items go to Other."] = "Aus: Items kommen nach Sonstiges.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Voller Name deines Twinks, z. B. 'Thrall Stormrage'. Leer = keine Post.",
@@ -127,6 +126,7 @@ ns.L.de = {
 	["Bag width: %d columns"] = "Taschenbreite: %d Spalten",
 	["Better on the AH: +%s"] = "Besser im AH: +%s",
 	["Better at the vendor"] = "Besser beim Händler",
+	["AH after 5%% cut: %s (vendor: %s)"] = "AH nach 5%% Gebühr: %s (Händler: %s)",
 }
 
 ns.L.fr = {
@@ -223,7 +223,6 @@ ns.L.fr = {
 	["Drop an item to hide it."] = "Dépose un objet pour le masquer.",
 	["Your hidden items."] = "Tes objets masqués.",
 	["These items are mailed to %s when you open a mailbox."] = "Ces objets sont envoyés à %s quand tu ouvres une boîte aux lettres.",
-	["AH value after 5%% cut: %s"] = "Valeur HV après la taxe de 5%% : %s",
 	["Off = your normal bags."] = "Désactivé = tes sacs normaux.",
 	["Off: items go to Other."] = "Désactivé : les objets vont dans Autres.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Nom complet de ton reroll, ex. 'Thrall Stormrage'. Vide = pas de courrier.",
@@ -253,6 +252,7 @@ ns.L.fr = {
 	["Bag width: %d columns"] = "Largeur du sac : %d colonnes",
 	["Better on the AH: +%s"] = "Mieux à l'HV : +%s",
 	["Better at the vendor"] = "Mieux chez le marchand",
+	["AH after 5%% cut: %s (vendor: %s)"] = "HV après la taxe de 5%% : %s (marchand : %s)",
 }
 
 ns.L.es = {
@@ -349,7 +349,6 @@ ns.L.es = {
 	["Drop an item to hide it."] = "Suelta un objeto para ocultarlo.",
 	["Your hidden items."] = "Tus objetos ocultos.",
 	["These items are mailed to %s when you open a mailbox."] = "Estos objetos se envían a %s cuando abres un buzón.",
-	["AH value after 5%% cut: %s"] = "Valor en subasta tras la comisión del 5%%: %s",
 	["Off = your normal bags."] = "Desactivado = tus bolsas normales.",
 	["Off: items go to Other."] = "Desactivado: los objetos van a Otros.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Nombre completo de tu alter, p. ej. 'Thrall Stormrage'. Vacío = sin correo.",
@@ -379,6 +378,7 @@ ns.L.es = {
 	["Bag width: %d columns"] = "Ancho de la bolsa: %d columnas",
 	["Better on the AH: +%s"] = "Mejor en la casa de subastas: +%s",
 	["Better at the vendor"] = "Mejor en el vendedor",
+	["AH after 5%% cut: %s (vendor: %s)"] = "Subasta tras el 5%%: %s (vendedor: %s)",
 }
 
 ns.L.pt = {
@@ -475,7 +475,6 @@ ns.L.pt = {
 	["Drop an item to hide it."] = "Solte um item para ocultá-lo.",
 	["Your hidden items."] = "Seus itens ocultos.",
 	["These items are mailed to %s when you open a mailbox."] = "Estes itens são enviados para %s quando você abre uma caixa de correio.",
-	["AH value after 5%% cut: %s"] = "Valor no leilão após a taxa de 5%%: %s",
 	["Off = your normal bags."] = "Desligado = suas bolsas normais.",
 	["Off: items go to Other."] = "Desligado: os itens vão para Outros.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Nome completo do seu alt, ex. 'Thrall Stormrage'. Vazio = sem correio.",
@@ -505,6 +504,7 @@ ns.L.pt = {
 	["Bag width: %d columns"] = "Largura da bolsa: %d colunas",
 	["Better on the AH: +%s"] = "Melhor no leilão: +%s",
 	["Better at the vendor"] = "Melhor no vendedor",
+	["AH after 5%% cut: %s (vendor: %s)"] = "Leilão após 5%%: %s (vendedor: %s)",
 }
 
 ns.L.it = {
@@ -601,7 +601,6 @@ ns.L.it = {
 	["Drop an item to hide it."] = "Rilascia un oggetto per nasconderlo.",
 	["Your hidden items."] = "I tuoi oggetti nascosti.",
 	["These items are mailed to %s when you open a mailbox."] = "Questi oggetti vengono spediti a %s quando apri una cassetta della posta.",
-	["AH value after 5%% cut: %s"] = "Valore all'AH dopo la commissione del 5%%: %s",
 	["Off = your normal bags."] = "Disattivato = le tue borse normali.",
 	["Off: items go to Other."] = "Disattivato: gli oggetti vanno in Altro.",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Nome completo del tuo alt, es. 'Thrall Stormrage'. Vuoto = niente posta.",
@@ -631,6 +630,7 @@ ns.L.it = {
 	["Bag width: %d columns"] = "Larghezza della borsa: %d colonne",
 	["Better on the AH: +%s"] = "Meglio all'AH: +%s",
 	["Better at the vendor"] = "Meglio dal mercante",
+	["AH after 5%% cut: %s (vendor: %s)"] = "AH dopo il 5%%: %s (mercante: %s)",
 }
 
 ns.L.ru = {
@@ -727,7 +727,6 @@ ns.L.ru = {
 	["Drop an item to hide it."] = "Положите предмет, чтобы скрыть его.",
 	["Your hidden items."] = "Ваши скрытые предметы.",
 	["These items are mailed to %s when you open a mailbox."] = "Эти предметы отправляются %s, когда вы открываете почтовый ящик.",
-	["AH value after 5%% cut: %s"] = "Цена на аукционе после комиссии 5%%: %s",
 	["Off = your normal bags."] = "Выкл. = ваши обычные сумки.",
 	["Off: items go to Other."] = "Выкл.: предметы попадают в «Прочее».",
 	["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Полное имя вашего твинка, например 'Thrall Stormrage'. Пусто = без почты.",
@@ -757,4 +756,5 @@ ns.L.ru = {
 	["Bag width: %d columns"] = "Ширина сумки (столбцов): %d",
 	["Better on the AH: +%s"] = "Выгоднее на аукционе: +%s",
 	["Better at the vendor"] = "Выгоднее торговцу",
+	["AH after 5%% cut: %s (vendor: %s)"] = "Аукцион после 5%%: %s (торговец: %s)",
 }

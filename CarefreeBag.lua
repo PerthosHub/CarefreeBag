@@ -121,6 +121,7 @@ NL["grey"] = "grijs"
 
 
 NL["sell automatically"] = "automatisch verkopen"
+NL["AH after 5%% cut: %s (vendor: %s)"] = "AH na 5%% kosten: %s (vendor: %s)"
 NL["Better on the AH: +%s"] = "Beter op het AH: +%s"
 NL["Better at the vendor"] = "Beter bij de vendor"
 NL["General"] = "Algemeen"
@@ -154,7 +155,6 @@ NL["Everything without a group."] = "Alles zonder groep."
 NL["Drop an item to hide it."] = "Sleep een item hierheen om het te verbergen."
 NL["Your hidden items."] = "Je verborgen items."
 NL["These items are mailed to %s when you open a mailbox."] = "Deze items worden naar %s gemaild als je een mailbox opent."
-NL["AH value after 5%% cut: %s"] = "AH-waarde na 5%% kosten: %s"
 NL["Off = your normal bags."] = "Uit = je gewone tassen."
 NL["Off: items go to Other."] = "Uit: items gaan naar Overig."
 NL["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Volledige naam van je alt, bijv. 'Thrall Stormrage'. Leeg = niet mailen."
@@ -417,12 +417,13 @@ local function AddAHLines(tt, g)
 	local net = each * g.count * (1 - AH_CUT)
 	local vendor = g.value or 0
 	tt:AddLine(" ")
-	tt:AddLine("CarefreeBag: " .. T("AH value after 5%% cut: %s"):format(money(net)), 0.4, 0.8, 1)
-	if net > vendor then
+	tt:AddLine("CarefreeBag", 0.4, 0.8, 1)                      -- 1. wie het zegt
+	if net > vendor then                                        -- 2. het advies
 		tt:AddLine(T("Better on the AH: +%s"):format(money(net - vendor)), 0.25, 1, 0.25)
 	else
 		tt:AddLine(T("Better at the vendor"), 1, 0.82, 0)
 	end
+	tt:AddLine(T("AH after 5%% cut: %s (vendor: %s)"):format(money(net), money(vendor)), 0.8, 0.8, 0.8) -- 3. waarom
 end
 local ahHooked
 local function HookAHTooltip()
