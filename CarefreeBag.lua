@@ -9,7 +9,7 @@
 -- 6. Post: bij de mailbox een lijstje "naar bank-alt / naar BoE-alt" met één knop.
 
 local ADDON = ...
-local VERSION = "0.9.4"
+local VERSION = "0.9.5"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -302,6 +302,16 @@ local function FullName(input)
 	return input
 end
 
+-- Je eigen volledige naam. UnitName("player") geeft in Forever alleen de voornaam;
+-- UnitNameUnmodified geeft voornaam én achternaam terug.
+local function MyFullName()
+	local n, sur
+	if UnitNameUnmodified then n, sur = UnitNameUnmodified("player") end
+	if not n then n, sur = UnitName("player") end
+	if sur and sur ~= "" then return n .. " " .. sur end
+	return n
+end
+
 local function SameName(a, b)
 	local function norm(x) return (x or ""):lower():gsub("[%s%-]+", " ") end
 	return norm(a) == norm(b)
@@ -439,7 +449,7 @@ local function MailTarget(e)
 		name = c and c.mailTo
 	end
 	if not name or name == "" then return nil end
-	if SameName(name, UnitName("player")) then return nil end
+	if SameName(name, MyFullName()) then return nil end -- nooit naar jezelf
 	return FullName(name), sec
 end
 
@@ -2006,7 +2016,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		end
 		Print(T("v%s loaded. Press B, or type /cfb for options."):format(VERSION))
 		local sep = SurnameSep()
-		Log("v" .. VERSION .. " loaded as '" .. tostring(UnitName("player")) .. "', name separator: '" .. tostring(sep) .. "'")
+		Log("v" .. VERSION .. " loaded as '" .. tostring(MyFullName()) .. "', name separator: '" .. tostring(sep) .. "'")
 		pcall(driver.RegisterEvent, driver, "UI_ERROR_MESSAGE")
 		pcall(driver.RegisterEvent, driver, "UPDATE_BINDINGS")
 		ScheduleRestack()

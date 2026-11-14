@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.5
+- Fixed: on the character that a group is mailed to, CarefreeBag no longer tries to mail items to itself (full name with surname is now used).
+
 ## 0.9.4 – first public release
 - One window for all your bags, grouped into your own categories.
 - Drag an item onto a group's empty slot and it stays in that group.
