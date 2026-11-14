@@ -792,17 +792,6 @@ local MAIL_ICON = "|TInterface\\Minimap\\Tracking\\Mailbox:14:14|t"
 local CHECK_ICON = "|TInterface\\Buttons\\UI-CheckBox-Check:14:14|t"
 local keepHeader -- na in-/uitklappen: dit kopje moet op dezelfde plek blijven
 
--- Blauwe knop in Blizzard-stijl: de rode paneelknop, ontkleurd en blauw getint.
-local function TintBlue(b)
-	for _, tex in ipairs({ b.Left, b.Middle, b.Right, b.GetNormalTexture and b:GetNormalTexture() or nil,
-			b.GetPushedTexture and b:GetPushedTexture() or nil }) do
-		if type(tex) == "table" and tex.SetVertexColor then
-			if tex.SetDesaturated then tex:SetDesaturated(true) end
-			tex:SetVertexColor(0.45, 0.7, 1)
-		end
-	end
-end
-
 -- Keuzelijst: zelfde stijl overal; klik je ernaast, dan gaat hij dicht.
 local menuCatcher
 local function NewMenu(name, parent)
@@ -848,7 +837,6 @@ local function OpenSortMenu(anchor, sec)
 		for i, m in ipairs(SORTS) do
 			local b = MakeButton(sortMenu, "", 170)
 			b:SetPoint("TOP", sortMenu, "TOP", 0, -4 - (i - 1) * 22)
-			TintBlue(b)
 			b.mode = m
 			b:SetScript("OnClick", function(self)
 				DB.sort = DB.sort or {}
@@ -2141,7 +2129,6 @@ local function BuildConfig()
 	for i, l in ipairs(LANGS) do
 		local b = MakeButton(langMenu, l[2], 150)
 		b:SetPoint("TOP", langMenu, "TOP", 0, -4 - (i - 1) * 22)
-		TintBlue(b)
 		b.langCode = l[1]
 		b:SetScript("OnClick", function()
 			langMenu:Hide()
@@ -2356,7 +2343,6 @@ local function BuildConfig()
 	local ownBtn = MakeButton(pm, T("Custom group"), 170)
 	ownBtn:SetPoint("TOP", pm, "TOP", 0, -4)
 	ownBtn.presetID = "own"
-	TintBlue(ownBtn)
 	ownBtn:SetScript("OnClick", function()
 		pm:Hide()
 		config.choice = "own"
