@@ -135,7 +135,7 @@ NL["Manual"] = "Handmatig"
 NL["Most valuable stack first (with Auctionator: AH value)."] = "Duurste stack eerst (met Auctionator: AH-waarde)."
 NL["What you got last is at the end."] = "Wat je het laatst kreeg staat achteraan."
 NL["Your own order: drag items onto each other."] = "Je eigen volgorde: sleep items op elkaar."
-NL["Sort buttons in the bag"] = "Sorteerknopjes in de tas"
+NL["Show sort options"] = "Sorteeropties tonen"
 NL["Choose per group how it is sorted."] = "Kies per groep hoe hij gesorteerd wordt."
 NL["Drop an item: it goes here from now on."] = "Sleep een item hierheen: het komt hier voortaan."
 NL["Quest items. Never sold or mailed."] = "Quest-items. Nooit verkocht of gemaild."
@@ -2381,7 +2381,7 @@ local function BuildConfig()
 	ly = ly - 34
 
 	-- 3. Sorteerknopjes in de tas
-	local sortCb = NewCheck(low, T("Sort buttons in the bag"), T("Choose per group how it is sorted."),
+	local sortCb = NewCheck(low, T("Show sort options"), T("Choose per group how it is sorted."),
 		function() return DB.showSort end, function(v) DB.showSort = v; Refresh() end)
 	sortCb:SetPoint("TOPLEFT", low, "TOPLEFT", PAD + 4, ly)
 	config.checks[#config.checks + 1] = sortCb
