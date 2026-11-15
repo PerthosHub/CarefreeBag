@@ -64,3 +64,8 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 4. De workflow test, pakt in en uploadt naar CurseForge (project 1803698) en Wago (n6VYpWNd). Controleer het log op "Success".
 5. CurseForge keurt elk bestand handmatig goed (meestal binnen een paar uur).
 - API-sleutels staan alleen in GitHub secrets (`CF_API_KEY`, `WAGO_API_TOKEN`); vraag Johan nooit om ze.
+
+## Stand van zaken (bijwerken na elke sessie)
+- 1.5.0 is nog **niet** uitgebracht. Wacht op Johans test in het spel van: de opsplitsing, het bankpaneel (tassen en bank van een ander karakter), en mail "zonder vragen".
+- Nog niet gedaan: Warband-bank (retail), een verwijderd karakter uit de lijst halen.
+- Johans karakters (Forever): main en bank alt hebben dezelfde voornaam. Echte namen staan niet in de repo.
