@@ -2,6 +2,10 @@
 
 ## 1.5.1 (not released yet)
 - Items you loot while your bags are open keep blinking, also when you already had that item (for example one more potion). Move the mouse over it to stop the blinking; loot more of it and it blinks again. Closing the bags stops all blinking.
+- Search starts at 2 letters and stops the blinking of new items. Closing the bags clears the search. Escape in an empty search box closes the bags.
+- Search also finds items in your bank and on your other characters: the Bank & alts button shows how many, and the panel opens by itself where they are (your bank first, then your alts). It closes again when you clear the search.
+- Bank & alts panel: pick a character by its round class icon on the left (the chosen one is in color with a golden glow). Bags and Bank have icons and show the number of search hits.
+- Bank & alts panel shows the free slots of the bank or bags you are looking at.
 
 ## 1.5.0
 - Under the hood: the code is split into smaller files, with automatic tests on GitHub before every release. Nothing changes in the game.

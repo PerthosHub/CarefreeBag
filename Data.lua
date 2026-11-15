@@ -218,9 +218,10 @@ function ns.SnapBags()
 	local s = MySnap()
 	if not s then return end
 	-- Alleen tijdens het spelen opslaan; bij uitloggen zijn de tassen al leeg (dat ging mis).
-	local items, free = ns.Scan()
+	local items, free, total = ns.Scan()
 	if #items == 0 and #free == 0 then return end -- tassen nog niet geladen
 	local list = Snapshot(items)
+	s.bagsFree, s.bagsSlots = #free, total -- vrije vakjes, voor het bankpaneel
 	if not s.bags or #s.bags ~= #list then Log(("snapshot: bags %d items"):format(#list)) end
 	s.bags, s.bagsTime = list, time and time() or nil
 	ownerIndex = nil
@@ -232,7 +233,11 @@ function ns.SnapBank()
 	if not s then return end
 	local ids = BankBags()
 	if #ids == 0 then return end -- bank nog niet geladen
-	local list = Snapshot(ScanBags(ids))
+	local raw = ScanBags(ids)
+	local list = Snapshot(raw)
+	local slots = 0
+	for _, id in ipairs(ids) do slots = slots + (C_Container.GetContainerNumSlots(id) or 0) end
+	s.bankFree, s.bankSlots = math.max(0, slots - #raw), slots -- vrije vakjes, voor het bankpaneel
 	if not s.bank or #s.bank ~= #list then
 		Log(("snapshot: bank %d items (containers %s)"):format(#list, table.concat(ids, ",")))
 	end

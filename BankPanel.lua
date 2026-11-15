@@ -3,8 +3,8 @@
 -- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
 local ADDON, ns = ...
 -- uit eerdere bestanden:
-local GAP, Log, MakeButton, MyFullName, NewMenu, NewWindow = ns.GAP, ns.Log, ns.MakeButton, ns.MyFullName, ns.NewMenu, ns.NewWindow
-local SectionList, SectionOf, ShowMenu, SLOT_TEX, T = ns.SectionList, ns.SectionOf, ns.ShowMenu, ns.SLOT_TEX, ns.T
+local GAP, Log, MakeButton, MyFullName, NewWindow = ns.GAP, ns.Log, ns.MakeButton, ns.MyFullName, ns.NewWindow
+local SectionList, SectionOf, SLOT_TEX, T = ns.SectionList, ns.SectionOf, ns.SLOT_TEX, ns.T
 
 ---------------------------------------------------------------------------
 -- Paneel naast je tassen: je bank, en de tassen en bank van je andere karakters
@@ -13,6 +13,9 @@ local SectionList, SectionOf, ShowMenu, SLOT_TEX, T = ns.SectionList, ns.Section
 
 local viewer
 local viewTiles, viewHeads = {}, {}
+local Hits, UpdatePortraits, ViewLayout -- verderop
+local PORT = 36 -- grootte van een karakterportret (knop met ronde rand)
+local PORT_W = PORT + 8 -- breedte van de portrettenrij links (plus de gouden streep)
 
 -- Karakters om uit te kiezen: jijzelf eerst, daarna de rest op naam.
 local function ViewChars()
@@ -75,7 +78,157 @@ local function ViewHead(i)
 	return h
 end
 
-local function ViewLayout()
+---------------------------------------------------------------------------
+-- Zoek-hits op de bank en bij je andere karakters
+---------------------------------------------------------------------------
+
+local function Matches(r)
+	if ns.searchText == "" then return false end
+	local name = ((r.l or ""):lower():match("%[(.-)%]") or "")
+	return name:find(ns.searchText, 1, true) ~= nil
+end
+
+-- Aantal vakjes met een hit in de tassen ("bags") of bank ("bank") van een karakter.
+function Hits(key, part)
+	if ns.searchText == "" then return 0 end
+	local ch = ns.DB.chars[key]
+	local rows = ch and ch.snap and ch.snap[part]
+	local n = 0
+	for _, r in ipairs(rows or {}) do if Matches(r) then n = n + 1 end end
+	return n
+end
+
+-- Waar het eerst gevonden wordt: eigen bank, dan andere karakters (tassen, dan bank).
+local function FirstHit()
+	if Hits(ns.charKey, "bank") > 0 then return ns.charKey, "bank" end
+	for _, c in ipairs(ViewChars()) do
+		if c.key ~= ns.charKey then
+			if Hits(c.key, "bags") > 0 then return c.key, "bags" end
+			if Hits(c.key, "bank") > 0 then return c.key, "bank" end
+		end
+	end
+end
+
+-- Alle hits buiten je eigen tassen (voor het getal op de knop Bank & alts).
+local function OtherHits()
+	local n = 0
+	for _, c in ipairs(ViewChars()) do
+		n = n + Hits(c.key, "bank")
+		if c.key ~= ns.charKey then n = n + Hits(c.key, "bags") end
+	end
+	return n
+end
+
+-- Karakter met hits: kies het deel (tassen of bank) waar het zit.
+local function PartWithHits(key, current)
+	if key == ns.charKey then return "bank" end
+	if Hits(key, current or "bags") > 0 then return current or "bags" end
+	if Hits(key, "bags") > 0 then return "bags" end
+	if Hits(key, "bank") > 0 then return "bank" end
+	return current
+end
+
+---------------------------------------------------------------------------
+-- Karakter wisselen: ronde klasse-portretten langs de linkerkant
+---------------------------------------------------------------------------
+
+local portraits = {}
+ns.viewPortraits = portraits -- voor de tests
+
+-- Rond klasse-icoon met de ronde rand van de minimapknoppen. Het gekozen karakter is in kleur
+-- met een gouden rand en een gouden streep ernaast; de andere zijn grijs en doorzichtig.
+local function Portrait(i)
+	local p = portraits[i]
+	if p then p:Show(); return p end
+	p = CreateFrame("Button", nil, viewer)
+	p:SetSize(PORT, PORT)
+	local k = PORT / 32 -- Blizzard-maten 32/20/54
+	p.icon = p:CreateTexture(nil, "ARTWORK")
+	p.icon:SetSize(20 * k, 20 * k)
+	p.icon:SetPoint("TOPLEFT", p, "TOPLEFT", 6 * k, -6 * k)
+	local okM, mask = pcall(p.CreateMaskTexture, p)
+	if okM and mask then
+		mask:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		mask:SetAllPoints(p.icon)
+		pcall(p.icon.AddMaskTexture, p.icon, mask)
+	end
+	p.ring = p:CreateTexture(nil, "OVERLAY")
+	p.ring:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+	p.ring:SetSize(54 * k, 54 * k)
+	p.ring:SetPoint("TOPLEFT", p, "TOPLEFT", 0, 0)
+	-- gouden streep rechts van het gekozen karakter (wijst naar het paneel)
+	-- gekozen karakter: zachte ronde gouden gloed achter het icoon
+	p.sel = p:CreateTexture(nil, "BACKGROUND")
+	p.sel:SetTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+	p.sel:SetBlendMode("ADD")
+	p.sel:SetVertexColor(1, 0.8, 0.2, 0.9)
+	p.sel:SetSize(34 * k, 34 * k)
+	p.sel:SetPoint("CENTER", p.icon, "CENTER", 0, 0)
+	p.sel:Hide()
+	p.hits = p:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+	p.hits:SetPoint("BOTTOMRIGHT", p.icon, "BOTTOMRIGHT", 4, -3)
+	p.hits:SetTextColor(1, 0.82, 0)
+	p:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight", "ADD")
+	local hl = p:GetHighlightTexture()
+	if hl then hl:ClearAllPoints(); hl:SetSize(28 * k, 28 * k); hl:SetPoint("CENTER", p.icon, "CENTER", 0, 0) end
+	p:SetScript("OnEnter", function(self)
+		local c = self.char
+		if not c then return end
+		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+		local col = self.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[self.class]
+		GameTooltip:AddLine(c.name .. (c.key == ns.charKey and (" |cff33ff99" .. T("(you)") .. "|r") or ""),
+			col and col.r or 1, col and col.g or 1, col and col.b or 1)
+		GameTooltip:Show()
+	end)
+	p:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	p:SetScript("OnClick", function(self)
+		if PlaySound and SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_TAB then pcall(PlaySound, SOUNDKIT.IG_CHARACTER_INFO_TAB) end
+		viewer.key = self.char.key
+		viewer.part = PartWithHits(viewer.key, viewer.part)
+		viewer.scroll:SetVerticalScroll(0)
+		ViewLayout()
+	end)
+	portraits[i] = p
+	return p
+end
+
+-- Zet de portretten neer; geeft de hoogte van de rij terug.
+function UpdatePortraits()
+	for _, p in ipairs(portraits) do p:Hide() end
+	local list = ViewChars()
+	for i, c in ipairs(list) do
+		local p = Portrait(i)
+		p.char = c
+		p:ClearAllPoints()
+		p:SetPoint("TOPLEFT", viewer, "TOPLEFT", ns.PAD - 2, -32 - (i - 1) * (PORT + 4))
+		local ch = ns.DB.chars[c.key]
+		local class = (ch and ch.snap and ch.snap.class) or (c.key == ns.charKey and UnitClass and select(2, UnitClass("player")))
+		p.class = class
+		-- Klasse-icoon: atlas "classicon-warrior" als die bestaat, anders de klassencirkels.
+		local atlas = class and ("classicon-" .. class:lower())
+		local tc = class and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[class]
+		if atlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) and p.icon.SetAtlas then
+			p.icon:SetAtlas(atlas)
+		elseif tc then
+			p.icon:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles")
+			p.icon:SetTexCoord(tc[1], tc[2], tc[3], tc[4])
+		else
+			p.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+			p.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+		end
+		local chosen = c.key == viewer.key
+		p.sel:SetShown(chosen)
+		p.icon:SetDesaturated(not chosen)
+		p.icon:SetAlpha(chosen and 1 or 0.5)
+		p.ring:SetDesaturated(not chosen)
+		if chosen then p.ring:SetVertexColor(1, 0.9, 0.4) else p.ring:SetVertexColor(0.6, 0.6, 0.6) end
+		local n = Hits(c.key, "bank") + (c.key ~= ns.charKey and Hits(c.key, "bags") or 0)
+		p.hits:SetText(n > 0 and n or "")
+	end
+	return 32 + #list * (PORT + 4)
+end
+
+function ViewLayout()
 	if not viewer or not viewer:IsShown() then return end
 	for _, t in ipairs(viewTiles) do t:Hide() end
 	for _, h in ipairs(viewHeads) do h:Hide() end
@@ -94,23 +247,33 @@ local function ViewLayout()
 	local title = me and T("Your bank") or (choice.part == "bank" and T("Bank of %s") or T("Bags of %s")):format(who)
 	viewer:SetHeaderText(title)
 	viewer.title = title
-	-- bij jezelf geen knoppen Tassen/Bank ernaast: de keuzeknop mag de hele breedte gebruiken
-	viewer.pick:SetWidth(me and (8 * (ns.TILE + GAP) - GAP) or 170)
-	viewer.pick:SetText(who .. (me and (" |cff33ff99" .. T("(you)") .. "|r") or "") .. "  |TInterface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up:14:14|t")
-	for part, b in pairs(viewer.tabs) do
-		if part == choice.part then b:LockHighlight() else b:UnlockHighlight() end
+	local portH = UpdatePortraits()
+	-- Tassen/Bank: gekozen = gouden tekst met gouden streep eronder, de andere grijs.
+	for _, part in ipairs({ "bags", "bank" }) do
+		local b = viewer.tabs[part]
+		local n = Hits(choice.key, part)
+		local icon = part == "bank" and "|TInterface\\Minimap\\Tracking\\Banker:16:16:0:0|t " or "|TInterface\\Icons\\INV_Misc_Bag_08:16:16:0:0:64:64:5:59:5:59|t "
+		b:SetText(icon .. (part == "bank" and T("Bank") or T("Bags")) .. (n > 0 and (" |cffffd100" .. n .. "|r") or ""))
+		b:SetWidth(math.max(60, (b.label:GetStringWidth() or 40) + 20))
+		local on = part == choice.part
+		b.sel:SetShown(on)
+		if on then b.label:SetTextColor(1, 0.82, 0) else b.label:SetTextColor(0.6, 0.6, 0.6) end
 	end
 	local ch = ns.DB.chars[choice.key]
 	local s = ch and ch.snap
 	local rows = s and s[choice.part]
 	local stamp = s and s[choice.part .. "Time"]
-	if choice.key == ns.charKey and choice.part == "bank" and ns.bankOpen then
-		viewer.note:SetText("")
-	elseif stamp and date then
-		viewer.note:SetText(T("Updated %s"):format(date("%d-%m %H:%M", stamp)))
-	else
-		viewer.note:SetText("")
+	local note = ""
+	if not (choice.key == ns.charKey and choice.part == "bank" and ns.bankOpen) and stamp and date then
+		note = T("Updated %s"):format(date("%d-%m %H:%M", stamp))
 	end
+	-- vrije vakjes van wat je bekijkt
+	local free, slots = s and s[choice.part .. "Free"], s and s[choice.part .. "Slots"]
+	if free and slots and slots > 0 then
+		local col = (free == 0 and "|cffff2020") or (free <= 3 and "|cffff9900") or "|cff33ff99"
+		note = col .. T("Free slots: %s of %s"):format(free, slots) .. "|r" .. (note ~= "" and ("   " .. note) or "")
+	end
+	viewer.note:SetText(note)
 	local cols = 8 -- vast: breed genoeg voor de knoppen bovenin
 	local width = cols * (ns.TILE + GAP) - GAP
 	local y = 0
@@ -189,61 +352,46 @@ local function ViewLayout()
 	viewer.content:SetSize(width, math.max(y, 1))
 	viewer.scroll:SetSize(width, math.max(h, 40))
 	viewer.scrollMax = math.max(0, y - h)
-	viewer:SetSize(width + ns.PAD * 2, math.max(h, 40) + 76 + ns.PAD)
-end
-
-local function OpenViewMenu()
-	local list = ViewChars()
-	local m = viewer.menu
-	if not m then
-		m = NewMenu("CarefreeBagViewMenu")
-		m.buttons = {}
-		viewer.menu = m
-	end
-	for _, b in ipairs(m.buttons) do b:Hide() end
-	for i, c in ipairs(list) do
-		local b = m.buttons[i]
-		if not b then
-			b = MakeButton(m, "", 180)
-			m.buttons[i] = b
-		end
-		b:SetPoint("TOP", m, "TOP", 0, -4 - (i - 1) * 22)
-		b:SetText(c.key == ns.charKey and (c.name .. " |cff33ff99" .. T("(you)") .. "|r") or c.name)
-		b:SetScript("OnClick", function()
-			viewer.key = c.key
-			m:Hide()
-			viewer.scroll:SetVerticalScroll(0)
-			ViewLayout()
-		end)
-		b:Show()
-	end
-	m:SetSize(190, #list * 22 + 8)
-	m:ClearAllPoints()
-	m:SetPoint("TOPLEFT", viewer.pick, "BOTTOMLEFT", 0, -2)
-	ShowMenu(m)
+	viewer:SetSize(width + ns.PAD * 2 + PORT_W, math.max(math.max(h, 40) + 76 + ns.PAD, portH + ns.PAD))
 end
 
 local function BuildViewer()
 	viewer = NewWindow("CarefreeBagViewer", T("Bank & alts"), 300, 200)
 	viewer:SetMovable(false)
 	viewer:SetScript("OnDragStart", nil)
-	-- Bovenin: welk karakter (keuzelijst) en Tassen of Bank.
-	viewer.pick = MakeButton(viewer, "", 170)
-	viewer.pick:SetPoint("TOPLEFT", viewer, "TOPLEFT", ns.PAD, -32)
-	viewer.pick:SetScript("OnClick", OpenViewMenu)
+	-- Links de karakterportretten; bovenin Tassen of Bank (alleen bij andere karakters).
+	local left = ns.PAD + PORT_W
 	viewer.tabs = {}
-	local prev = viewer.pick
+	local prev
 	for _, part in ipairs({ "bags", "bank" }) do
-		local b = MakeButton(viewer, part == "bank" and T("Bank") or T("Bags"), 64)
-		b:SetPoint("LEFT", prev, "RIGHT", 4, 0)
-		b:SetScript("OnClick", function() viewer.part = part; viewer.scroll:SetVerticalScroll(0); ViewLayout() end)
-		viewer.tabs[part] = b
+		local b = CreateFrame("Button", nil, viewer)
+		b:SetSize(60, 22)
+		if prev then b:SetPoint("LEFT", prev, "RIGHT", 8, 0)
+		else b:SetPoint("TOPLEFT", viewer, "TOPLEFT", left, -30) end
 		prev = b
+		b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		b.label:SetPoint("CENTER", b, "CENTER", 0, 1)
+		-- gekozen: zachte gloed zoals een gekozen regel in het questlog
+		b.sel = b:CreateTexture(nil, "BACKGROUND")
+		b.sel:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+		b.sel:SetBlendMode("ADD")
+		b.sel:SetVertexColor(1, 0.82, 0.3, 0.8)
+		b.sel:SetAllPoints(b)
+		b.sel:Hide()
+		b:SetScript("OnEnter", function(self) if not self.sel:IsShown() then self.label:SetTextColor(1, 1, 1) end end)
+		b:SetScript("OnLeave", function(self) if not self.sel:IsShown() then self.label:SetTextColor(0.6, 0.6, 0.6) end end)
+		b.SetText = function(self, s) self.text = s; self.label:SetText(s) end
+		b:SetText(part == "bank" and T("Bank") or T("Bags"))
+		b:SetScript("OnClick", function()
+			if PlaySound and SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_TAB then pcall(PlaySound, SOUNDKIT.IG_CHARACTER_INFO_TAB) end
+			viewer.part = part; viewer.scroll:SetVerticalScroll(0); ViewLayout()
+		end)
+		viewer.tabs[part] = b
 	end
 	viewer.note = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	viewer.note:SetPoint("TOPLEFT", viewer.pick, "BOTTOMLEFT", 2, -4)
+	viewer.note:SetPoint("TOPLEFT", viewer, "TOPLEFT", left + 2, -56)
 	viewer.scroll = CreateFrame("ScrollFrame", nil, viewer)
-	viewer.scroll:SetPoint("TOPLEFT", viewer, "TOPLEFT", ns.PAD, -76)
+	viewer.scroll:SetPoint("TOPLEFT", viewer, "TOPLEFT", left, -76)
 	viewer.content = CreateFrame("Frame", nil, viewer.scroll)
 	viewer.scroll:SetScrollChild(viewer.content)
 	viewer.scroll:EnableMouseWheel(true)
@@ -252,22 +400,78 @@ local function BuildViewer()
 		self:SetVerticalScroll(math.max(0, math.min(viewer.scrollMax or 0, v)))
 	end)
 	viewer:SetScript("OnShow", ViewLayout)
-	viewer:SetScript("OnHide", function() if viewer.menu then viewer.menu:Hide() end end)
+	viewer:SetScript("OnHide", function()
+		viewer.autoOpened = nil
+		-- zelf dichtgedaan tijdens het zoeken: niet meteen weer openen
+		if ns.searchText ~= "" then viewer.noAuto = true end
+	end)
 	-- Vast naast je tassen (links ervan), en dicht als je tassen dichtgaan.
 	viewer:ClearAllPoints()
 	viewer:SetPoint("TOPRIGHT", ns.main, "TOPLEFT", -4, 0)
-	ns.main:HookScript("OnHide", function() viewer:Hide() end)
+	ns.main:HookScript("OnHide", function() viewer:Hide(); viewer.noAuto = nil end)
 end
 
 ns.ViewRefresh = function() if viewer and viewer:IsShown() then ViewLayout() end end
 
-ns.ToggleViewer = function()
+local function OpenViewer(key, part)
 	if not viewer then BuildViewer() end
-	if viewer:IsShown() then viewer:Hide(); return end
 	-- Opties en bankpaneel zitten op dezelfde plek: één tegelijk.
 	if ns.HideConfig then ns.HideConfig() end
-	viewer.key, viewer.part = nil, nil
-	viewer:Show()
+	viewer.key, viewer.part = key, part
+	if viewer:IsShown() then ViewLayout() else viewer:Show() end
+end
+
+ns.ToggleViewer = function()
+	if viewer and viewer:IsShown() then viewer:Hide(); return end
+	OpenViewer(FirstHit())
 end
 
 ns.HideViewer = function() if viewer then viewer:Hide() end end
+
+-- Getal en gloed op de knop Bank & alts: hits buiten je eigen tassen.
+local function UpdateBadge()
+	local btn = ns.main and ns.main.bankBtn
+	if not btn then return end
+	if not btn.hits then
+		btn.hits = btn:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+		btn.hits:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", 4, -3)
+		btn.hits:SetTextColor(1, 0.82, 0)
+		btn.glow = btn:CreateTexture(nil, "OVERLAY", nil, 6)
+		btn.glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+		btn.glow:SetBlendMode("ADD")
+		btn.glow:SetVertexColor(1, 0.82, 0)
+		btn.glow:SetSize(btn:GetWidth() * 1.9, btn:GetHeight() * 1.9)
+		btn.glow:SetPoint("CENTER")
+		btn.glow:Hide()
+	end
+	local n = OtherHits()
+	btn.hits:SetText(n > 0 and n or "")
+	btn.glow:SetShown(n > 0)
+end
+
+-- Zoektekst veranderd (vanuit de zoekbalk van je tassen).
+ns.OnSearch = function()
+	UpdateBadge()
+	if ns.searchText == "" then
+		if viewer then
+			viewer.noAuto = nil
+			if viewer.autoOpened then viewer:Hide() end
+		end
+		ns.ViewRefresh()
+		return
+	end
+	local key, part = FirstHit()
+	if not key then ns.ViewRefresh(); return end
+	if not viewer or not viewer:IsShown() then
+		if viewer and viewer.noAuto then return end
+		OpenViewer(key, part)
+		viewer.autoOpened = true
+	elseif Hits(viewer.key, viewer.part) == 0 then
+		-- hier niets gevonden: spring naar waar het wel zit
+		viewer.key, viewer.part = key, part
+		viewer.scroll:SetVerticalScroll(0)
+		ViewLayout()
+	else
+		ViewLayout()
+	end
+end

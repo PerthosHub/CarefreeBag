@@ -83,6 +83,17 @@ local inLayout;  ns.layoutPending, inLayout = false, false
 local lastFree, lastItems = {}, {}
 -- Zolang het venster open is: hoeveel je van elk item had (laagste stand) en wat erbij kwam.
 local openCounts, freshIDs = nil, {}
+
+-- Alle nieuwe items als gezien markeren (tas dicht of beginnen met zoeken).
+local function ClearNew()
+	openCounts, freshIDs = nil, {} -- nil: de volgende opbouw neemt de huidige stand als basis
+	if C_NewItems and C_NewItems.RemoveNewItem then
+		for _, e in ipairs(lastItems) do
+			local okN, isNew = pcall(C_NewItems.IsNewItem, e.bag, e.slot)
+			if okN and isNew then pcall(C_NewItems.RemoveNewItem, e.bag, e.slot) end
+		end
+	end
+end
 ns.searchText = ""
 -- Vaste volgorde zolang het venster open is: [sectie] = { key, key, ... }.
 -- Leeg = opnieuw sorteren (bij openen, of als je een categorie wijzigt).
@@ -554,6 +565,7 @@ local function SetupItemButton(b, g)
 	end
 	-- Ook erbij geloot terwijl de tas open staat (ook als je het item al had).
 	if freshIDs[g.itemID] then isNew = true end
+	if ns.searchText ~= "" then isNew = false end -- tijdens zoeken geen knipperen
 	if b.newGlow then
 		b.newGlow:SetShown(isNew)
 		if isNew then
@@ -979,14 +991,14 @@ function ns.BuildMain()
 	ns.main:SetScript("OnShow", function() if PlaySound and SOUNDKIT then pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN) end end)
 	ns.main:SetScript("OnHide", function()
 		showHidden = false
-		openCounts, freshIDs = nil, {}
 		ns.ResetOrder() -- volgende keer openen: netjes opnieuw gesorteerd
 		-- Tas dicht: nieuwe items zijn gezien, markering weghalen.
-		if C_NewItems and C_NewItems.RemoveNewItem then
-			for _, e in ipairs(lastItems) do
-				local okN, isNew = pcall(C_NewItems.IsNewItem, e.bag, e.slot)
-				if okN and isNew then pcall(C_NewItems.RemoveNewItem, e.bag, e.slot) end
-			end
+		ClearNew()
+		-- Tas dicht: zoeken stopt (volgende keer openen = alles weer zichtbaar).
+		if ns.main.search then ns.main.search:SetText(""); ns.main.search:ClearFocus() end
+		if ns.searchText ~= "" then
+			ns.searchText = ""
+			if ns.OnSearch then pcall(ns.OnSearch) end
 		end
 		if PlaySound and SOUNDKIT then pcall(PlaySound, SOUNDKIT.IG_BACKPACK_CLOSE) end
 	end)
@@ -1022,9 +1034,20 @@ function ns.BuildMain()
 	sb:SetPoint("RIGHT", ns.main.bankBtn, "LEFT", -8, 0)
 	sb:HookScript("OnTextChanged", function(self)
 		local t = (self:GetText() or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
-		if t ~= ns.searchText then ns.searchText = t; ns.Refresh(); if ns.ViewRefresh then ns.ViewRefresh() end end
+		if #t < 2 then t = "" end -- pas zoeken vanaf 2 tekens
+		if t ~= ns.searchText then
+			-- Begin met zoeken: nieuwe items zijn gezien, knipperen stopt.
+			if ns.searchText == "" then ClearNew() end
+			ns.searchText = t; ns.Refresh()
+			if ns.OnSearch then ns.OnSearch() elseif ns.ViewRefresh then ns.ViewRefresh() end
+		end
 	end)
-	sb:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
+	sb:SetScript("OnEscapePressed", function(self)
+		-- Escape: zoektekst weg; was hij al leeg, dan meteen de tassen dicht.
+		local empty = (self:GetText() or "") == ""
+		self:SetText(""); self:ClearFocus()
+		if empty then ns.main:Hide() end
+	end)
 	sb:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
 	if type(sb.Instructions) == "table" and sb.Instructions.SetText then pcall(sb.Instructions.SetText, sb.Instructions, T("Search...")) end
 	ns.main.search = sb
