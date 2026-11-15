@@ -7,13 +7,22 @@
 local ADDON, ns = ...
 -- uit eerdere bestanden:
 local AHPrice, Log, MakeButton, NewWindow, Print, Scan = ns.AHPrice, ns.Log, ns.MakeButton, ns.NewWindow, ns.Print, ns.Scan
-local SectionOf, T = ns.SectionOf, ns.T
+local CatByKey, Kept, KeptGroups, SectionOf, T = ns.CatByKey, ns.Kept, ns.KeptGroups, ns.SectionOf, ns.T
 
 local LOOT_ITEM = (Enum and Enum.LootSlotType and Enum.LootSlotType.Item) or LOOT_SLOT_ITEM or 1
 local AH_CUT = 0.05
 local QUEST_VALUE = 2 ^ 50                                -- questloot is altijd "meer waard"
 local NEVER = { quest = true, keys = true, hidden = true } -- deze groepen stellen we nooit voor
-local W, H = 300, 196
+local W, H = 300, 230
+
+-- Naam van een groep zoals in de tas.
+local function GroupName(key)
+	if key == "grey" then return "Auto Sell" end
+	if key == "boe" then return "BoE" end
+	if key == "other" then return T("Other") end
+	local c = CatByKey(key)
+	return c and c.name or tostring(key)
+end
 
 local state = { pending = nil, dismissed = false, scheduled = false }
 local panel
@@ -38,19 +47,30 @@ local function Each(link, vendor)
 end
 
 -- Goedkoopste stapel in je tassen. Alleen items met een prijs: items zonder waarde
--- (hearthstone, questspullen, sleutels) zijn vaak juist belangrijk.
+-- (hearthstone, questspullen, sleutels) zijn vaak juist belangrijk. Items en groepen
+-- die je wilt houden ("Keep") slaan we over.
 local function Cheapest(items)
 	local best
+	local keep, keepGroups = Kept(), KeptGroups()
 	for _, e in ipairs(items) do
-		if not e.key and not e.info.isLocked and not e.info.hasNoValue and not NEVER[SectionOf(e)] then
+		local sec = SectionOf(e)
+		if not e.key and not e.info.isLocked and not e.info.hasNoValue and not NEVER[sec]
+			and not keep[e.itemID] and not keepGroups[sec] then
 			local each, ah = Each(e.link, e.price)
 			if each > 0 then
 				local v = each * e.count
-				if not best or v < best.value then best = { e = e, value = v, ah = ah } end
+				if not best or v < best.value then best = { e = e, value = v, ah = ah, sec = sec } end
 			end
 		end
 	end
 	return best
+end
+
+-- Tooltipregel voor items die je bij volle tassen altijd houdt (zie Data.lua).
+function ns.KeptLine(tt, id)
+	if id and Kept()[id] then
+		tt:AddLine("|cff66ccffCarefreeBag:|r " .. T("kept when your bags are full"), 1, 1, 1)
+	end
 end
 
 -- Past dit loot-item nog? Vrij vakje, of bij een eigen stapel die nog niet vol is.
@@ -203,8 +223,33 @@ local function BuildPanel()
 	panel:SetFrameStrata("HIGH")
 	panel.lootRow = Row(panel, -30, T("Loot that does not fit"))
 	panel.junkRow = Row(panel, -76, T("Cheapest in your bags"))
+	-- Dit item of deze groep nooit weggooien: dan komt meteen het volgende goedkoopste item.
+	local half = (W - 2 * ns.PAD - 6) / 2
+	panel.keepItem = MakeButton(panel, T("Keep this item"), half)
+	panel.keepItem:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -120)
+	panel.keepItem:SetScript("OnClick", function()
+		local o = panel.offer
+		if not o then return end
+		Kept()[o.junk.e.itemID] = true
+		Print(T("%s is never destroyed when your bags are full."):format(o.junk.e.link or o.junk.e.name))
+		Log("loot: keep item " .. tostring(o.junk.e.itemID))
+		Evaluate()
+	end)
+	ns.Tooltip(panel.keepItem, T("Keep this item"), T("Never destroy this item when your bags are full. The next cheapest item is shown."))
+	panel.keepGroup = MakeButton(panel, T("Keep this group"), half)
+	panel.keepGroup:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -ns.PAD, -120)
+	panel.keepGroup:SetScript("OnClick", function()
+		local o = panel.offer
+		if not o then return end
+		KeptGroups()[o.junk.sec] = true
+		Print(T("Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."):format(GroupName(o.junk.sec)))
+		Log("loot: keep group " .. tostring(o.junk.sec))
+		if ns.RefreshConfig then ns.RefreshConfig() end
+		Evaluate()
+	end)
+	ns.Tooltip(panel.keepGroup, T("Keep this group"), T("Never destroy anything from this group when your bags are full. Change it in the options (Keep)."))
 	panel.verdict = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	panel.verdict:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -126)
+	panel.verdict:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -154)
 	panel.verdict:SetWidth(W - 2 * ns.PAD)
 	panel.verdict:SetJustifyH("LEFT")
 	panel.swap = MakeButton(panel, T("Destroy & loot"), 140)
@@ -223,6 +268,7 @@ local function ShowOffer(lootItem, junk)
 	FillRow(panel.lootRow, lootItem.link, lootItem.icon, lootItem.count, lootItem.value, lootItem.ah, lootItem.quest)
 	local e = junk.e
 	FillRow(panel.junkRow, e.link, e.info.iconFileID, e.count, junk.value, junk.ah, false)
+	panel.junkRow.label:SetText(T("Cheapest in your bags") .. " |cffaaaaaa(" .. GroupName(junk.sec) .. ")|r")
 	if lootItem.quest then
 		panel.verdict:SetText("|cff40ff40" .. T("The loot is a quest item.") .. "|r")
 	elseif lootItem.value > junk.value then

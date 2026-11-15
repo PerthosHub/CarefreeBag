@@ -137,6 +137,20 @@ function ns.BuildConfig()
 		end)
 	mailCb:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 4, y)
 	config.checks[#config.checks + 1] = mailCb
+	y = y - 28
+
+	-- Items die je bij volle tassen houdt ("Keep this item" in het venster Bags full)
+	config.keptLabel = config:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	config.keptLabel:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 10, y - 4)
+	config.keptClear = MakeButton(config, T("Clear"), 80)
+	config.keptClear:SetPoint("TOPRIGHT", config, "TOPRIGHT", -ns.PAD - 4, y)
+	config.keptClear:SetScript("OnClick", function()
+		local k = ns.Kept()
+		for id in pairs(k) do k[id] = nil end
+		Log("loot: kept items cleared")
+		ns.RefreshConfig()
+	end)
+	Tooltip(config.keptClear, T("Clear"), T("These items may be destroyed again when your bags are full. Only for this character."))
 	y = y - 38
 
 	-- 1. Groepen: eigen categorieën en vaste groepen in één lijst ---------------
@@ -163,6 +177,9 @@ function ns.BuildConfig()
 	local colB = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	colB:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 148, y)
 	colB:SetText(T("Mail to / settings"))
+	local colC = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	colC:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 378, y)
+	colC:SetText(T("Keep"))
 	y = y - 14
 	config.catTop = y
 
@@ -306,6 +323,12 @@ function ns.BuildConfig()
 			ResetOrder(); ns.Refresh(); ns.RefreshConfig()
 		end)
 		Tooltip(r.del, T("Remove"), T("Items go back to Other."))
+		-- Bij volle tassen nooit iets uit deze groep weggooien.
+		r.keep = NewCheck(r, "", nil, function() return r.key and ns.KeptGroups()[r.key] end, function(v)
+			if r.key then ns.KeptGroups()[r.key] = v or nil; Log("loot: keep group " .. r.key .. ": " .. tostring(v)) end
+		end)
+		r.keep:SetPoint("LEFT", r, "LEFT", 380, 0)
+		Tooltip(r.keep, T("Keep"), T("Never destroy anything from this group when your bags are full."))
 		catRows[i] = r
 	end
 
@@ -447,6 +470,10 @@ ns.RefreshConfig = function()
 	if not config or not config:IsShown() then return end
 	for _, cb in ipairs(config.checks) do cb:SetChecked(cb.get() and true or false) end
 	config.colsLabel:SetText(T("Bag width: %d columns"):format(ns.DB.maxCols))
+	local nKept = 0
+	for _ in pairs(ns.Kept()) do nKept = nKept + 1 end
+	config.keptLabel:SetText(T("Items kept when bags are full: %d"):format(nKept))
+	config.keptClear:SetEnabled(nKept > 0)
 
 	local order = FixOrder()
 	local y = config.catTop
@@ -502,6 +529,8 @@ ns.RefreshConfig = function()
 				r.mailAuto:SetChecked(MailAuto(key))
 				r.mailAuto:SetEnabled(not ns.DB.mailAlwaysAuto) -- staat "altijd" aan: vinkje per groep doet niets
 			end
+			r.keep:SetShown(key ~= "quest" and key ~= "keys") -- die worden toch nooit weggegooid
+			r.keep:SetChecked(ns.KeptGroups()[key] and true or false)
 			r.up:SetEnabled(i > 1)
 			r.down:SetEnabled(i < #order)
 			r:ClearAllPoints()

@@ -252,6 +252,19 @@ function ns.Hidden()
 	local ch = ns.CharEntry()
 	return ch and ch.hidden or NOHIDDEN
 end
+-- Bij volle tassen nooit weggooien (per karakter): losse items en hele groepen.
+function ns.Kept()
+	local ch = ns.CharEntry()
+	if not ch then return {} end
+	ch.keep = ch.keep or {}
+	return ch.keep
+end
+function ns.KeptGroups()
+	local ch = ns.CharEntry()
+	if not ch then return {} end
+	ch.keepGroups = ch.keepGroups or {}
+	return ch.keepGroups
+end
 
 -- Hoeveel items heeft dit karakter aan een groep geleerd (door slepen)?
 function ns.LearnedCount(key)

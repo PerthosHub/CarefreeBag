@@ -95,3 +95,25 @@ BAGS[0][3].count = 20
 LOOT = { { id = 2589, qty = 2 } }
 E("UI_ERROR_MESSAGE", 3, "Inventory is full.")
 check(P:IsShown(), "foutmelding 'tassen vol' opent het paneel")
+
+-- 9. "Keep this item": Torn Wing nooit meer, meteen het volgende goedkoopste item
+check(P.offer.junk.e.itemID == 8001 and P.junkRow.label.text:find("Auto Sell"), "groepsnaam bij het goedkoopste item (Auto Sell)")
+P.keepItem:Fire("OnClick"); RunTimers()
+check(CFC().keep[8001] == true, "Torn Wing onthouden als 'houden' (per karakter)")
+check(P:IsShown() and P.offer.junk.e.itemID == 2589, "volgende goedkoopste: Linen Cloth")
+local linenSec = P.offer.junk.sec
+-- 10. "Keep this group": niets uit de groep van het linnen, dan de ring
+P.keepGroup:Fire("OnClick"); RunTimers()
+check(CFC().keepGroups[linenSec] == true, "groep '" .. tostring(linenSec) .. "' onthouden als 'houden'")
+check(P:IsShown() and P.offer.junk.e.itemID == 9000, "volgende: Shiny Ring (andere groep)")
+-- 11. Ring ook houden: niets meer over om weg te gooien
+P.keepItem:Fire("OnClick"); RunTimers()
+check(not P:IsShown(), "alles beschermd: geen paneel")
+-- 12. Opties: vinkje per groep en 'Wissen' voor de items
+SlashCmdList.CAREFREEBAG(""); RunTimers()
+check(CarefreeBagConfig:IsShown() and CarefreeBagConfig.keptLabel.text:find("2"), "opties: 2 items die je houdt")
+CarefreeBagConfig.keptClear:Fire("OnClick"); RunTimers()
+check(next(CFC().keep) == nil, "Wissen: geen items meer bewaard")
+check(CFC().keepGroups[linenSec] == true, "Wissen laat de groepen staan")
+E("LOOT_CLOSED"); LOOT = { { id = 2589, qty = 2 } }; E("LOOT_OPENED")
+check(P:IsShown() and P.offer.junk.e.itemID == 8001, "na Wissen: Torn Wing weer voorgesteld")

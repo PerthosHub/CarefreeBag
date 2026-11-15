@@ -75,6 +75,7 @@ function ns.HookAHTooltip()
 		if tt ~= GameTooltip or not tt.GetOwner then return end
 		local owner = tt:GetOwner()
 		if owner and owner.isCarefreeItem and owner.group then AddAHLines(tt, owner.group) end
+		if owner and owner.isCarefreeItem and owner.group and ns.KeptLine then pcall(ns.KeptLine, tt, owner.group.itemID) end
 		if AddOwnerLines then pcall(AddOwnerLines, tt) end
 	end
 	if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then

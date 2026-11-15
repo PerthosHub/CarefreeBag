@@ -4,6 +4,18 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["Keep this item"] = "Dit item houden",
+	["Keep this group"] = "Deze groep houden",
+	["%s is never destroyed when your bags are full."] = "%s wordt nooit weggegooid als je tassen vol zijn.",
+	["Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."] = "Niets uit de groep %s wordt weggegooid als je tassen vol zijn. Aanpassen in de opties (Houden).",
+	["Never destroy this item when your bags are full. The next cheapest item is shown."] = "Dit item nooit weggooien als je tassen vol zijn. Je ziet meteen het volgende goedkoopste item.",
+	["Never destroy anything from this group when your bags are full. Change it in the options (Keep)."] = "Nooit iets uit deze groep weggooien als je tassen vol zijn. Aanpassen in de opties (Houden).",
+	["Never destroy anything from this group when your bags are full."] = "Nooit iets uit deze groep weggooien als je tassen vol zijn.",
+	["kept when your bags are full"] = "blijft bewaard als je tassen vol zijn",
+	["Keep"] = "Houden",
+	["Clear"] = "Wissen",
+	["These items may be destroyed again when your bags are full. Only for this character."] = "Deze items mogen weer weggegooid worden als je tassen vol zijn. Alleen voor dit karakter.",
+	["Items kept when bags are full: %d"] = "Items die je houdt bij volle tassen: %d",
 	["Bags full"] = "Tassen vol",
 	["Loot that does not fit"] = "Loot die niet past",
 	["Cheapest in your bags"] = "Goedkoopste in je tassen",
@@ -162,6 +174,18 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["Keep this item"] = "Diesen behalten",
+	["Keep this group"] = "Gruppe behalten",
+	["%s is never destroyed when your bags are full."] = "%s wird bei vollen Taschen nie zerstört.",
+	["Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."] = "Aus der Gruppe %s wird bei vollen Taschen nichts zerstört. Ändern in den Optionen (Behalten).",
+	["Never destroy this item when your bags are full. The next cheapest item is shown."] = "Diesen Gegenstand bei vollen Taschen nie zerstören. Der nächstbillige wird gezeigt.",
+	["Never destroy anything from this group when your bags are full. Change it in the options (Keep)."] = "Bei vollen Taschen nie etwas aus dieser Gruppe zerstören. Ändern in den Optionen (Behalten).",
+	["Never destroy anything from this group when your bags are full."] = "Bei vollen Taschen nie etwas aus dieser Gruppe zerstören.",
+	["kept when your bags are full"] = "wird bei vollen Taschen behalten",
+	["Keep"] = "Behalten",
+	["Clear"] = "Leeren",
+	["These items may be destroyed again when your bags are full. Only for this character."] = "Diese Gegenstände dürfen bei vollen Taschen wieder zerstört werden. Nur für diesen Charakter.",
+	["Items kept when bags are full: %d"] = "Bei vollen Taschen behalten: %d",
 	["Bags full"] = "Taschen voll",
 	["Loot that does not fit"] = "Beute, die nicht passt",
 	["Cheapest in your bags"] = "Billigstes in deinen Taschen",
@@ -321,6 +345,18 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Keep this item"] = "Garder cet objet",
+	["Keep this group"] = "Garder ce groupe",
+	["%s is never destroyed when your bags are full."] = "%s n'est jamais détruit quand tes sacs sont pleins.",
+	["Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."] = "Rien du groupe %s n'est détruit quand tes sacs sont pleins. Modifiable dans les options (Garder).",
+	["Never destroy this item when your bags are full. The next cheapest item is shown."] = "Ne jamais détruire cet objet quand tes sacs sont pleins. L'objet suivant le moins cher s'affiche.",
+	["Never destroy anything from this group when your bags are full. Change it in the options (Keep)."] = "Ne jamais rien détruire de ce groupe quand tes sacs sont pleins. Modifiable dans les options (Garder).",
+	["Never destroy anything from this group when your bags are full."] = "Ne jamais rien détruire de ce groupe quand tes sacs sont pleins.",
+	["kept when your bags are full"] = "gardé quand tes sacs sont pleins",
+	["Keep"] = "Garder",
+	["Clear"] = "Vider",
+	["These items may be destroyed again when your bags are full. Only for this character."] = "Ces objets peuvent de nouveau être détruits quand tes sacs sont pleins. Seulement pour ce personnage.",
+	["Items kept when bags are full: %d"] = "Objets gardés quand les sacs sont pleins : %d",
 	["Bags full"] = "Sacs pleins",
 	["Loot that does not fit"] = "Butin qui ne rentre pas",
 	["Cheapest in your bags"] = "Le moins cher de tes sacs",
@@ -480,6 +516,18 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Keep this item"] = "Guardar este objeto",
+	["Keep this group"] = "Guardar este grupo",
+	["%s is never destroyed when your bags are full."] = "%s nunca se destruye cuando tus bolsas están llenas.",
+	["Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."] = "No se destruye nada del grupo %s cuando tus bolsas están llenas. Cámbialo en las opciones (Guardar).",
+	["Never destroy this item when your bags are full. The next cheapest item is shown."] = "Nunca destruir este objeto con las bolsas llenas. Se muestra el siguiente más barato.",
+	["Never destroy anything from this group when your bags are full. Change it in the options (Keep)."] = "Nunca destruir nada de este grupo con las bolsas llenas. Cámbialo en las opciones (Guardar).",
+	["Never destroy anything from this group when your bags are full."] = "Nunca destruir nada de este grupo con las bolsas llenas.",
+	["kept when your bags are full"] = "se guarda con las bolsas llenas",
+	["Keep"] = "Guardar",
+	["Clear"] = "Vaciar",
+	["These items may be destroyed again when your bags are full. Only for this character."] = "Estos objetos se pueden volver a destruir con las bolsas llenas. Solo para este personaje.",
+	["Items kept when bags are full: %d"] = "Objetos guardados con las bolsas llenas: %d",
 	["Bags full"] = "Bolsas llenas",
 	["Loot that does not fit"] = "Botín que no cabe",
 	["Cheapest in your bags"] = "Lo más barato de tus bolsas",
@@ -639,6 +687,18 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Keep this item"] = "Manter este item",
+	["Keep this group"] = "Manter este grupo",
+	["%s is never destroyed when your bags are full."] = "%s nunca é destruído quando suas bolsas estão cheias.",
+	["Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."] = "Nada do grupo %s é destruído quando suas bolsas estão cheias. Mude nas opções (Manter).",
+	["Never destroy this item when your bags are full. The next cheapest item is shown."] = "Nunca destruir este item com as bolsas cheias. O próximo mais barato aparece.",
+	["Never destroy anything from this group when your bags are full. Change it in the options (Keep)."] = "Nunca destruir nada deste grupo com as bolsas cheias. Mude nas opções (Manter).",
+	["Never destroy anything from this group when your bags are full."] = "Nunca destruir nada deste grupo com as bolsas cheias.",
+	["kept when your bags are full"] = "mantido com as bolsas cheias",
+	["Keep"] = "Manter",
+	["Clear"] = "Limpar",
+	["These items may be destroyed again when your bags are full. Only for this character."] = "Estes itens podem ser destruídos de novo com as bolsas cheias. Só para este personagem.",
+	["Items kept when bags are full: %d"] = "Itens mantidos com as bolsas cheias: %d",
 	["Bags full"] = "Bolsas cheias",
 	["Loot that does not fit"] = "Saque que não cabe",
 	["Cheapest in your bags"] = "O mais barato das suas bolsas",
@@ -798,6 +858,18 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Keep this item"] = "Tieni questo oggetto",
+	["Keep this group"] = "Tieni questo gruppo",
+	["%s is never destroyed when your bags are full."] = "%s non viene mai distrutto quando le borse sono piene.",
+	["Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."] = "Niente del gruppo %s viene distrutto quando le borse sono piene. Modificalo nelle opzioni (Tieni).",
+	["Never destroy this item when your bags are full. The next cheapest item is shown."] = "Non distruggere mai questo oggetto con le borse piene. Viene mostrato il successivo più economico.",
+	["Never destroy anything from this group when your bags are full. Change it in the options (Keep)."] = "Non distruggere mai nulla di questo gruppo con le borse piene. Modificalo nelle opzioni (Tieni).",
+	["Never destroy anything from this group when your bags are full."] = "Non distruggere mai nulla di questo gruppo con le borse piene.",
+	["kept when your bags are full"] = "tenuto con le borse piene",
+	["Keep"] = "Tieni",
+	["Clear"] = "Svuota",
+	["These items may be destroyed again when your bags are full. Only for this character."] = "Questi oggetti possono di nuovo essere distrutti con le borse piene. Solo per questo personaggio.",
+	["Items kept when bags are full: %d"] = "Oggetti tenuti con le borse piene: %d",
 	["Bags full"] = "Borse piene",
 	["Loot that does not fit"] = "Bottino che non entra",
 	["Cheapest in your bags"] = "Il più economico nelle tue borse",
@@ -957,6 +1029,18 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Keep this item"] = "Оставить предмет",
+	["Keep this group"] = "Оставить группу",
+	["%s is never destroyed when your bags are full."] = "%s никогда не уничтожается, когда сумки полны.",
+	["Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."] = "Ничего из группы %s не уничтожается, когда сумки полны. Изменить можно в настройках (Оставить).",
+	["Never destroy this item when your bags are full. The next cheapest item is shown."] = "Никогда не уничтожать этот предмет при полных сумках. Будет показан следующий самый дешёвый.",
+	["Never destroy anything from this group when your bags are full. Change it in the options (Keep)."] = "Никогда не уничтожать ничего из этой группы при полных сумках. Изменить можно в настройках (Оставить).",
+	["Never destroy anything from this group when your bags are full."] = "Никогда не уничтожать ничего из этой группы при полных сумках.",
+	["kept when your bags are full"] = "сохраняется при полных сумках",
+	["Keep"] = "Оставить",
+	["Clear"] = "Очистить",
+	["These items may be destroyed again when your bags are full. Only for this character."] = "Эти предметы снова можно уничтожать при полных сумках. Только для этого персонажа.",
+	["Items kept when bags are full: %d"] = "Сохраняется при полных сумках: %d",
 	["Bags full"] = "Сумки полны",
 	["Loot that does not fit"] = "Добыча, которая не помещается",
 	["Cheapest in your bags"] = "Самое дешёвое в сумках",
