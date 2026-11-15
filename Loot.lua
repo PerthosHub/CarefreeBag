@@ -91,7 +91,7 @@ local function BestLoot(items, free)
 		if link and (not GetLootSlotType or GetLootSlotType(i) == LOOT_ITEM) then
 			local icon, _, qty, _, _, locked, isQuest = GetLootSlotInfo(i)
 			local id = tonumber(link:match("item:(%d+)"))
-			local r = Info(link)
+			local r = id and Info(id)
 			qty = (qty and qty > 0) and qty or 1
 			if id and not locked and not Fits(items, free, id, qty, r and r[18]) then
 				local each, ah = Each(link, r and r[12])
