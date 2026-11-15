@@ -2,5 +2,7 @@ package-as: CarefreeBag
 
 ignore:
   - README.md
+  - CLAUDE.md
   - .github
   - media
+  - tests

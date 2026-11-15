@@ -1,0 +1,19 @@
+name: Test CarefreeBag
+
+# Bij elke push naar main en elke pull request: alle scenario's en de vertalingen.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Lua 5.1
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lua5.1
+      - name: Test scenarios
+        run: lua5.1 tests/run.lua
+      - name: Check translations
+        run: python3 tests/check_locales.py

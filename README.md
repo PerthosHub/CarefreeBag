@@ -34,5 +34,9 @@ CarefreeBag is a simple bag addon for WoW Forever, made with retail and Classic 
 - Optional: **Auctionator** (for AH prices).
 - If another bag addon (Baganator, Bagnon, AdiBags, ...) is installed, CarefreeBag asks which one you want to use.
 
+## Development
+- Run the tests: `lua5.1 tests/run.lua` and `python3 tests/check_locales.py` (GitHub runs them on every push).
+- How the code is organised: see `CLAUDE.md`.
+
 ## License
 MIT – see [LICENSE](LICENSE).

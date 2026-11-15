@@ -17,5 +17,14 @@
 ## X-Curse-Project-ID: 1803698
 ## X-Wago-ID: n6VYpWNd
 
+Env.lua
 Locales.lua
-CarefreeBag.lua
+Core.lua
+Data.lua
+BagWindow.lua
+BankPanel.lua
+Blizzard.lua
+Chores.lua
+Mail.lua
+Options.lua
+Start.lua
