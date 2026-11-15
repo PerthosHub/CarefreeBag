@@ -7,6 +7,7 @@ ITEMS = {
   [7003] = { name = "Worn Gloves", quality = 1, stack = 1, bind = 0, icon = 6, equip = "INVTYPE_HAND" },
 }
 BAGS[0] = { n = 4, [1] = { itemID = 4599, count = 5 } }
+ERR_INV_FULL = "Inventory is full."
 
 local NS = {}
 LoadAddon(NS)
