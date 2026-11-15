@@ -66,6 +66,7 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 - API-sleutels staan alleen in GitHub secrets (`CF_API_KEY`, `WAGO_API_TOKEN`); vraag Johan nooit om ze.
 
 ## Stand van zaken (bijwerken na elke sessie)
-- 1.5.0 is nog **niet** uitgebracht. Wacht op Johans test in het spel van: de opsplitsing, het bankpaneel (tassen en bank van een ander karakter), en mail "zonder vragen".
+- 1.5.0 is nog **niet** uitgebracht. Bankpaneel (tassen en bank van een ander karakter) is door Johan in het spel getest: werkt. Nog te testen: de opsplitsing in het algemeen en mail "zonder vragen".
+- Volgende stap: UI-verbeteringen (Johan geeft per chat aan welke).
 - Nog niet gedaan: Warband-bank (retail), een verwijderd karakter uit de lijst halen.
 - Johans karakters (Forever): main en bank alt hebben dezelfde voornaam. Echte namen staan niet in de repo.
