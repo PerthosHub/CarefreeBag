@@ -65,6 +65,10 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 5. CurseForge keurt elk bestand handmatig goed (meestal binnen een paar uur).
 - API-sleutels staan alleen in GitHub secrets (`CF_API_KEY`, `WAGO_API_TOKEN`); vraag Johan nooit om ze.
 
+## Einde van elke sessie (Johans afspraak)
+- "Stand van zaken" hieronder bijwerken, committen op de sessie-branch én naar `main` pushen (`git push origin HEAD:main`, fast-forward). Een nieuwe chat begint vanaf `main`.
+- Pushen naar `main` brengt niets uit: dat gebeurt pas met een release-tag.
+
 ## Stand van zaken (bijwerken na elke sessie)
 - 1.5.0 is nog **niet** uitgebracht. Bankpaneel (tassen en bank van een ander karakter) is door Johan in het spel getest: werkt. Nog te testen: de opsplitsing in het algemeen en mail "zonder vragen".
 - Volgende stap: UI-verbeteringen (Johan geeft per chat aan welke).
