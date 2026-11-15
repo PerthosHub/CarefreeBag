@@ -1870,6 +1870,10 @@ local function ViewLayout()
 	-- Standaard: de bank van het karakter waarmee je speelt.
 	viewer.key = viewer.key or charKey
 	viewer.part = viewer.part or "bank"
+	-- Je eigen tassen staan al rechts open: bij jezelf alleen de bank.
+	if viewer.key == charKey then viewer.part = "bank" end
+	viewer.tabs.bags:SetShown(viewer.key ~= charKey)
+	viewer.tabs.bank:SetShown(viewer.key ~= charKey)
 	local choice = { key = viewer.key, part = viewer.part }
 	local ch0 = DB.chars[choice.key]
 	local who = (ch0 and ch0.snap and ch0.snap.name) or (choice.key == charKey and MyFullName()) or choice.key
@@ -2873,10 +2877,9 @@ local function BuildConfig()
 			local c, idx = CatByKey(r.key)
 			if c then
 				table.remove(CS().cats, idx)
-				for _, ch in pairs(DB.chars) do
-					for id, k in pairs(ch.assign) do if k == c.key then ch.assign[id] = nil end end
-				end
-				if DB.assign then for id, k in pairs(DB.assign) do if k == c.key then DB.assign[id] = nil end end end
+				-- alleen bij dit karakter: andere karakters houden hun groepen en geleerde items
+				local own = Assign()
+				for id, k in pairs(own) do if k == c.key then own[id] = nil end end
 				Print(T("category '%s' removed. Its items are back in Other."):format(c.name))
 			end
 			ResetOrder(); Refresh(); RefreshConfig()
