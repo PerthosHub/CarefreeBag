@@ -181,6 +181,8 @@ NL["Send everything in %s to %s?"] = "Wil je alles uit %s versturen naar %s?"
 NL["After that: %s"] = "Daarna: %s"
 NL["Yes, send"] = "Ja, versturen"
 NL["Skip"] = "Overslaan"
+NL["Send without asking"] = "Versturen zonder vragen"
+NL["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Bij de mailbox wordt deze groep meteen verstuurd, zonder de vraag Ja/Overslaan."
 NL["Bags"] = "Tassen"
 NL["Bank"] = "Bank"
 NL["Bank & alts"] = "Bank & alts"
@@ -2378,6 +2380,13 @@ mail = { busy = false, plan = nil, step = false, skipped = {} }
 
 -- Per categorie: wat gaat waarheen. De volgorde is die van je groepen.
 -- Je krijgt per categorie de vraag of hij verstuurd moet worden.
+-- Mag deze groep zonder vraag verstuurd worden? (per groep in te stellen)
+local function MailAuto(key)
+	if key == "boe" then return DB.boeMailAuto and true or false end
+	local c = CatByKey(key)
+	return c and c.mailAuto and true or false
+end
+
 local function BuildMailPlan()
 	local items = Scan()
 	local plan = {}
@@ -2386,17 +2395,32 @@ local function BuildMailPlan()
 		if to and not mail.skipped[sec] then
 			if not plan[sec] then
 				local c = CatByKey(sec)
-				plan[sec] = { key = sec, cat = c and c.name or "BoE", to = to, items = {} }
+				plan[sec] = { key = sec, cat = c and c.name or "BoE", to = to, items = {}, auto = MailAuto(sec) }
 			end
 			local p = plan[sec]
 			p.items[#p.items + 1] = { bag = e.bag, slot = e.slot, itemID = e.itemID, name = e.name, count = e.count }
 		end
 	end
+	-- Groepen die zonder vraag mogen eerst, daarna de groepen met een vraag.
 	local list = {}
-	for _, sec in ipairs(SectionList()) do
-		if plan[sec.key] then list[#list + 1] = plan[sec.key] end
+	for pass = 1, 2 do
+		for _, sec in ipairs(SectionList()) do
+			local p = plan[sec.key]
+			if p and (p.auto == (pass == 1)) then list[#list + 1] = p end
+		end
 	end
 	return list
+end
+
+local MailStart -- vooruit
+-- Staat bovenaan een groep die zonder vraag mag? Dan meteen versturen.
+local function MailAutoNext()
+	if mail.busy or mail.step or not mailPanel or not mailPanel:IsShown() then return end
+	local plan = BuildMailPlan()
+	if plan[1] and plan[1].auto then
+		Log("mail: " .. plan[1].cat .. " sent without asking")
+		MailStart()
+	end
 end
 
 local UpdateMailPanel -- vooruit
@@ -2419,7 +2443,10 @@ local function MailPack()
 		local done = mail.cat
 		mail.cat = nil
 		if #BuildMailPlan() == 0 then MailStop(T("all mail has been sent."))
-		else MailStop(T("%s sent."):format(done or "")) end
+		else
+			MailStop(T("%s sent."):format(done or ""))
+			C_Timer.After(0.6, MailAutoNext) -- volgende groep zonder vraag?
+		end
 		return false
 	end
 	if MailFrameTab_OnClick then pcall(MailFrameTab_OnClick, nil, 2) end
@@ -2453,7 +2480,7 @@ local function MailSend()
 end
 
 -- Verstuurt alleen de categorie waar nu de vraag over staat.
-local function MailStart()
+MailStart = function()
 	if mail.busy then return end
 	local plan = BuildMailPlan()
 	if #plan == 0 then Print(T("nothing to send.")); return end
@@ -2761,7 +2788,7 @@ local function BuildConfig()
 		r.onCb:SetPoint("LEFT", r, "LEFT", 8, 0) -- vinkje vóór de naam
 		Tooltip(r.onCb, T("Off: items go to Other."))
 
-		r.mail = NewEdit(r, 140)
+		r.mail = NewEdit(r, 114)
 		r.mail:SetPoint("LEFT", r, "LEFT", 146, 0)
 		local function setMail(self)
 			if r.key == "boe" then
@@ -2776,12 +2803,22 @@ local function BuildConfig()
 			Log("mail address for " .. tostring(r.key) .. " changed")
 			self:ClearFocus()
 			Refresh()
+			RefreshConfig() -- vinkje "zonder vragen" verschijnt pas met een ontvanger
 		end
 		r.mail:SetScript("OnEnterPressed", setMail)
 		r.mail:SetScript("OnEditFocusLost", setMail)
 		-- Forever heeft voor- en achternaam; de andere WoW-versies naam(-realm).
 		Tooltip(r.mail, T("Mail to"), SurnameSep() and T("Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail.")
 			or T("Name of your alt, e.g. 'Thrall', or 'Thrall-Stormrage' on another realm. Empty = no mail."))
+
+		-- Zonder vragen versturen (alleen zichtbaar als er een ontvanger is).
+		r.mailAuto = NewCheck(r, "", nil, function() return r.key and MailAuto(r.key) end, function(v)
+			if r.key == "boe" then DB.boeMailAuto = v or nil
+			else local c = r.key and CatByKey(r.key); if c then c.mailAuto = v or nil end end
+			Log("mail without asking for " .. tostring(r.key) .. ": " .. tostring(v))
+		end)
+		r.mailAuto:SetPoint("LEFT", r.mail, "RIGHT", 2, 0)
+		Tooltip(r.mailAuto, T("Send without asking"), T("At the mailbox this group is sent right away, without the Yes/Skip question."))
 
 		-- Vinkjes voor vaste groepen (in de kolom van het postadres).
 		r.cb1 = NewCheck(r, "", nil, function() return r.cb1Field and DB[r.cb1Field] end, function(v) if r.cb1Field then DB[r.cb1Field] = v end end)
@@ -3001,6 +3038,8 @@ RefreshConfig = function()
 				else
 					r.mail:Hide()
 				end
+				r.mailAuto:SetShown(spec.mail and (DB.boeMail or "") ~= "" and true or false)
+				r.mailAuto:SetChecked(MailAuto(key))
 			else
 				local c = CatByKey(key)
 				SetupCheck(r, r.cb1, "cb1Field", nil)
@@ -3009,6 +3048,8 @@ RefreshConfig = function()
 				if preset then r.fixedName.fs:SetText("|cffffd100" .. c.name .. "|r")
 				elseif not r.name:HasFocus() then r.name:SetText(c.name) end
 				if not r.mail:HasFocus() then r.mail:SetText(c.mailTo or "") end
+				r.mailAuto:SetShown((c.mailTo or "") ~= "")
+				r.mailAuto:SetChecked(MailAuto(key))
 			end
 			r.up:SetEnabled(i > 1)
 			r.down:SetEnabled(i < #order)
@@ -3188,6 +3229,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		if not mailPanel then Try("mail", BuildMailPanel) end
 		if mailPanel then mailPanel:Show(); UpdateMailPanel() end
 		Refresh()
+		C_Timer.After(0.5, MailAutoNext)
 	elseif event == "MAIL_CLOSED" then
 		if mail.busy then MailStop(T("mailbox closed, stopped.")) end
 		if mailPanel then mailPanel:Hide() end

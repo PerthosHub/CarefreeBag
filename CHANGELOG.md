@@ -5,6 +5,7 @@
 - Your bank is remembered each time you visit a banker. Your bags are remembered as you play.
 - Item tooltips show where else you have the item, per character (bags and bank).
 - The search box also dims items in the panel.
+- Mail: per group you can tick "Send without asking" (shows up once the group has a recipient). At the mailbox those groups are sent right away, before the groups that still ask.
 
 ## 1.4.0
 - Now also loads in retail (Midnight), MoP Classic, TBC Classic Anniversary and Classic Era. These versions are new and less tested: please report problems on GitHub.

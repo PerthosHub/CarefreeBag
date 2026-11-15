@@ -4,6 +4,8 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.de = {
+	["Send without asking"] = "Ohne Nachfrage senden",
+	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Am Briefkasten wird diese Gruppe sofort gesendet, ohne die Frage Ja/Überspringen.",
 	["Bags"] = "Taschen",
 	["Bank"] = "Bank",
 	["Bank & alts"] = "Bank & Twinks",
@@ -138,6 +140,8 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Send without asking"] = "Envoyer sans demander",
+	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "À la boîte aux lettres, ce groupe est envoyé tout de suite, sans la question Oui/Passer.",
 	["Bags"] = "Sacs",
 	["Bank"] = "Banque",
 	["Bank & alts"] = "Banque & rerolls",
@@ -272,6 +276,8 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Send without asking"] = "Enviar sin preguntar",
+	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "En el buzón, este grupo se envía al momento, sin la pregunta Sí/Saltar.",
 	["Bags"] = "Bolsas",
 	["Bank"] = "Banco",
 	["Bank & alts"] = "Banco y alters",
@@ -406,6 +412,8 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Send without asking"] = "Enviar sem perguntar",
+	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Na caixa de correio, este grupo é enviado na hora, sem a pergunta Sim/Pular.",
 	["Bags"] = "Bolsas",
 	["Bank"] = "Banco",
 	["Bank & alts"] = "Banco e alts",
@@ -540,6 +548,8 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Send without asking"] = "Invia senza chiedere",
+	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Alla cassetta postale questo gruppo viene inviato subito, senza la domanda Sì/Salta.",
 	["Bags"] = "Borse",
 	["Bank"] = "Banca",
 	["Bank & alts"] = "Banca e alt",
@@ -674,6 +684,8 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Send without asking"] = "Отправлять без вопроса",
+	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "У почтового ящика эта группа отправляется сразу, без вопроса Да/Пропустить.",
 	["Bags"] = "Сумки",
 	["Bank"] = "Банк",
 	["Bank & alts"] = "Банк и твинки",

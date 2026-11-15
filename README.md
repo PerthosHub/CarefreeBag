@@ -16,7 +16,7 @@ CarefreeBag is a simple bag addon for WoW Forever, made with retail and Classic 
 - Fixed groups: **Quest**, **BoE**, **Auto Sell**, **Other** and **Keys** (off by default). Each can be turned off.
 - **Auto Sell**: grey items, plus anything you drop in, are sold when you open a vendor. Hold **Shift** to skip once.
 - **Stacks**: the same item shows as one tile; half stacks are combined in your bags (never during combat).
-- **Mail to alts**: give a group an address. At a mailbox you're asked per group: Yes, send or Skip.
+- **Mail to alts**: give a group an address. At a mailbox you're asked per group: Yes, send or Skip. Or tick "Send without asking" for a group.
 - **Per group**: collapse it, and (optional) pick the sorting: stack price, newest last or manual (drag to reorder).
 - **Bank & alts**: a panel next to your bags shows your bank, and the bags and bank of your other characters (view only). Tooltips show where else you have an item.
 - **AH value** of a stack after the AH cut in the tooltip, if you have Auctionator.
