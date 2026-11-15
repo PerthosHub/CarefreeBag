@@ -1,6 +1,8 @@
 # Changelog
 
 ## 1.5.0
+- Fix: two characters with the same first name (Forever: "Perthos Dimbringer" and "Perthos Boxdrie") shared their groups and learned items. Each character now really has its own. The character that logged in last keeps the changed groups; the other gets its groups from before 1.3.0 back. `/cfb resetgroups` resets the groups of the current character.
+- Bank & alts panel: pick a character, then Bags or Bank. Opens on your own bank.
 - New "Bank & alts" button: a panel next to your bags shows your bank, and the bags and bank of your other characters, sorted into that character's groups. View only; at the banker you move items as usual.
 - Your bank is remembered each time you visit a banker. Your bags are remembered as you play.
 - Item tooltips show where else you have the item, per character (bags and bank).

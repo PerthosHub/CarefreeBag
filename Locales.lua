@@ -4,6 +4,7 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.de = {
+	["Groups of this character reset."] = "Gruppen dieses Charakters zurückgesetzt.",
 	["Send without asking"] = "Ohne Nachfrage senden",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Am Briefkasten wird diese Gruppe sofort gesendet, ohne die Frage Ja/Überspringen.",
 	["Bags"] = "Taschen",
@@ -140,6 +141,7 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Groups of this character reset."] = "Groupes de ce personnage réinitialisés.",
 	["Send without asking"] = "Envoyer sans demander",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "À la boîte aux lettres, ce groupe est envoyé tout de suite, sans la question Oui/Passer.",
 	["Bags"] = "Sacs",
@@ -276,6 +278,7 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Groups of this character reset."] = "Grupos de este personaje restablecidos.",
 	["Send without asking"] = "Enviar sin preguntar",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "En el buzón, este grupo se envía al momento, sin la pregunta Sí/Saltar.",
 	["Bags"] = "Bolsas",
@@ -412,6 +415,7 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Groups of this character reset."] = "Grupos deste personagem redefinidos.",
 	["Send without asking"] = "Enviar sem perguntar",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Na caixa de correio, este grupo é enviado na hora, sem a pergunta Sim/Pular.",
 	["Bags"] = "Bolsas",
@@ -548,6 +552,7 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Groups of this character reset."] = "Gruppi di questo personaggio ripristinati.",
 	["Send without asking"] = "Invia senza chiedere",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Alla cassetta postale questo gruppo viene inviato subito, senza la domanda Sì/Salta.",
 	["Bags"] = "Borse",
@@ -684,6 +689,7 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Groups of this character reset."] = "Группы этого персонажа сброшены.",
 	["Send without asking"] = "Отправлять без вопроса",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "У почтового ящика эта группа отправляется сразу, без вопроса Да/Пропустить.",
 	["Bags"] = "Сумки",

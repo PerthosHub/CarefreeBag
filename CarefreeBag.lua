@@ -181,6 +181,7 @@ NL["Send everything in %s to %s?"] = "Wil je alles uit %s versturen naar %s?"
 NL["After that: %s"] = "Daarna: %s"
 NL["Yes, send"] = "Ja, versturen"
 NL["Skip"] = "Overslaan"
+NL["Groups of this character reset."] = "Groepen van dit karakter teruggezet."
 NL["Send without asking"] = "Versturen zonder vragen"
 NL["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Bij de mailbox wordt deze groep meteen verstuurd, zonder de vraag Ja/Overslaan."
 NL["Bags"] = "Tassen"
@@ -335,7 +336,26 @@ local function CharEntry()
 	if not charKey then
 		local name = UnitName and UnitName("player")
 		if not name or name == "" or name == UNKNOWNOBJECT then return nil end
-		charKey = name .. "-" .. ((GetRealmName and GetRealmName()) or "")
+		local realm = "-" .. ((GetRealmName and GetRealmName()) or "")
+		-- Forever: twee karakters kunnen dezelfde voornaam hebben (Perthos Dimbringer en
+		-- Perthos Boxdrie). Daarom de volledige naam als sleutel.
+		local full = MyFullName() or name
+		charKey = full .. realm
+		-- Tot 1.5.0 was de sleutel alleen de voornaam; die gedeelde gegevens kopiëren we
+		-- (zonder de onthouden tassen/bank, want die waren van wie het laatst inlogde).
+		local old = DB.chars[name .. realm]
+		if full ~= name and old and not DB.chars[charKey] then
+			local function copy(t) local n = {}; for k, v in pairs(t or {}) do n[k] = type(v) == "table" and copy(v) or v end; return n end
+			-- Wie het laatst inlogde, heeft de groepen het laatst aangepast: die houdt ze.
+			-- De anderen beginnen weer met de groepen van vóór 1.3.0 (de accountlijst).
+			local owner = (old.snap and old.snap.name) or old.lastName
+			old.lastName = owner
+			local ch = copy(old)
+			ch.snap, ch.legacy, ch.lastName = nil, nil, nil
+			if owner and owner ~= full then ch.cats, ch.order, ch.sort, ch.collapsed = nil, nil, nil, nil end
+			DB.chars[charKey] = ch
+			old.snap, old.legacy = nil, true -- oude sleutel: niet meer tonen als karakter
+		end
 	end
 	local ch = DB.chars[charKey]
 	if not ch then
@@ -503,6 +523,25 @@ local function KeyringBag()
 	return id
 end
 
+-- Eén item uit een tasvak, met alles wat de indeling nodig heeft.
+local function MakeEntry(bag, slot, info, isKey)
+	local stack, bind, price, classID, equipLoc, subclassID = ItemExtra(info.itemID)
+	local link = info.hyperlink
+	return {
+		bag = bag, slot = slot, info = info, itemID = info.itemID,
+		count = info.stackCount or 1, quality = info.quality or 1,
+		bound = info.isBound, link = link,
+		name = link and link:match("%[(.-)%]") or tostring(info.itemID),
+		maxStack = stack or ((info.stackCount or 1) > 1 and 20 or 1),
+		stackKnown = stack ~= nil,
+		bindType = bind or 0,
+		price = price or 0,
+		quest = IsQuestItem(bag, slot, classID),
+		classID = classID, subclassID = subclassID, equipLoc = equipLoc,
+		key = isKey,
+	}
+end
+
 local function Scan()
 	local items, free = {}, {}
 	local total = 0
@@ -518,21 +557,7 @@ local function Scan()
 			if not isKey then total = total + 1 end
 			local info = C_Container.GetContainerItemInfo(bag, slot)
 			if info and info.itemID then
-				local stack, bind, price, classID, equipLoc, subclassID = ItemExtra(info.itemID)
-				local link = info.hyperlink
-				items[#items + 1] = {
-					bag = bag, slot = slot, info = info, itemID = info.itemID,
-					count = info.stackCount or 1, quality = info.quality or 1,
-					bound = info.isBound, link = link,
-					name = link and link:match("%[(.-)%]") or tostring(info.itemID),
-					maxStack = stack or ((info.stackCount or 1) > 1 and 20 or 1),
-					stackKnown = stack ~= nil,
-					bindType = bind or 0,
-					price = price or 0,
-					quest = IsQuestItem(bag, slot, classID),
-					classID = classID, subclassID = subclassID, equipLoc = equipLoc,
-					key = isKey,
-				}
+				items[#items + 1] = MakeEntry(bag, slot, info, isKey)
 			elseif not isKey then
 				free[#free + 1] = { bag = bag, slot = slot, reagent = (bag == REAGENT_BAG) or nil }
 			end
@@ -594,13 +619,7 @@ local function ScanBags(bags)
 		local n = C_Container.GetContainerNumSlots(bag) or 0
 		for slot = 1, n do
 			local info = C_Container.GetContainerItemInfo(bag, slot)
-			if info and info.itemID then
-				local stack, bind, price, classID, equipLoc, subclassID = ItemExtra(info.itemID)
-				items[#items + 1] = { itemID = info.itemID, count = info.stackCount or 1, info = info,
-					quality = info.quality or 1, bound = info.isBound, link = info.hyperlink,
-					bindType = bind or 0, price = price or 0, quest = IsQuestItem(bag, slot, classID),
-					classID = classID, subclassID = subclassID, equipLoc = equipLoc }
-			end
+			if info and info.itemID then items[#items + 1] = MakeEntry(bag, slot, info) end
 		end
 	end
 	return items
@@ -1783,24 +1802,18 @@ end
 local viewer
 local viewTiles, viewHeads = {}, {}
 
-local function ViewChoices()
+-- Karakters om uit te kiezen: jijzelf eerst, daarna de rest op naam.
+local function ViewChars()
 	local list = {}
-	local function add(key, part)
-		local ch = DB.chars[key]
-		local s = ch and ch.snap
-		local name = (s and s.name) or key
-		list[#list + 1] = { key = key, part = part, name = name,
-			label = name .. " – " .. (part == "bank" and T("Bank") or T("Bags")) }
-	end
-	if charKey and DB.chars[charKey] then add(charKey, "bank") end
-	local others = {}
 	for key, ch in pairs(DB.chars or {}) do
-		if key ~= charKey and ch.snap and (ch.snap.bags or ch.snap.bank) then others[#others + 1] = key end
+		if not ch.legacy and (key == charKey or ch.snap) then
+			list[#list + 1] = { key = key, name = (ch.snap and ch.snap.name) or MyFullName() or key }
+		end
 	end
-	table.sort(others, function(a, b)
-		return ((DB.chars[a].snap.name or a)) < ((DB.chars[b].snap.name or b))
+	table.sort(list, function(a, b)
+		if (a.key == charKey) ~= (b.key == charKey) then return a.key == charKey end
+		return a.name < b.name
 	end)
-	for _, key in ipairs(others) do add(key, "bags"); add(key, "bank") end
 	return list
 end
 
@@ -1854,14 +1867,16 @@ local function ViewLayout()
 	if not viewer or not viewer:IsShown() then return end
 	for _, t in ipairs(viewTiles) do t:Hide() end
 	for _, h in ipairs(viewHeads) do h:Hide() end
-	local choice = viewer.choice
-	if not choice then
-		local list = ViewChoices()
-		choice = list[1]
-		viewer.choice = choice
+	-- Standaard: de bank van het karakter waarmee je speelt.
+	viewer.key = viewer.key or charKey
+	viewer.part = viewer.part or "bank"
+	local choice = { key = viewer.key, part = viewer.part }
+	local ch0 = DB.chars[choice.key]
+	local who = (ch0 and ch0.snap and ch0.snap.name) or (choice.key == charKey and MyFullName()) or choice.key
+	viewer.pick:SetText(who .. "  |TInterface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up:14:14|t")
+	for part, b in pairs(viewer.tabs) do
+		if part == choice.part then b:LockHighlight() else b:UnlockHighlight() end
 	end
-	if not choice then return end
-	viewer.pick:SetText(choice.label .. "  |TInterface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up:14:14|t")
 	local ch = DB.chars[choice.key]
 	local s = ch and ch.snap
 	local rows = s and s[choice.part]
@@ -1873,7 +1888,7 @@ local function ViewLayout()
 	else
 		viewer.note:SetText("")
 	end
-	local cols = math.max(5, math.min(DB.maxCols or 14, 10))
+	local cols = 8 -- vast: breed genoeg voor de knoppen bovenin
 	local width = cols * (TILE + GAP) - GAP
 	local y = 0
 	if not rows then
@@ -1951,11 +1966,11 @@ local function ViewLayout()
 	viewer.content:SetSize(width, math.max(y, 1))
 	viewer.scroll:SetSize(width, math.max(h, 40))
 	viewer.scrollMax = math.max(0, y - h)
-	viewer:SetSize(width + PAD * 2, math.max(h, 40) + 62 + PAD)
+	viewer:SetSize(width + PAD * 2, math.max(h, 40) + 76 + PAD)
 end
 
 local function OpenViewMenu()
-	local list = ViewChoices()
+	local list = ViewChars()
 	local m = viewer.menu
 	if not m then
 		m = NewMenu("CarefreeBagViewMenu")
@@ -1966,20 +1981,20 @@ local function OpenViewMenu()
 	for i, c in ipairs(list) do
 		local b = m.buttons[i]
 		if not b then
-			b = MakeButton(m, "", 220)
+			b = MakeButton(m, "", 180)
 			m.buttons[i] = b
 		end
 		b:SetPoint("TOP", m, "TOP", 0, -4 - (i - 1) * 22)
-		b:SetText(c.label)
+		b:SetText(c.name)
 		b:SetScript("OnClick", function()
-			viewer.choice = c
+			viewer.key = c.key
 			m:Hide()
-			if viewer.scroll then viewer.scroll:SetVerticalScroll(0) end
+			viewer.scroll:SetVerticalScroll(0)
 			ViewLayout()
 		end)
 		b:Show()
 	end
-	m:SetSize(230, #list * 22 + 8)
+	m:SetSize(190, #list * 22 + 8)
 	m:ClearAllPoints()
 	m:SetPoint("TOPLEFT", viewer.pick, "BOTTOMLEFT", 0, -2)
 	ShowMenu(m)
@@ -1989,13 +2004,23 @@ local function BuildViewer()
 	viewer = NewWindow("CarefreeBagViewer", T("Bank & alts"), 300, 200)
 	viewer:SetMovable(false)
 	viewer:SetScript("OnDragStart", nil)
-	viewer.pick = MakeButton(viewer, "", 260)
+	-- Bovenin: welk karakter (keuzelijst) en Tassen of Bank.
+	viewer.pick = MakeButton(viewer, "", 170)
 	viewer.pick:SetPoint("TOPLEFT", viewer, "TOPLEFT", PAD, -32)
 	viewer.pick:SetScript("OnClick", OpenViewMenu)
+	viewer.tabs = {}
+	local prev = viewer.pick
+	for _, part in ipairs({ "bags", "bank" }) do
+		local b = MakeButton(viewer, part == "bank" and T("Bank") or T("Bags"), 64)
+		b:SetPoint("LEFT", prev, "RIGHT", 4, 0)
+		b:SetScript("OnClick", function() viewer.part = part; viewer.scroll:SetVerticalScroll(0); ViewLayout() end)
+		viewer.tabs[part] = b
+		prev = b
+	end
 	viewer.note = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	viewer.note:SetPoint("LEFT", viewer.pick, "RIGHT", 8, 0)
+	viewer.note:SetPoint("TOPLEFT", viewer.pick, "BOTTOMLEFT", 2, -4)
 	viewer.scroll = CreateFrame("ScrollFrame", nil, viewer)
-	viewer.scroll:SetPoint("TOPLEFT", viewer, "TOPLEFT", PAD, -62)
+	viewer.scroll:SetPoint("TOPLEFT", viewer, "TOPLEFT", PAD, -76)
 	viewer.content = CreateFrame("Frame", nil, viewer.scroll)
 	viewer.scroll:SetScrollChild(viewer.content)
 	viewer.scroll:EnableMouseWheel(true)
@@ -2015,7 +2040,7 @@ ViewRefresh = function() if viewer and viewer:IsShown() then ViewLayout() end en
 
 ToggleViewer = function()
 	if not viewer then BuildViewer() end
-	if viewer:IsShown() then viewer:Hide() else viewer.choice = nil; viewer:Show() end
+	if viewer:IsShown() then viewer:Hide() else viewer.key, viewer.part = nil, nil; viewer:Show() end
 end
 
 ---------------------------------------------------------------------------
@@ -3292,6 +3317,16 @@ SlashCmdList["CAREFREEBAG"] = function(msg)
 		local l = DB.log or {}
 		Print(T("last %d lines of the log:"):format(math.min(15, #l)))
 		for i = math.max(1, #l - 14), #l do print("  " .. l[i]) end
+	elseif msg == "resetgroups" then
+		-- Groepen van dit karakter terugzetten naar de accountlijst van vóór 1.3.0.
+		local ch = CharEntry()
+		if ch then
+			ch.cats, ch.order, ch.sort, ch.collapsed = nil, nil, nil, nil
+			catsNamed = nil
+			CharEntry(); ResetOrder(); Refresh(); RefreshConfig()
+			Print(T("Groups of this character reset."))
+			Log("groups reset by /cfb resetgroups")
+		end
 	elseif msg == "fout" or msg == "error" then
 		Print(T("last error: %s"):format(tostring(DB.lastError or T("none"))))
 	else
