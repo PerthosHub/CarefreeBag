@@ -102,6 +102,9 @@ check(CarefreeBagFrame.free == nil and CarefreeBagFrame.freeBar.text.text:find("
 -- mail
 MailFrame.shown = true; E("MAIL_SHOW"); RunTimers()
 check(CarefreeBagMailPanel and CarefreeBagMailPanel:IsShown(), "postpaneel bij mailbox")
+check(CarefreeBagMailPanel.text:GetText():find("voortaan automatisch") and CarefreeBagMailPanel.send.text == "Ja, altijd", "eerste keer: vraag of post voortaan altijd zonder vragen mag")
+CarefreeBagMailPanel.skip:Fire("OnClick"); RunTimers()
+check(CarefreeBagDB.mailAlwaysAuto == false and #SENT == 0, "Nee, vraag het: niets verstuurd, per groep vragen")
 print(CarefreeBagMailPanel.text:GetText())
 local txt = CarefreeBagMailPanel.text:GetText()
 check(txt:find("Wil je alles uit |cffffd100Naar AH|r versturen naar |cff66ccffThrall%-Stormrage|r%?") and txt:find("Linen") and txt:find("Daarna: BoE"), "vraag per categorie: eerst Naar AH, daarna BoE")
