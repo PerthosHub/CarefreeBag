@@ -4,6 +4,17 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["Bags full"] = "Tassen vol",
+	["Loot that does not fit"] = "Loot die niet past",
+	["Cheapest in your bags"] = "Goedkoopste in je tassen",
+	["Quest item"] = "Questitem",
+	["No value"] = "Geen waarde",
+	["The loot is worth %s more."] = "De loot is %s meer waard.",
+	["The loot is worth %s less."] = "De loot is %s minder waard.",
+	["The loot is a quest item."] = "De loot is een questitem.",
+	["Destroy & loot"] = "Weggooien & looten",
+	["Destroyed %s to make room for %s."] = "%s weggegooid om plaats te maken voor %s.",
+	["Destroys the cheapest item for good (it cannot be bought back) and picks up the loot."] = "Gooit het goedkoopste item echt weg (niet terug te kopen) en pakt de loot op.",
 	[" Note: Buyback only keeps the last 12."] = " Let op: Buyback bewaart alleen de laatste 12.",
 	["Add"] = "Toevoegen",
 	["Auto Sell skipped (Shift)."] = "Auto Sell overgeslagen (Shift).",
@@ -151,6 +162,17 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["Bags full"] = "Taschen voll",
+	["Loot that does not fit"] = "Beute, die nicht passt",
+	["Cheapest in your bags"] = "Billigstes in deinen Taschen",
+	["Quest item"] = "Questgegenstand",
+	["No value"] = "Kein Wert",
+	["The loot is worth %s more."] = "Die Beute ist %s mehr wert.",
+	["The loot is worth %s less."] = "Die Beute ist %s weniger wert.",
+	["The loot is a quest item."] = "Die Beute ist ein Questgegenstand.",
+	["Destroy & loot"] = "Zerstören & looten",
+	["Destroyed %s to make room for %s."] = "%s zerstört, um Platz für %s zu machen.",
+	["Destroys the cheapest item for good (it cannot be bought back) and picks up the loot."] = "Zerstört den billigsten Gegenstand endgültig (kein Rückkauf möglich) und hebt die Beute auf.",
 	["Groups of this character reset."] = "Gruppen dieses Charakters zurückgesetzt.",
 	["Send without asking"] = "Ohne Nachfrage senden",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Am Briefkasten wird diese Gruppe sofort gesendet, ohne die Frage Ja/Überspringen.",
@@ -299,6 +321,17 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Bags full"] = "Sacs pleins",
+	["Loot that does not fit"] = "Butin qui ne rentre pas",
+	["Cheapest in your bags"] = "Le moins cher de tes sacs",
+	["Quest item"] = "Objet de quête",
+	["No value"] = "Aucune valeur",
+	["The loot is worth %s more."] = "Le butin vaut %s de plus.",
+	["The loot is worth %s less."] = "Le butin vaut %s de moins.",
+	["The loot is a quest item."] = "Le butin est un objet de quête.",
+	["Destroy & loot"] = "Détruire et ramasser",
+	["Destroyed %s to make room for %s."] = "%s détruit pour faire de la place à %s.",
+	["Destroys the cheapest item for good (it cannot be bought back) and picks up the loot."] = "Détruit définitivement l'objet le moins cher (impossible de le racheter) et ramasse le butin.",
 	["Groups of this character reset."] = "Groupes de ce personnage réinitialisés.",
 	["Send without asking"] = "Envoyer sans demander",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "À la boîte aux lettres, ce groupe est envoyé tout de suite, sans la question Oui/Passer.",
@@ -447,6 +480,17 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Bags full"] = "Bolsas llenas",
+	["Loot that does not fit"] = "Botín que no cabe",
+	["Cheapest in your bags"] = "Lo más barato de tus bolsas",
+	["Quest item"] = "Objeto de misión",
+	["No value"] = "Sin valor",
+	["The loot is worth %s more."] = "El botín vale %s más.",
+	["The loot is worth %s less."] = "El botín vale %s menos.",
+	["The loot is a quest item."] = "El botín es un objeto de misión.",
+	["Destroy & loot"] = "Destruir y despojar",
+	["Destroyed %s to make room for %s."] = "Has destruido %s para hacer sitio a %s.",
+	["Destroys the cheapest item for good (it cannot be bought back) and picks up the loot."] = "Destruye para siempre el objeto más barato (no se puede recomprar) y recoge el botín.",
 	["Groups of this character reset."] = "Grupos de este personaje restablecidos.",
 	["Send without asking"] = "Enviar sin preguntar",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "En el buzón, este grupo se envía al momento, sin la pregunta Sí/Saltar.",
@@ -595,6 +639,17 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Bags full"] = "Bolsas cheias",
+	["Loot that does not fit"] = "Saque que não cabe",
+	["Cheapest in your bags"] = "O mais barato das suas bolsas",
+	["Quest item"] = "Item de missão",
+	["No value"] = "Sem valor",
+	["The loot is worth %s more."] = "O saque vale %s a mais.",
+	["The loot is worth %s less."] = "O saque vale %s a menos.",
+	["The loot is a quest item."] = "O saque é um item de missão.",
+	["Destroy & loot"] = "Destruir e saquear",
+	["Destroyed %s to make room for %s."] = "%s destruído para abrir espaço para %s.",
+	["Destroys the cheapest item for good (it cannot be bought back) and picks up the loot."] = "Destrói de vez o item mais barato (não dá para recomprar) e pega o saque.",
 	["Groups of this character reset."] = "Grupos deste personagem redefinidos.",
 	["Send without asking"] = "Enviar sem perguntar",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Na caixa de correio, este grupo é enviado na hora, sem a pergunta Sim/Pular.",
@@ -743,6 +798,17 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Bags full"] = "Borse piene",
+	["Loot that does not fit"] = "Bottino che non entra",
+	["Cheapest in your bags"] = "Il più economico nelle tue borse",
+	["Quest item"] = "Oggetto della missione",
+	["No value"] = "Nessun valore",
+	["The loot is worth %s more."] = "Il bottino vale %s in più.",
+	["The loot is worth %s less."] = "Il bottino vale %s in meno.",
+	["The loot is a quest item."] = "Il bottino è un oggetto della missione.",
+	["Destroy & loot"] = "Distruggi e raccogli",
+	["Destroyed %s to make room for %s."] = "%s distrutto per fare spazio a %s.",
+	["Destroys the cheapest item for good (it cannot be bought back) and picks up the loot."] = "Distrugge per sempre l'oggetto più economico (non si può riacquistare) e raccoglie il bottino.",
 	["Groups of this character reset."] = "Gruppi di questo personaggio ripristinati.",
 	["Send without asking"] = "Invia senza chiedere",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "Alla cassetta postale questo gruppo viene inviato subito, senza la domanda Sì/Salta.",
@@ -891,6 +957,17 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Bags full"] = "Сумки полны",
+	["Loot that does not fit"] = "Добыча, которая не помещается",
+	["Cheapest in your bags"] = "Самое дешёвое в сумках",
+	["Quest item"] = "Предмет для задания",
+	["No value"] = "Без цены",
+	["The loot is worth %s more."] = "Добыча дороже на %s.",
+	["The loot is worth %s less."] = "Добыча дешевле на %s.",
+	["The loot is a quest item."] = "Добыча — предмет для задания.",
+	["Destroy & loot"] = "Уничтожить и забрать",
+	["Destroyed %s to make room for %s."] = "%s уничтожен, чтобы освободить место для %s.",
+	["Destroys the cheapest item for good (it cannot be bought back) and picks up the loot."] = "Навсегда уничтожает самый дешёвый предмет (выкупить нельзя) и забирает добычу.",
 	["Groups of this character reset."] = "Группы этого персонажа сброшены.",
 	["Send without asking"] = "Отправлять без вопроса",
 	["At the mailbox this group is sent right away, without the Yes/Skip question."] = "У почтового ящика эта группа отправляется сразу, без вопроса Да/Пропустить.",

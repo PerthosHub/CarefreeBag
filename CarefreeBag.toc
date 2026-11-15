@@ -25,5 +25,6 @@ BankPanel.lua
 Blizzard.lua
 Chores.lua
 Mail.lua
+Loot.lua
 Options.lua
 Start.lua

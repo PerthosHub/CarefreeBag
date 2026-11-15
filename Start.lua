@@ -42,7 +42,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 			"GET_ITEM_INFO_RECEIVED", "MERCHANT_SHOW", "MERCHANT_CLOSED", "MAIL_SHOW", "MAIL_CLOSED",
 			"MAIL_SEND_SUCCESS", "MAIL_FAILED", "PLAYER_REGEN_ENABLED", "ADDON_ACTION_BLOCKED",
 			"ADDON_ACTION_FORBIDDEN", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
-			"PLAYERBANKBAGSLOTS_CHANGED" }) do
+			"PLAYERBANKBAGSLOTS_CHANGED", "LOOT_OPENED", "LOOT_SLOT_CLEARED", "LOOT_CLOSED" }) do
 			pcall(driver.RegisterEvent, driver, ev)
 		end
 		Print(T("v%s loaded. Open your bags as usual, or type /cfb for options."):format(ns.VERSION))
@@ -77,8 +77,11 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		if ns.bindPending then ns.bindPending = false; ns.BindKeys() end
 	elseif event == "UPDATE_BINDINGS" then
 		if not ns.binding then C_Timer.After(0.1, ns.BindKeys) end
+	elseif event == "LOOT_OPENED" or event == "LOOT_SLOT_CLEARED" or event == "LOOT_CLOSED" then
+		Try("loot", ns.LootEvent, event)
 	elseif event == "UI_ERROR_MESSAGE" then
 		if ns.mail.busy then Log("game message during mail: " .. tostring(a2)) end
+		if ERR_INV_FULL and a2 == ERR_INV_FULL then Try("loot", ns.LootEvent, "FULL") end
 	elseif event == "MAIL_SHOW" then
 		ns.mail.step = false -- nieuw bezoek: eerst weer automatisch proberen
 		ns.mail.skipped = {}  -- en alle categorieën worden weer gevraagd
@@ -131,6 +134,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		if event == "BAG_UPDATE_DELAYED" then
 			ScheduleRestack()
 			ScheduleSnap()
+			ns.LootEvent("BAG")
 			if ns.mailPanel and ns.mailPanel:IsShown() and not ns.mail.busy then ns.UpdateMailPanel() end
 		end
 	end
