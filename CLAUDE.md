@@ -50,9 +50,15 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 - Een scenario met `-- flavors: classic retail` als eerste regel draait per WoW-versie (`FLAVOR`).
 - GitHub Actions draait de tests bij elke push; de release-workflow test eerst en brengt alleen uit als alles slaagt.
 
-## Installeren op Johans pc (desktop-app gekoppeld)
+## Waar werken: lokaal (voorkeur) of cloud
+- **Lokaal** (Claude desktop-app → Code → omgeving "Local", map `C:\Dev\CarefreeBag`): Claude kan installeren in de AddOns-map en de browser bedienen (browserpaneel van de app of de Claude-extensie in Edge). Gebruik dit voor alles met testen in het spel, CurseForge/Wago-pagina's of releases.
+- **Cloud** (omgeving niet "Local"): alleen code en GitHub, geen browser, geen toegang tot Johans pc. Zeg dat meteen als een taak dat nodig heeft.
+- Lokaal op Windows zijn `lua5.1`/`python3` misschien niet geïnstalleerd: dan draait GitHub Actions de tests na de push (controleer het resultaat).
+
+## Installeren op Johans pc
 - Doel: `C:\Games\World of Warcraft Forever\World of Warcraft\_forever_\Interface\AddOns\CarefreeBag\`.
-- Kopieer naar een **nieuwe** map onder `/mnt/user-data/outputs/<uniek>/`, zet `## Version: x.y.z-dev` in de .toc, `device_commit_files` met `force`, en **controleer daarna met `md5sum`** (een oud pad gaf ooit een oude versie door).
+- **Lokale sessie:** kopieer de addon-bestanden (`.toc`, `*.lua`, `media/`; niet `tests/`, `.git`, `.github`) naar het doel, zet daar `## Version: x.y.z-dev` in de .toc en vergelijk daarna de hashes (bijv. `Get-FileHash`) met de bron.
+- **Gewone Claude-chat met gekoppelde pc:** kopieer naar een **nieuwe** map onder `/mnt/user-data/outputs/<uniek>/`, zet `## Version: x.y.z-dev` in de .toc, `device_commit_files` met `force`, en **controleer daarna met `md5sum`** (een oud pad gaf ooit een oude versie door).
 - Nieuwe bestanden in de .toc worden sinds patch 9.0.1 ook met `/reload` geladen.
 - De nagebootste WoW (`tests/mock.lua`) ziet niet alles (bijv. Blizzard-templates). Laat Johan na grote verbouwingen altijd eerst zelf in het spel testen vóór een release.
 - SavedVariables staan in `...\_forever_\WTF\Account\<id>\SavedVariables\CarefreeBag.lua` (wordt pas bij `/reload` of uitloggen geschreven).
