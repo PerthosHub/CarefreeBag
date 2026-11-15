@@ -72,7 +72,7 @@ function tinsert(t, v) table.insert(t, v) end
 function wipe(t) for k in pairs(t) do t[k] = nil end return t end
 function GetTime() return NOW end
 function InCombatLockdown() return COMBAT end
-function UnitName() return "Perthos-Dimbringer" end
+function UnitName() return "Thrall-Frostwolf" end
 function GetMoney() return 123456 end
 function GetMoneyString(m) return m .. "c" end
 function GetCursorPosition() return 0, 0 end
@@ -164,7 +164,7 @@ function C_Container.UseContainerItem(b, s)
   if MerchantFrame.shown then local it = BAGS[b][s]; SOLD[#SOLD+1] = it.itemID; BAGS[b][s] = nil end
 end
 function IsShiftKeyDown() return SHIFT end
-rawset(_G, "UnitNameUnmodified", function() return "Perthos", MY_SURNAME or "Dimbringer" end)
+rawset(_G, "UnitNameUnmodified", function() return "Thrall", MY_SURNAME or "Frostwolf" end)
 
 TooltipDataProcessor = { AddTooltipPostCall = function(t, f) POSTCALL = f end }
 Enum = Enum or {}

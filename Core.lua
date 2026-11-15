@@ -195,8 +195,8 @@ function CharEntry()
 		local name = UnitName and UnitName("player")
 		if not name or name == "" or name == UNKNOWNOBJECT then return nil end
 		local realm = "-" .. ((GetRealmName and GetRealmName()) or "")
-		-- Forever: twee karakters kunnen dezelfde voornaam hebben (Perthos Dimbringer en
-		-- Perthos Boxdrie). Daarom de volledige naam als sleutel.
+		-- Forever: twee karakters kunnen dezelfde voornaam hebben (Thrall Frostwolf en
+		-- Thrall Stormrage). Daarom de volledige naam als sleutel.
 		local full = MyFullName() or name
 		charKey = full .. realm
 		-- Tot 1.5.0 was de sleutel alleen de voornaam; die gedeelde gegevens kopiëren we

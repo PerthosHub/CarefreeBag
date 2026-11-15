@@ -27,7 +27,7 @@ Elk bestand begint met `local _, ns = ...` en `setfenv(1, ns.Env("Naam1", ...))`
 - Binnen functies gewoon `local` gebruiken.
 
 ## Opgeslagen gegevens (`CarefreeBagDB`, account-breed)
-- `chars[sleutel]`: **per karakter**. Sleutel = volledige naam + "-" + realm (Forever: "Perthos Dimbringer-Realm"; nooit alleen de voornaam, twee karakters kunnen dezelfde voornaam hebben).
+- `chars[sleutel]`: **per karakter**. Sleutel = volledige naam + "-" + realm (Forever: "Thrall Frostwolf-Realm"; nooit alleen de voornaam, twee karakters kunnen dezelfde voornaam hebben).
   - `assign[itemID] = groepsleutel` (geleerd door slepen), `hidden[itemID]`, `seen`, `manual`
   - `cats` (eigen groepen: `key, name, preset?, mailTo?, mailAuto?`), `order`, `sort`, `collapsed`
   - `snap = { name, class, bags = {...}, bank = {...}, bagsTime, bankTime }` voor het bankpaneel/tooltip

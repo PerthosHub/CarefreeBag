@@ -11,18 +11,18 @@ LoadAddon(NS)
 local function E(ev, ...) DRIVER:Fire("OnEvent", ev, ...) ; RunTimers() end
 CarefreeBagDB = { lang = "en" }
 E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN")
--- Professions -> Perun (zonder vragen), Consumables -> Perun (met vraag), BoE -> Perun (met vraag)
+-- Professions -> Jaina (zonder vragen), Consumables -> Jaina (met vraag), BoE -> Jaina (met vraag)
 local prof, cons
 for _, c in ipairs(CFC().cats) do if c.key == "prof" then prof = c elseif c.key == "consum" then cons = c end end
 -- optievenster: vinkje pas zichtbaar met ontvanger
 CarefreeBagConfig:Show(); RunTimers()
 local row; for _, f in ipairs(ALLFRAMES) do if f.mailAuto and f.key == "prof" and f.shown then row = f end end
 check(row and not row.mailAuto:IsShown(), "zonder ontvanger: geen vinkje 'zonder vragen'")
-row.mail:SetText("Perun Dimbringer"); row.mail:Fire("OnEnterPressed"); RunTimers()
-check(prof.mailTo == "Perun Dimbringer" and row.mailAuto:IsShown(), "ontvanger ingevuld: vinkje verschijnt")
+row.mail:SetText("Jaina Frostwolf"); row.mail:Fire("OnEnterPressed"); RunTimers()
+check(prof.mailTo == "Jaina Frostwolf" and row.mailAuto:IsShown(), "ontvanger ingevuld: vinkje verschijnt")
 row.mailAuto:SetChecked(true); row.mailAuto:Fire("OnClick"); RunTimers()
 check(prof.mailAuto == true, "Professions: zonder vragen aan")
-cons.mailTo = "Perun Dimbringer"; CarefreeBagDB.boeMail = "Perun Dimbringer"
+cons.mailTo = "Jaina Frostwolf"; CarefreeBagDB.boeMail = "Jaina Frostwolf"
 CarefreeBagConfig:Hide()
 -- mailbox
 MailFrame.shown = true; E("MAIL_SHOW"); RunTimers()
@@ -43,7 +43,7 @@ print("lastError:", CarefreeBagDB.lastError)
 -- groep verwijderen raakt andere karakters niet
 CarefreeBagDB.chars["Ander-"] = { assign = { [2589] = "prof" }, cats = { { key = "prof", preset = "prof" } } }
 CFC().assign = CFC().assign or {}
-local me = CarefreeBagDB.chars["Perthos Dimbringer-"]; me.assign[2589] = "prof"
+local me = CarefreeBagDB.chars["Thrall Frostwolf-"]; me.assign[2589] = "prof"
 CarefreeBagConfig:Show(); RunTimers()
 local r; for _, f in ipairs(ALLFRAMES) do if f.del and f.key == "prof" and f.shown then r = f end end
 r.del:Fire("OnClick"); RunTimers()

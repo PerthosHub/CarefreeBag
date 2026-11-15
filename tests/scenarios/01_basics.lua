@@ -22,7 +22,7 @@ local NS = {}
 LoadAddon(NS)
 
 local function E(ev, ...) DRIVER:Fire("OnEvent", ev, ...) ; RunTimers() end
-CarefreeBagDB = { bankAlt = "Perthos Boxdrie", boeAlt = "Perun Thunderstorm", autoSell = true, cats = { { key = "buffs", name = "Buffs" }, { key = "eten", name = "Eten" }, { key = "ah", name = "Naar AH", mail = "bank" }, { key = "craft", name = "Craften" } } }
+CarefreeBagDB = { bankAlt = "Thrall Stormrage", boeAlt = "Jaina Proudmoore", autoSell = true, cats = { { key = "buffs", name = "Buffs" }, { key = "eten", name = "Eten" }, { key = "ah", name = "Naar AH", mail = "bank" }, { key = "craft", name = "Craften" } } }
 E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN")
 for i = 1, 5 do E("BAG_UPDATE_DELAYED") end
 check(CarefreeBagFrame ~= nil, "venster gemaakt")
@@ -88,7 +88,7 @@ CURSOR = { itemID = 2589 }; plus("ah"):Fire("OnReceiveDrag"); RunTimers()
 check(A()[2589] == "ah", "Linen naar AH-categorie")
 -- migratie: oude bank/boe-instellingen omgezet
 local ah; for _, c in ipairs(CFC().cats) do if c.key == "ah" then ah = c end end
-check(ah.mailTo == "Perthos Boxdrie" and CarefreeBagDB.boeMail == "Perun Thunderstorm" and CarefreeBagDB.bankAlt == nil, "oude postinstellingen omgezet naar per categorie")
+check(ah.mailTo == "Thrall Stormrage" and CarefreeBagDB.boeMail == "Jaina Proudmoore" and CarefreeBagDB.bankAlt == nil, "oude postinstellingen omgezet naar per categorie")
 -- koppen: vaste groep blauw met regels
 local og; for _, f in ipairs(ALLFRAMES) do if f.rules and f.shown and f.ruleTitle == "Overig" then og = f end end
 check(og and og.fs.text:find("^|cff66ccff"), "vaste groep Overig: blauwe kop met uitleg")
@@ -104,18 +104,18 @@ MailFrame.shown = true; E("MAIL_SHOW"); RunTimers()
 check(CarefreeBagMailPanel and CarefreeBagMailPanel:IsShown(), "postpaneel bij mailbox")
 print(CarefreeBagMailPanel.text:GetText())
 local txt = CarefreeBagMailPanel.text:GetText()
-check(txt:find("Wil je alles uit |cffffd100Naar AH|r versturen naar |cff66ccffPerthos%-Boxdrie|r%?") and txt:find("Linen") and txt:find("Daarna: BoE"), "vraag per categorie: eerst Naar AH, daarna BoE")
+check(txt:find("Wil je alles uit |cffffd100Naar AH|r versturen naar |cff66ccffThrall%-Stormrage|r%?") and txt:find("Linen") and txt:find("Daarna: BoE"), "vraag per categorie: eerst Naar AH, daarna BoE")
 check(not txt:find("Hearthstone"), "verborgen gaat niet mee")
 check(CarefreeBagMailPanel.skip:IsShown() and CarefreeBagMailPanel.send.text == "Ja, versturen", "knoppen Ja, versturen / Overslaan")
 CarefreeBagMailPanel.send:Fire("OnClick"); RunTimers()
-check(#SENT == 1 and SENT[1].to == "Perthos-Boxdrie" and SENT[1].n == 2, "mail 1: 2x linen naar Perthos-Boxdrie: " .. tostring(SENT[1] and SENT[1].to))
+check(#SENT == 1 and SENT[1].to == "Thrall-Stormrage" and SENT[1].n == 2, "mail 1: 2x linen naar Thrall-Stormrage: " .. tostring(SENT[1] and SENT[1].to))
 check(SENT[1].body == "" and SENT[1].subj:find("^CarefreeBag: "), "mail zonder tekst, onderwerp CarefreeBag")
 E("MAIL_SEND_SUCCESS"); RunTimers()
 check(#SENT == 1, "na Naar AH stopt hij en vraagt hij de volgende")
 txt = CarefreeBagMailPanel.text:GetText()
-check(txt:find("alles uit |cffffd100BoE|r versturen naar |cff66ccffPerun%-Thunderstorm") and txt:find("Green BoE"), "vraag 2: BoE naar Perun")
+check(txt:find("alles uit |cffffd100BoE|r versturen naar |cff66ccffJaina%-Proudmoore") and txt:find("Green BoE"), "vraag 2: BoE naar Jaina")
 CarefreeBagMailPanel.send:Fire("OnClick"); RunTimers()
-check(#SENT == 2 and SENT[2].to == "Perun-Thunderstorm" and SENT[2].n == 1, "mail 2: BoE naar Perun-Thunderstorm")
+check(#SENT == 2 and SENT[2].to == "Jaina-Proudmoore" and SENT[2].n == 1, "mail 2: BoE naar Jaina-Proudmoore")
 E("MAIL_SEND_SUCCESS"); RunTimers()
 check(not LOG[#LOG]:find("fout"), "geen fout")
 local done = false; for _, l in ipairs(LOG) do if l:find("alle post is verstuurd") then done = true end end
@@ -277,12 +277,12 @@ check(CarefreeBagDB.lang == "nl", "bestaande installatie blijft Nederlands")
 local qh; for _, f in ipairs(ALLFRAMES) do if type(f.text)=="string" and H(f.text) == "Sleutels" and f.shown then qh = f end end
 check(qh, "Nederlandse kop 'Sleutels'")
 -- op je bank-alt zelf: niets naar jezelf sturen
-MY_SURNAME = "Boxdrie"
+MY_SURNAME = "Stormrage"
 MailFrame.shown = true; E("MAIL_SHOW"); RunTimers()
-check(not CarefreeBagMailPanel.text.text:find("Perthos.Boxdrie"), "op Perthos Boxdrie: niets naar jezelf")
+check(not CarefreeBagMailPanel.text.text:find("Thrall.Stormrage"), "op Thrall Stormrage: niets naar jezelf")
 E("MAIL_CLOSED"); MY_SURNAME = nil; BAGS[0][15] = { itemID = 2589, count = 5 }; E("BAG_UPDATE_DELAYED")
 MailFrame.shown = true; E("MAIL_SHOW"); RunTimers()
-check(CarefreeBagMailPanel.text.text:find("Perthos.Boxdrie"), "op Perthos Dimbringer: wel naar Perthos Boxdrie")
+check(CarefreeBagMailPanel.text.text:find("Thrall.Stormrage"), "op Thrall Frostwolf: wel naar Thrall Stormrage")
 E("MAIL_CLOSED")
 print("lastError:", CarefreeBagDB.lastError)
 local miss = {}; for k in pairs(MISSING) do miss[#miss+1] = k end; table.sort(miss)
