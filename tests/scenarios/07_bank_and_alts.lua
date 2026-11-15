@@ -30,7 +30,13 @@ check(A.snap and #A.snap.bags == 2, "tassen van Frostwolf onthouden")
 E("BANKFRAME_OPENED")
 local linen = 0; for _, r in ipairs(A.snap.bank or {}) do if r.id == 2589 then linen = r.n end end
 check(linen == 27, "bank van Frostwolf onthouden (20+7)")
+-- bij het sluiten van de bank en bij uitloggen zijn de vakken (deels) leeg: niet overschrijven
+local bankSave, bagSave = BAGS[-1], BAGS[0]
+BAGS[-1] = { n = 4 }
 E("BANKFRAME_CLOSED"); E("PLAYER_LOGOUT")
+linen = 0; for _, r in ipairs(A.snap.bank or {}) do if r.id == 2589 then linen = r.n end end
+check(linen == 27 and #A.snap.bags == 2, "sluiten/uitloggen wist de onthouden bank en tassen niet")
+BAGS[-1] = bankSave
 -- tweede karakter met dezelfde voornaam
 BAGS[0] = { n = 6, [1] = { itemID = 2000, count = 1 } }; BAGS[-1] = { n = 4 }; BAGS[6] = nil
 Load("Stormrage")

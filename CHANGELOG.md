@@ -3,6 +3,7 @@
 ## 1.5.0
 - Under the hood: the code is split into smaller files, with automatic tests on GitHub before every release. Nothing changes in the game.
 - Fix: two characters with the same first name (Forever: "Thrall Frostwolf" and "Thrall Stormrage") shared their groups and learned items. Each character now really has its own. The character that logged in last keeps the changed groups; the other gets its groups from before 1.3.0 back. `/cfb resetgroups` resets the groups of the current character.
+- Fix: the bags and bank of other characters were sometimes saved empty (when closing the bank or logging out).
 - Bank & alts panel: pick a character, then Bags or Bank. Opens on your own bank (your own bags are already open next to it).
 - Fix: removing a group made every character forget the items learned for it. Now only the current character does.
 - New "Bank & alts" button: a panel next to your bags shows your bank, and the bags and bank of your other characters, sorted into that character's groups. View only; at the banker you move items as usual.

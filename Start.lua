@@ -42,7 +42,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 			"GET_ITEM_INFO_RECEIVED", "MERCHANT_SHOW", "MERCHANT_CLOSED", "MAIL_SHOW", "MAIL_CLOSED",
 			"MAIL_SEND_SUCCESS", "MAIL_FAILED", "PLAYER_REGEN_ENABLED", "ADDON_ACTION_BLOCKED",
 			"ADDON_ACTION_FORBIDDEN", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
-			"PLAYERBANKBAGSLOTS_CHANGED", "PLAYER_LOGOUT" }) do
+			"PLAYERBANKBAGSLOTS_CHANGED" }) do
 			pcall(driver.RegisterEvent, driver, ev)
 		end
 		Print(T("v%s loaded. Open your bags as usual, or type /cfb for options."):format(ns.VERSION))
@@ -57,15 +57,13 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		Try("bank", SnapBank)
 		if ns.ViewRefresh then ns.ViewRefresh() end
 	elseif event == "BANKFRAME_CLOSED" then
-		Try("bank", SnapBank)
+		-- Niet meer uitlezen: tijdens het sluiten is de bank al (deels) leeg.
 		ns.bankOpen = false
 	elseif event == "PLAYERBANKSLOTS_CHANGED" or event == "PLAYERBANKBAGSLOTS_CHANGED" then
 		if ns.bankOpen then
 			Try("bank", SnapBank)
 			if ns.ViewRefresh then ns.ViewRefresh() end
 		end
-	elseif event == "PLAYER_LOGOUT" then
-		pcall(SnapBags)
 	elseif event == "MERCHANT_SHOW" then
 		ns.Refresh()
 		local ok, err = pcall(ns.SellStart)
