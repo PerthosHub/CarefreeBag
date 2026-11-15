@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.6.0 (not released yet)
+## 1.6.0
 - Bags full and the loot does not fit? A small window next to the loot shows the loot and the cheapest item or stack in your bags, with their prices side by side (vendor price, or the AH price after the cut if Auctionator has a better one). Green: the loot is worth more. Red: it is worth less.
 - One click on "Destroy & loot" destroys that cheapest item and picks up the loot. WoW only allows destroying items after a click, so this never happens by itself. "Skip" leaves it alone until you close the loot.
 - Items without a price (like your Hearthstone), quest items, keys and hidden items are never offered. Quest loot is always worth it.
