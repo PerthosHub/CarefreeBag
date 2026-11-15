@@ -119,3 +119,9 @@ check(next(CFC().keep) == nil, "Wissen: geen items meer bewaard")
 check(CFC().keepGroups[linenSec] == true, "Wissen laat de groepen staan")
 E("LOOT_CLOSED"); LOOT = { { id = 2589, qty = 2 } }; E("LOOT_OPENED")
 check(P:IsShown() and P.offer.junk.e.itemID == 8001, "na Wissen: Torn Wing weer voorgesteld")
+
+-- 13. Geavanceerd: ingeklapt tot je erop klikt
+check(not CarefreeBagConfig.adv:IsShown(), "geavanceerde instellingen standaard ingeklapt")
+CarefreeBagConfig.advBtn:Fire("OnClick")
+check(CarefreeBagConfig.adv:IsShown(), "klik: geavanceerde instellingen open")
+check(CarefreeBagDB.showSort == false, "sorteeropties standaard uit")

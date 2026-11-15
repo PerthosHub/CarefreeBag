@@ -4,6 +4,12 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["Advanced settings"] = "Geavanceerde instellingen",
+	["Bag width"] = "Breedte van de tas",
+	["How many items fit next to each other in the bag window (5 to 30)."] = "Hoeveel items er naast elkaar passen in het tassenvenster (5 tot 30).",
+	["When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."] = "Zijn je tassen vol en past loot niet, dan stelt CarefreeBag voor je goedkoopste item weg te gooien. Items die je op 'Item altijd houden' zette, worden nooit voorgesteld.",
+	["Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."] = "Wissen: al deze items kunnen weer voorgesteld worden. Hele groepen stel je in met het vinkje 'Altijd houden' per groep. Alleen voor dit karakter.",
+	["Auto"] = "Auto",
 	["Always keep item"] = "Item altijd houden",
 	["Always keep group"] = "Groep altijd houden",
 	["%s is never destroyed when your bags are full."] = "%s wordt nooit weggegooid als je tassen vol zijn.",
@@ -174,6 +180,12 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["Advanced settings"] = "Erweiterte Einstellungen",
+	["Bag width"] = "Taschenbreite",
+	["How many items fit next to each other in the bag window (5 to 30)."] = "Wie viele Gegenstände im Taschenfenster nebeneinander passen (5 bis 30).",
+	["When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."] = "Sind deine Taschen voll und passt Beute nicht, bietet CarefreeBag an, deinen billigsten Gegenstand zu zerstören. Mit 'Immer behalten' markierte Gegenstände werden nie angeboten.",
+	["Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."] = "Leeren: all diese Gegenstände können wieder angeboten werden. Ganze Gruppen stellst du mit dem Häkchen 'Immer behalten' pro Gruppe ein. Nur für diesen Charakter.",
+	["Auto"] = "Auto",
 	["Always keep item"] = "Immer behalten",
 	["Always keep group"] = "Gruppe immer behalten",
 	["%s is never destroyed when your bags are full."] = "%s wird bei vollen Taschen nie zerstört.",
@@ -345,6 +357,12 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Advanced settings"] = "Paramètres avancés",
+	["Bag width"] = "Largeur du sac",
+	["How many items fit next to each other in the bag window (5 to 30)."] = "Combien d'objets tiennent côte à côte dans la fenêtre des sacs (5 à 30).",
+	["When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."] = "Quand tes sacs sont pleins et qu'un butin ne rentre pas, CarefreeBag propose de détruire ton objet le moins cher. Les objets marqués 'Toujours garder' ne sont jamais proposés.",
+	["Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."] = "Vider : tous ces objets peuvent de nouveau être proposés. Les groupes entiers se règlent avec la case 'Toujours garder' par groupe. Seulement pour ce personnage.",
+	["Auto"] = "Auto",
 	["Always keep item"] = "Toujours garder",
 	["Always keep group"] = "Toujours garder le groupe",
 	["%s is never destroyed when your bags are full."] = "%s n'est jamais détruit quand tes sacs sont pleins.",
@@ -516,6 +534,12 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Advanced settings"] = "Ajustes avanzados",
+	["Bag width"] = "Ancho de la bolsa",
+	["How many items fit next to each other in the bag window (5 to 30)."] = "Cuántos objetos caben uno al lado del otro en la ventana de bolsas (5 a 30).",
+	["When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."] = "Si tus bolsas están llenas y el botín no cabe, CarefreeBag ofrece destruir tu objeto más barato. Los objetos marcados con 'Guardar siempre' nunca se ofrecen.",
+	["Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."] = "Vaciar: todos estos objetos se pueden volver a ofrecer. Los grupos enteros se ajustan con la casilla 'Guardar siempre' de cada grupo. Solo para este personaje.",
+	["Auto"] = "Auto",
 	["Always keep item"] = "Guardar siempre",
 	["Always keep group"] = "Guardar siempre el grupo",
 	["%s is never destroyed when your bags are full."] = "%s nunca se destruye cuando tus bolsas están llenas.",
@@ -687,6 +711,12 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Advanced settings"] = "Configurações avançadas",
+	["Bag width"] = "Largura da bolsa",
+	["How many items fit next to each other in the bag window (5 to 30)."] = "Quantos itens cabem lado a lado na janela das bolsas (5 a 30).",
+	["When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."] = "Se suas bolsas estão cheias e o saque não cabe, o CarefreeBag oferece destruir seu item mais barato. Itens marcados com 'Manter sempre' nunca são oferecidos.",
+	["Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."] = "Limpar: todos esses itens podem ser oferecidos de novo. Grupos inteiros são definidos com a caixa 'Manter sempre' de cada grupo. Só para este personagem.",
+	["Auto"] = "Auto",
 	["Always keep item"] = "Manter sempre",
 	["Always keep group"] = "Manter sempre o grupo",
 	["%s is never destroyed when your bags are full."] = "%s nunca é destruído quando suas bolsas estão cheias.",
@@ -858,6 +888,12 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Advanced settings"] = "Impostazioni avanzate",
+	["Bag width"] = "Larghezza della borsa",
+	["How many items fit next to each other in the bag window (5 to 30)."] = "Quanti oggetti stanno uno accanto all'altro nella finestra delle borse (da 5 a 30).",
+	["When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."] = "Se le borse sono piene e il bottino non entra, CarefreeBag propone di distruggere l'oggetto più economico. Gli oggetti segnati con 'Tieni sempre' non vengono mai proposti.",
+	["Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."] = "Svuota: tutti questi oggetti possono di nuovo essere proposti. I gruppi interi si impostano con la spunta 'Tieni sempre' per gruppo. Solo per questo personaggio.",
+	["Auto"] = "Auto",
 	["Always keep item"] = "Tieni sempre",
 	["Always keep group"] = "Tieni sempre il gruppo",
 	["%s is never destroyed when your bags are full."] = "%s non viene mai distrutto quando le borse sono piene.",
@@ -1029,6 +1065,12 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Advanced settings"] = "Дополнительные настройки",
+	["Bag width"] = "Ширина сумки",
+	["How many items fit next to each other in the bag window (5 to 30)."] = "Сколько предметов помещается в ряд в окне сумок (от 5 до 30).",
+	["When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."] = "Если сумки полны и добыча не помещается, CarefreeBag предлагает уничтожить самый дешёвый предмет. Предметы с отметкой 'Всегда оставлять' никогда не предлагаются.",
+	["Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."] = "Очистить: все эти предметы снова могут предлагаться. Целые группы настраиваются галочкой 'Всегда оставлять' у каждой группы. Только для этого персонажа.",
+	["Auto"] = "Авто",
 	["Always keep item"] = "Всегда оставлять",
 	["Always keep group"] = "Всегда оставлять группу",
 	["%s is never destroyed when your bags are full."] = "%s никогда не уничтожается, когда сумки полны.",

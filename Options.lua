@@ -110,17 +110,6 @@ function ns.BuildConfig()
 	Tooltip(langBtn, "Language: " .. LangName(ns.DB.lang))
 	y = y - 28
 
-	-- Breedte van de tas
-	config.colsLabel = config:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	config.colsLabel:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 10, y - 4)
-	local minus = MakeButton(config, "-", 24)
-	minus:SetPoint("TOPRIGHT", config, "TOPRIGHT", -ns.PAD - 32, y)
-	minus:SetScript("OnClick", function() ns.DB.maxCols = math.max(5, ns.DB.maxCols - 1); ResetOrder(); ns.Refresh(); ns.RefreshConfig() end)
-	local plus = MakeButton(config, "+", 24)
-	plus:SetPoint("LEFT", minus, "RIGHT", 2, 0)
-	plus:SetScript("OnClick", function() ns.DB.maxCols = math.min(30, ns.DB.maxCols + 1); ResetOrder(); ns.Refresh(); ns.RefreshConfig() end)
-	y = y - 28
-
 	-- Sorteeropties in de tas
 	local sortCb = NewCheck(config, T("Show sort options"), T("Choose per group how it is sorted."),
 		function() return ns.DB.showSort end, function(v) ns.DB.showSort = v; ns.Refresh() end)
@@ -139,11 +128,49 @@ function ns.BuildConfig()
 	config.checks[#config.checks + 1] = mailCb
 	y = y - 28
 
-	-- Items die je bij volle tassen houdt ("Keep this item" in het venster Bags full)
-	config.keptLabel = config:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	config.keptLabel:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 10, y - 4)
-	config.keptClear = MakeButton(config, T("Clear"), 80)
-	config.keptClear:SetPoint("TOPRIGHT", config, "TOPRIGHT", -ns.PAD - 4, y)
+	y = y - 10
+
+	-- Geavanceerd (onderaan, pas zichtbaar na uitklappen; plaats wordt in RefreshConfig gezet)
+	config.advBtn = CreateFrame("Button", nil, config)
+	config.advBtn:SetSize(CW - 2 * ns.PAD, 22)
+	config.advBtn.icon = config.advBtn:CreateTexture(nil, "ARTWORK")
+	config.advBtn.icon:SetSize(16, 16)
+	config.advBtn.icon:SetPoint("LEFT", config.advBtn, "LEFT", 4, 0)
+	config.advBtn.fs = config.advBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	config.advBtn.fs:SetPoint("LEFT", config.advBtn.icon, "RIGHT", 6, 0)
+	config.advBtn.fs:SetText(T("Advanced settings"))
+	config.advBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+	config.advBtn:SetScript("OnClick", function() config.advOpen = not config.advOpen; ns.RefreshConfig() end)
+	config.adv = CreateFrame("Frame", nil, config)
+	config.adv:SetSize(CW - 2 * ns.PAD, 60)
+
+	-- Breedte van de tas
+	local colsHover = CreateFrame("Frame", nil, config.adv)
+	colsHover:SetSize(260, 24)
+	colsHover:SetPoint("TOPLEFT", config.adv, "TOPLEFT", 6, 0)
+	colsHover:EnableMouse(true)
+	config.colsLabel = colsHover:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	config.colsLabel:SetPoint("LEFT", colsHover, "LEFT", 4, 0)
+	Tooltip(colsHover, T("Bag width"), T("How many items fit next to each other in the bag window (5 to 30)."))
+	local minus = MakeButton(config.adv, "-", 24)
+	minus:SetPoint("TOPRIGHT", config.adv, "TOPRIGHT", -32, 0)
+	minus:SetScript("OnClick", function() ns.DB.maxCols = math.max(5, ns.DB.maxCols - 1); ResetOrder(); ns.Refresh(); ns.RefreshConfig() end)
+	local plus = MakeButton(config.adv, "+", 24)
+	plus:SetPoint("LEFT", minus, "RIGHT", 2, 0)
+	plus:SetScript("OnClick", function() ns.DB.maxCols = math.min(30, ns.DB.maxCols + 1); ResetOrder(); ns.Refresh(); ns.RefreshConfig() end)
+
+	-- Items die je bij volle tassen altijd houdt ("Always keep item" in het venster Bags full)
+	local keptHover = CreateFrame("Frame", nil, config.adv)
+	keptHover:SetSize(300, 24)
+	keptHover:SetPoint("TOPLEFT", config.adv, "TOPLEFT", 6, -30)
+	keptHover:EnableMouse(true)
+	config.keptLabel = keptHover:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	config.keptLabel:SetPoint("LEFT", keptHover, "LEFT", 4, 0)
+	Tooltip(keptHover, T("Always keep item"),
+		T("When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."),
+		T("Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."))
+	config.keptClear = MakeButton(config.adv, T("Clear"), 80)
+	config.keptClear:SetPoint("TOPRIGHT", config.adv, "TOPRIGHT", 0, -30)
 	config.keptClear:SetScript("OnClick", function()
 		local k = ns.Kept()
 		for id in pairs(k) do k[id] = nil end
@@ -151,7 +178,6 @@ function ns.BuildConfig()
 		ns.RefreshConfig()
 	end)
 	Tooltip(config.keptClear, T("Clear"), T("These items may be destroyed again when your bags are full. Only for this character."))
-	y = y - 38
 
 	-- 1. Groepen: eigen categorieën en vaste groepen in één lijst ---------------
 	Heading(config, T("Groups"), y)
@@ -180,6 +206,10 @@ function ns.BuildConfig()
 	local colC = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	colC:SetPoint("TOPRIGHT", config, "TOPLEFT", ns.PAD + 406, y) -- rechts boven het vinkje (tekst is langer dan de kolom)
 	colC:SetText(T("Always keep"))
+	-- Kolom van het vinkje "zonder vragen" achter het postadres
+	local colD = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	colD:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 264, y)
+	colD:SetText(T("Auto"))
 	y = y - 14
 	config.catTop = y
 
@@ -530,7 +560,8 @@ ns.RefreshConfig = function()
 				r.mailAuto:SetEnabled(not ns.DB.mailAlwaysAuto) -- staat "altijd" aan: vinkje per groep doet niets
 			end
 			-- Quest/Keys worden toch nooit weggegooid; Auto Sell is er juist om weg te doen
-			r.keep:SetShown(key ~= "quest" and key ~= "keys" and key ~= "grey")
+			-- Other: daar staan ook items die weg mogen
+			r.keep:SetShown(key ~= "quest" and key ~= "keys" and key ~= "grey" and key ~= "other")
 			r.keep:SetChecked(ns.KeptGroups()[key] and true or false)
 			r.up:SetEnabled(i > 1)
 			r.down:SetEnabled(i < #order)
@@ -550,7 +581,17 @@ ns.RefreshConfig = function()
 	end
 	y = y - 6
 	config.groupBg:SetHeight(config.catTop + 52 - y)
-	config:SetHeight(-y + 40)
+	-- Geavanceerd: onderaan, ingeklapt tot je erop klikt
+	y = y - 14
+	config.advBtn:ClearAllPoints()
+	config.advBtn:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD, y)
+	config.advBtn.icon:SetTexture(config.advOpen and "Interface\\Buttons\\UI-MinusButton-Up" or "Interface\\Buttons\\UI-PlusButton-Up")
+	y = y - 28
+	config.adv:ClearAllPoints()
+	config.adv:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD, y)
+	config.adv:SetShown(config.advOpen and true or false)
+	if config.advOpen then y = y - 60 end
+	config:SetHeight(-y + 30)
 end
 
 -- Plaats van het optievenster: links naast de tassen als CarefreeBag aan staat,
