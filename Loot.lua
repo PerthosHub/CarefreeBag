@@ -49,12 +49,16 @@ end
 -- Goedkoopste stapel in je tassen. Alleen items met een prijs: items zonder waarde
 -- (hearthstone, questspullen, sleutels) zijn vaak juist belangrijk. Items en groepen
 -- die je wilt houden ("Keep") slaan we over.
-local function Cheapest(items)
+local CanHold -- vooruit (hieronder)
+-- Alleen items uit een tas waar de loot daarna ook in past: een vak in een
+-- beroepstas (bijv. mijnbouw) vrijmaken helpt niets voor een gewoon item.
+local function Cheapest(items, lootItem)
 	local best
 	local keep, keepGroups = Kept(), KeptGroups()
 	for _, e in ipairs(items) do
 		local sec = SectionOf(e)
 		if not e.key and not e.info.isLocked and not e.info.hasNoValue and not NEVER[sec]
+			and CanHold(e.bag, lootItem.id, lootItem.reagent)
 			and not keep[e.itemID] and not (keepGroups[sec] and sec ~= "grey" and sec ~= "other") then
 			local each, ah = Each(e.link, e.price)
 			if each > 0 then
@@ -80,21 +84,22 @@ local function BagFamily(bag)
 	return ok and family or 0
 end
 
+local REAGENT_BAG = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag
+
+-- Mag dit item in deze tas? Gewone tas: alles. Reagent-tas: alleen reagents.
+-- Beroepstas: alleen items van dat beroep.
+CanHold = function(bag, itemID, reagent)
+	if REAGENT_BAG and bag == REAGENT_BAG then return reagent and true or false end
+	local family = BagFamily(bag)
+	if family == 0 then return true end
+	local ok, fam = pcall(C_Item.GetItemFamily, itemID)
+	fam = (ok and fam) or 0
+	return bit and bit.band and bit.band(fam, family) > 0 or false
+end
+
 local function Fits(items, free, itemID, qty, reagent)
-	local itemFamily
 	for _, f in ipairs(free) do
-		local family = BagFamily(f.bag)
-		if f.reagent then
-			if reagent then return true end
-		elseif family == 0 then
-			return true
-		else -- beroepstas: alleen voor items van dat beroep
-			if itemFamily == nil then
-				local ok, fam = pcall(C_Item.GetItemFamily, itemID)
-				itemFamily = (ok and fam) or 0
-			end
-			if bit and bit.band and bit.band(itemFamily, family) > 0 then return true end
-		end
+		if CanHold(f.bag, itemID, reagent) then return true end
 	end
 	for _, e in ipairs(items) do
 		if e.itemID == itemID and not e.key and e.maxStack > 1 and e.count + qty <= e.maxStack then return true end
@@ -117,7 +122,8 @@ local function BestLoot(items, free)
 				local each, ah = Each(link, r and r[12])
 				local v = isQuest and QUEST_VALUE or each * qty
 				if not best or v > best.value then
-					best = { slot = i, link = link, icon = icon, count = qty, value = v, ah = ah, quest = isQuest }
+					best = { slot = i, link = link, icon = icon, count = qty, value = v, ah = ah, quest = isQuest,
+						id = id, reagent = r and r[18] }
 				end
 			end
 		end
@@ -182,18 +188,20 @@ local function TryPending()
 	local p = state.pending
 	if not p then return end
 	if not GetLootSlotLink or GetLootSlotLink(p.slot) ~= p.link then
+		Log("loot: slot " .. p.slot .. " changed before looting")
 		state.pending = nil
 		return
 	end
 	local _, free = Scan()
 	local room = false
-	for _, f in ipairs(free) do if not f.reagent then room = true end end
+	for _, f in ipairs(free) do if CanHold(f.bag, p.id, p.reagent) then room = true end end
 	if not room and p.tries < 10 then
 		p.tries = p.tries + 1
 		C_Timer.After(0.2, TryPending)
 		return
 	end
 	state.pending = nil
+	Log(("loot: LootSlot(%d) %s, room=%s, tries=%d"):format(p.slot, p.link:match("%[(.-)%]") or "?", tostring(room), p.tries))
 	LootSlot(p.slot)
 	C_Timer.After(0.3, Evaluate) -- misschien past er nog iets niet
 end
@@ -213,7 +221,7 @@ local function Swap()
 	local what = (e.link or e.name) .. (e.count > 1 and (" x" .. e.count) or "")
 	Print(T("Destroyed %s to make room for %s."):format(what, o.loot.link))
 	Log(("loot swap: destroyed %s (%d copper) for %s"):format(tostring(e.itemID), o.junk.value, o.loot.link:match("%[(.-)%]") or "?"))
-	state.pending = { slot = o.loot.slot, link = o.loot.link, tries = 0 }
+	state.pending = { slot = o.loot.slot, link = o.loot.link, id = o.loot.id, reagent = o.loot.reagent, tries = 0 }
 	HidePanel()
 	C_Timer.After(0.2, TryPending)
 end
@@ -292,7 +300,7 @@ Evaluate = function()
 	if not (GetNumLootItems and (GetNumLootItems() or 0) > 0) then HidePanel(); return end
 	local items, free = Scan()
 	local lootItem = BestLoot(items, free)
-	local junk = lootItem and Cheapest(items)
+	local junk = lootItem and Cheapest(items, lootItem)
 	if not junk then HidePanel(); return end
 	ShowOffer(lootItem, junk)
 end

@@ -5,6 +5,7 @@
 - One click on "Destroy & loot" destroys that cheapest item and picks up the loot. WoW only allows destroying items after a click, so this never happens by itself. "Skip" leaves it alone until you close the loot.
 - Items without a price (like your Hearthstone), quest items, keys and hidden items are never offered. Quest loot is always worth it.
 - Want to keep the offered item? "Always keep item" or "Always keep group" in the same window, and the next cheapest item is shown right away. Each character remembers its own.
+- Profession bags: only items from a bag the loot can go into are offered (freeing a slot in a mining bag does not help for a shell fragment).
 - Options: an "Always keep" tick per group (not for Auto Sell and Other: those hold things you can get rid of). Under the new "Advanced settings" at the bottom (click to open): bag width, and "Clear" for the items you chose to always keep. Kept items say so in their tooltip.
 - Options: the "Send without asking" tick behind the mail address now has a column title (Auto).
 - Options: the window is wider. Per group you see an envelope with the alt it mails to; click it to type the name and tick "Send without asking". Groups that mail without asking show "Auto".
