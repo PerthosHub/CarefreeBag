@@ -110,7 +110,9 @@ function C_Container.GetContainerItemInfo(b, s)
   local it = BAGS[b] and BAGS[b][s]; if not it then return nil end
   local d = ITEMS[it.itemID]
   return { itemID = it.itemID, stackCount = it.count, hasNoValue = (d.price or 0) == 0, quality = d.quality, iconFileID = d.icon, isBound = it.bound,
-    hyperlink = "|cff|Hitem:" .. it.itemID .. "|h[" .. d.name .. "]|h|r", isLocked = false }
+    hyperlink = "|cff|Hitem:" .. it.itemID .. "|h[" .. d.name .. "]|h|r",
+    -- opgepakt uit de tas = vakje op slot; CURSOR.outside = van buiten de tassen (bijv. wat je aan hebt)
+    isLocked = (CURSOR ~= nil and CURSOR.itemID == it.itemID and not CURSOR.outside) or false }
 end
 function C_Container.PickupContainerItem(b, s)
   local it = BAGS[b][s]

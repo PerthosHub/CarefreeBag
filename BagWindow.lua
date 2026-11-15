@@ -105,6 +105,19 @@ local function CursorItemID()
 	if kind == "item" then return id end
 end
 
+-- Komt het item op de cursor uit je tassen? Dan staat het vakje waar het uit komt op slot.
+-- Zo niet, dan komt het van ergens anders (wat je aan hebt, de bank).
+local function FromBags(id)
+	for _, e in ipairs(lastItems) do
+		if e.itemID == id then
+			local ok, info = pcall(C_Container.GetContainerItemInfo, e.bag, e.slot)
+			if ok and info and info.isLocked then return true end
+		end
+	end
+	return false
+end
+local StoreCursorItem -- staat verderop, na FirstFreeSlot
+
 -- Sorteren per categorie: soort, stapelprijs, nieuwste als laatst of handmatig.
 local SORTS = { "value", "newest", "manual" }
 local SORT_NAME = { value = "Stack price", newest = "Newest last", manual = "Manual" }
@@ -240,6 +253,9 @@ local function NewItemButton(i)
 	local origDrag = b:GetScript("OnReceiveDrag")
 	b:SetScript("OnReceiveDrag", function(self, ...)
 		if Reorder(self) then return end
+		-- Iets van buiten je tassen (bijv. wat je aan hebt): naar een vrij vakje, niet ruilen.
+		local id = CursorItemID()
+		if id and not FromBags(id) and StoreCursorItem(true) then return end
 		if origDrag then return origDrag(self, ...) end
 	end)
 	b.multi = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
@@ -463,6 +479,7 @@ end
 local function DropOn(sectionKey)
 	local id = CursorItemID()
 	if not id then return end
+	local outside = not FromBags(id)
 	if sectionKey == "hidden" then
 		Hidden()[id] = true
 	elseif sectionKey == "other" then
@@ -473,7 +490,8 @@ local function DropOn(sectionKey)
 		Assign()[id] = sectionKey
 	end
 	Log("dropped " .. id .. " -> " .. sectionKey)
-	ClearCursor() -- item gaat terug naar zijn eigen vakje
+	-- Uit je tassen: terug naar zijn eigen vakje. Van ergens anders: in een vrij vakje leggen.
+	if not (outside and StoreCursorItem()) then ClearCursor() end
 	ns.ResetOrder()
 	ns.Refresh()
 end
@@ -543,6 +561,25 @@ local function FirstFreeSlot()
 		end
 	end
 	return best
+end
+
+-- Item op de cursor in een vrij vakje leggen. Geen plek: melding (behalve als quiet).
+StoreCursorItem = function(quiet)
+	if not CursorHasItem() then return false end
+	local f = FirstFreeSlot()
+	if not f then
+		if not quiet and UIErrorsFrame and ERR_INV_FULL then pcall(UIErrorsFrame.AddMessage, UIErrorsFrame, ERR_INV_FULL, 1, 0.1, 0.1) end
+		return false
+	end
+	Log("stored cursor item " .. tostring(CursorItemID()) .. " in " .. f.bag .. ":" .. f.slot)
+	C_Container.PickupContainerItem(f.bag, f.slot)
+	return true
+end
+
+-- Ergens op het venster (achtergrond, vulbalk) laten vallen.
+local function DropAnywhere()
+	local id = CursorItemID()
+	if id and not FromBags(id) then StoreCursorItem() end
 end
 
 local function SetupItemButton(b, g)
@@ -679,11 +716,7 @@ local function GetGap()
 	if not t then
 		t = NewSlotTile(ns.main.content)
 		t.bg:SetVertexColor(0.5, 0.5, 0.5, 0.5)
-		local function drop()
-			if not CursorHasItem() then return end
-			local f = FirstFreeSlot()
-			if f then C_Container.PickupContainerItem(f.bag, f.slot) end
-		end
+		local function drop() StoreCursorItem() end
 		t:SetScript("OnReceiveDrag", drop)
 		t:SetScript("OnClick", drop)
 		gapPool[usedGaps] = t
@@ -1113,6 +1146,12 @@ function ns.BuildMain()
 	end)
 	bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	ns.main.freeBar = bar
+	-- Item van buiten je tassen op het venster of de vulbalk laten vallen = in een vrij vakje.
+	for _, fr in ipairs({ ns.main, bar }) do
+		fr:EnableMouse(true)
+		fr:SetScript("OnReceiveDrag", DropAnywhere)
+		fr:HookScript("OnMouseUp", function(_, btn) if btn == "LeftButton" then DropAnywhere() end end)
+	end
 	ns.main.money = ns.main:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	ns.main.money:SetJustifyH("RIGHT")
 	ns.main.money:SetPoint("RIGHT", ns.main, "BOTTOMRIGHT", -ns.PAD - 4, ns.PAD - 2 + ns.TILE / 2)
