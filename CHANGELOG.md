@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.5.1 (not released yet)
+## 1.5.1
 - Items you loot while your bags are open keep blinking, also when you already had that item (for example one more potion). Move the mouse over it to stop the blinking; loot more of it and it blinks again. Closing the bags stops all blinking.
 - Search starts at 2 letters and stops the blinking of new items. Closing the bags clears the search. Escape in an empty search box closes the bags.
 - Search also finds items in your bank and on your other characters: the Bank & alts button shows how many, and the panel opens by itself where they are (your bank first, then your alts). It closes again when you clear the search.
