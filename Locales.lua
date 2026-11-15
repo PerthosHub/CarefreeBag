@@ -4,6 +4,8 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["Reagents"] = "Reagents",
+	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Reagent-tas: %d van %d vrij (daar passen alleen crafting reagents in)",
 	["Mail %s to:"] = "%s mailen naar:",
 	["no mail"] = "geen post",
 	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Klik: kies naar welke alt deze groep gemaild wordt, en of dat zonder vragen gaat.",
@@ -183,6 +185,8 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["Reagents"] = "Reagenzien",
+	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Reagenzientasche: %d von %d frei (nur Handwerksreagenzien passen hinein)",
 	["Mail %s to:"] = "%s senden an:",
 	["no mail"] = "keine Post",
 	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Klick: wähle, an welchen Twink diese Gruppe geht und ob ohne Nachfrage gesendet wird.",
@@ -363,6 +367,8 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Reagents"] = "Composants",
+	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Sac de composants : %d sur %d libres (seuls les composants d'artisanat y vont)",
 	["Mail %s to:"] = "Envoyer %s à :",
 	["no mail"] = "pas de courrier",
 	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Clic : choisis le reroll qui reçoit ce groupe, et s'il est envoyé sans demander.",
@@ -543,6 +549,8 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Reagents"] = "Componentes",
+	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Bolsa de componentes: %d de %d libres (solo caben componentes de artesanía)",
 	["Mail %s to:"] = "Enviar %s a:",
 	["no mail"] = "sin correo",
 	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Clic: elige a qué alter se envía este grupo y si se envía sin preguntar.",
@@ -723,6 +731,8 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Reagents"] = "Reagentes",
+	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Bolsa de reagentes: %d de %d livres (só cabem reagentes de criação)",
 	["Mail %s to:"] = "Enviar %s para:",
 	["no mail"] = "sem correio",
 	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Clique: escolha para qual alt este grupo é enviado e se vai sem perguntar.",
@@ -903,6 +913,8 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Reagents"] = "Reagenti",
+	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Borsa dei reagenti: %d di %d liberi (ci stanno solo reagenti di creazione)",
 	["Mail %s to:"] = "Invia %s a:",
 	["no mail"] = "nessuna posta",
 	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Clic: scegli a quale alt inviare questo gruppo e se inviarlo senza chiedere.",
@@ -1083,6 +1095,8 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Reagents"] = "Реагенты",
+	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Сумка для реагентов: свободно %d из %d (туда помещаются только реагенты)",
 	["Mail %s to:"] = "Отправлять %s:",
 	["no mail"] = "без почты",
 	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Клик: выбери, какому твинку отправлять эту группу и отправлять ли без вопросов.",

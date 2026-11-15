@@ -928,7 +928,17 @@ local function Layout()
 	end
 
 	-- Voetregel: vrije vakjes + goud, altijd onderaan in beeld.
-	local used = math.max(0, total - #free)
+	-- De reagent-tas (retail/Forever) apart tellen: daar passen alleen crafting reagents in,
+	-- dus vrije vakjes daar betekenen niet dat gewone loot nog past.
+	local rTotal, rFree = 0, 0
+	local rBag = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag
+	if rBag and rBag <= (NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4) then
+		rTotal = C_Container.GetContainerNumSlots(rBag) or 0
+		for _, f in ipairs(free) do if f.reagent then rFree = rFree + 1 end end
+	end
+	total = total - rTotal
+	local nFree = #free - rFree
+	local used = math.max(0, total - nFree)
 	local frac = total > 0 and used / total or 0
 	ns.main.freeBar:SetValue(frac)
 	-- vloeiend van groen naar oranje naar rood
@@ -937,8 +947,10 @@ local function Layout()
 	elseif frac < 0.85 then local t = (frac - 0.6) / 0.25; r, g, bl = 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t
 	else local t = math.min(1, (frac - 0.85) / 0.15); r, g, bl = 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t end
 	ns.main.freeBar:SetStatusBarColor(r, g, bl)
-	ns.main.freeBar.text:SetText(used .. "/" .. total)
-	ns.main.freeBar.free, ns.main.freeBar.total = #free, total
+	ns.main.freeBar.text:SetText(used .. "/" .. total .. (rTotal > 0
+		and ("  |cff9d9d9d" .. T("Reagents") .. " " .. (rTotal - rFree) .. "/" .. rTotal .. "|r") or ""))
+	ns.main.freeBar.free, ns.main.freeBar.total = nFree, total
+	ns.main.freeBar.rFree, ns.main.freeBar.rTotal = rFree, rTotal
 	local money = GetMoney()
 	if money >= 10000 then money = money - money % 100 end -- met goud: geen koper meer tonen
 	ns.main.money:SetText(GetMoneyString and GetMoneyString(money, true) or tostring(money))
@@ -1094,6 +1106,9 @@ function ns.BuildMain()
 	bar:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:AddLine(T("Free slots: %s of %s"):format(tostring(self.free or "?"), tostring(self.total or "?")))
+		if (self.rTotal or 0) > 0 then
+			GameTooltip:AddLine(T("Reagent bag: %d of %d free (only crafting reagents fit there)"):format(self.rFree, self.rTotal), 0.8, 0.8, 0.8, true)
+		end
 		GameTooltip:Show()
 	end)
 	bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
