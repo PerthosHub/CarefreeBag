@@ -81,6 +81,8 @@ local usedItems, usedHeaders, usedPlus = 0, 0, 0
 local showHidden = false -- true = verbergmodus: verborgen groep zichtbaar, klik = verbergen/terughalen
 local inLayout;  ns.layoutPending, inLayout = false, false
 local lastFree, lastItems = {}, {}
+-- Zolang het venster open is: hoeveel je van elk item had (laagste stand) en wat erbij kwam.
+local openCounts, freshIDs = nil, {}
 ns.searchText = ""
 -- Vaste volgorde zolang het venster open is: [sectie] = { key, key, ... }.
 -- Leeg = opnieuw sorteren (bij openen, of als je een categorie wijzigt).
@@ -176,7 +178,8 @@ local function NewItemButton(i)
 	b.swapMark:SetPoint("CENTER")
 	b.swapMark:SetSize(ns.TILE * 1.8, ns.TILE * 1.8)
 	b.swapMark:Hide()
-	-- Nieuw item: pulserende gouden rand, tot je er met de muis overheen gaat.
+	-- Nieuw item: pulserende gouden rand, tot je er met de muis overheen gaat
+	-- (of de tas sluit). Loot je er daarna meer van, dan knippert het opnieuw.
 	b.newGlow = b:CreateTexture(nil, "OVERLAY", nil, 6)
 	b.newGlow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
 	b.newGlow:SetBlendMode("ADD")
@@ -192,12 +195,20 @@ local function NewItemButton(i)
 		b.newPulse = ag
 	end
 	b:HookScript("OnEnter", function(self)
-		if self.newGlow:IsShown() then
-			self.newGlow:Hide()
-			if self.newPulse then self.newPulse:Stop() end
-			local g = self.group
-			if g and C_NewItems and C_NewItems.RemoveNewItem then pcall(C_NewItems.RemoveNewItem, g.rep.bag, g.rep.slot) end
+		local g = self.group
+		if not g or not self.newGlow:IsShown() then return end
+		self.newGlow:Hide()
+		if self.newPulse then self.newPulse:Stop() end
+		-- Gezien: huidige stand wordt de nieuwe basis, alle vakjes van dit item niet meer nieuw.
+		local n = 0
+		for _, e in ipairs(lastItems) do
+			if e.itemID == g.itemID then
+				n = n + (e.count or 1)
+				if C_NewItems and C_NewItems.RemoveNewItem then pcall(C_NewItems.RemoveNewItem, e.bag, e.slot) end
+			end
 		end
+		freshIDs[g.itemID] = nil
+		if openCounts then openCounts[g.itemID] = n end
 	end)
 	b.watch = CreateFrame("Frame", nil, b)
 	b.watch:Hide()
@@ -541,9 +552,14 @@ local function SetupItemButton(b, g)
 		local okN, n = pcall(C_NewItems.IsNewItem, e.bag, e.slot)
 		isNew = (okN and n) and true or false
 	end
+	-- Ook erbij geloot terwijl de tas open staat (ook als je het item al had).
+	if freshIDs[g.itemID] then isNew = true end
 	if b.newGlow then
 		b.newGlow:SetShown(isNew)
-		if isNew then if b.newPulse then b.newPulse:Play() end elseif b.newPulse then b.newPulse:Stop() end
+		if isNew then
+			-- niet opnieuw starten bij elke verversing, anders hapert het knipperen
+			if b.newPulse and not (b.newPulse.IsPlaying and b.newPulse:IsPlaying()) then b.newPulse:Play() end
+		elseif b.newPulse then b.newPulse:Stop() end
 	end
 	pcall(b.UpdateJunkItem, b, info.quality, info.hasNoValue)
 	pcall(b.UpdateCooldown, b, info.iconFileID)
@@ -712,6 +728,23 @@ local function Layout()
 			if not ch.seen[e.itemID] then ch.seen[e.itemID] = now end
 		end
 		for id in pairs(ch.seen) do if not present[id] then ch.seen[id] = nil end end
+	end
+
+	-- Erbij geloot terwijl het venster open is: meer dan de laagste stand sinds openen.
+	-- (Laagste stand: een drankje drinken en er daarna één looten telt ook als nieuw.)
+	do
+		local counts = {}
+		for _, e in ipairs(items) do counts[e.itemID] = (counts[e.itemID] or 0) + (e.count or 1) end
+		if not openCounts then
+			openCounts = counts
+		else
+			for id, n in pairs(counts) do
+				local was = openCounts[id] or 0
+				if n > was then freshIDs[id] = true end
+				if n < was then openCounts[id] = n end
+			end
+			for id in pairs(openCounts) do if not counts[id] then openCounts[id] = 0 end end
+		end
 	end
 
 	-- 2. Per sectie sorteren, of de vaste volgorde aanhouden zolang het venster open is.
@@ -946,8 +979,9 @@ function ns.BuildMain()
 	ns.main:SetScript("OnShow", function() if PlaySound and SOUNDKIT then pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN) end end)
 	ns.main:SetScript("OnHide", function()
 		showHidden = false
+		openCounts, freshIDs = nil, {}
 		ns.ResetOrder() -- volgende keer openen: netjes opnieuw gesorteerd
-		-- Nieuwe items hebben nu één keer geknipperd: markering weghalen.
+		-- Tas dicht: nieuwe items zijn gezien, markering weghalen.
 		if C_NewItems and C_NewItems.RemoveNewItem then
 			for _, e in ipairs(lastItems) do
 				local okN, isNew = pcall(C_NewItems.IsNewItem, e.bag, e.slot)

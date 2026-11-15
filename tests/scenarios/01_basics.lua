@@ -270,6 +270,28 @@ CarefreeBagItem1:Fire("OnEnter")
 check(not CarefreeBagItem1.newGlow:IsShown() and REMOVED >= 1, "na hover: rand weg en niet meer nieuw " .. tostring(CarefreeBagItem1.newGlow:IsShown()) .. " " .. REMOVED)
 CarefreeBagFrame:Hide()
 check(REMOVED > 0, "bij sluiten worden nieuwe-item-markeringen weggehaald (" .. REMOVED .. ")")
+-- geloot terwijl de tas open staat, ook een item dat je al had: knippert tot hover of sluiten
+C_NewItems = { IsNewItem = function() return false end, RemoveNewItem = function() end }
+local function tile(id)
+	for i = 1, 300 do
+		local b = _G["CarefreeBagItem" .. i]
+		if b and b.shown and b.group and b.group.itemID == id then return b end
+	end
+end
+SlashCmdList.CAREFREEBAG("show"); RunTimers()
+check(tile(20002) and not tile(20002).newGlow:IsShown(), "bij openen: oud item knippert niet")
+BAGS[2][1] = { itemID = 20002, count = 1 }; E("BAG_UPDATE_DELAYED"); RunTimers() -- tweede Ding 2 erbij
+check(tile(20002) and tile(20002).newGlow:IsShown(), "item dat je al had, erbij geloot: knippert")
+check(tile(20003) and not tile(20003).newGlow:IsShown(), "ander item knippert niet")
+tile(20002):Fire("OnEnter")
+check(not tile(20002).newGlow:IsShown(), "na hover: knippert niet meer")
+E("BAG_UPDATE_DELAYED"); RunTimers()
+check(not tile(20002).newGlow:IsShown(), "na hover en verversen: blijft uit")
+BAGS[2][5] = { itemID = 20002, count = 1 }; E("BAG_UPDATE_DELAYED"); RunTimers() -- nog een Ding 2
+check(tile(20002).newGlow:IsShown(), "na hover nog meer van hetzelfde geloot: knippert weer")
+CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
+check(not tile(20002).newGlow:IsShown(), "tas dicht en weer open: knippert niet meer")
+CarefreeBagFrame:Hide()
 -- quest: zelf erin slepen
 SlashCmdList.CAREFREEBAG("show"); RunTimers()
 CURSOR = { itemID = 1000 }

@@ -78,6 +78,7 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 ## Stand van zaken (bijwerken na elke sessie)
 - **1.5.0 uitgebracht** (2026-11-15), alles door Johan in het spel getest: bankpaneel, opsplitsing, mail "zonder vragen" per groep, eenmalige mailvraag "voortaan altijd zonder vragen?" (`DB.mailAlwaysAuto`: nil = nog niet gevraagd, optie in Algemeen), optievenster vast links naast de tassen (`ns.PlaceConfig`, één tegelijk met het bankpaneel), bankpaneel-titel "Your bank" / "Bank of X" / "Bags of X" met "(you)".
 - Releasen kan ook met `gh release create vX.Y.Z --target main` (gh is lokaal ingelogd).
+- **1.5.1 nog niet uitgebracht**, door Johan in het spel getest: nieuw geloot item knippert zolang de tas open is (ook als je het al had), tot hover; meer looten = weer knipperen (`openCounts`/`freshIDs` in `BagWindow.lua`).
 - Volgende stap: UI-verbeteringen (Johan geeft per chat aan welke).
 - Nog niet gedaan: Warband-bank (retail), een verwijderd karakter uit de lijst halen.
 - Johans karakters (Forever): main en bank alt hebben dezelfde voornaam. Echte namen staan niet in de repo.

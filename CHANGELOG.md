@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.5.1 (not released yet)
+- Items you loot while your bags are open keep blinking, also when you already had that item (for example one more potion). Move the mouse over it to stop the blinking; loot more of it and it blinks again. Closing the bags stops all blinking.
+
 ## 1.5.0
 - Under the hood: the code is split into smaller files, with automatic tests on GitHub before every release. Nothing changes in the game.
 - Fix: two characters with the same first name (Forever: "Thrall Frostwolf" and "Thrall Stormrage") shared their groups and learned items. Each character now really has its own. The character that logged in last keeps the changed groups; the other gets its groups from before 1.3.0 back. `/cfb resetgroups` resets the groups of the current character.
