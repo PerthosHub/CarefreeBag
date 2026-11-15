@@ -4,7 +4,7 @@
 
 **Questing or in a dungeon, you never have to think about your inventory.**
 
-CarefreeBag is a simple bag addon for WoW Forever. It does the boring bag chores for you, so you can keep playing.
+CarefreeBag is a simple bag addon for WoW Forever, made with retail and Classic in mind too. It does the boring bag chores for you, so you can keep playing.
 
 ## Why CarefreeBag?
 - **No rules to set up.** Drag an item onto a group's empty slot. Done. It stays there from now on.
@@ -28,7 +28,8 @@ CarefreeBag is a simple bag addon for WoW Forever. It does the boring bag chores
 - `/cfb` options · `/cfb log` shows the log (handy for bug reports).
 
 ## Works with
-- WoW Forever.
+- **WoW Forever**: built and tested here.
+- **Retail (Midnight)**, **MoP Classic**, **TBC Classic Anniversary** and **Classic Era** (incl. Hardcore and SoD): new and less tested. Found a problem? Please open an issue on GitHub, `/cfb log` helps a lot.
 - Optional: **Auctionator** (for AH prices).
 - If another bag addon (Baganator, Bagnon, AdiBags, ...) is installed, CarefreeBag asks which one you want to use.
 

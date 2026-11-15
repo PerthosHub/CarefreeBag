@@ -1,4 +1,4 @@
--- CarefreeBag - zorgeloze tassen voor WoW Forever (interface 16001)
+-- CarefreeBag - zorgeloze tassen voor WoW Forever, retail en Classic (één code voor alle versies)
 --
 -- 1. Eén venster met al je tassen, ingedeeld in groepen.
 -- 2. Eigen categorieën. Elke categorie toont zijn items + 1 leeg vakje: sleep daar
@@ -10,7 +10,7 @@
 
 local ADDON, ns = ...
 ns = ns or {}
-local VERSION = "1.3.0"
+local VERSION = "1.4.0"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -157,6 +157,7 @@ NL["These items are mailed to %s when you open a mailbox."] = "Deze items worden
 NL["Off = your normal bags."] = "Uit = je gewone tassen."
 NL["Off: items go to Other."] = "Uit: items gaan naar Overig."
 NL["Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."] = "Volledige naam van je alt, bijv. 'Thrall Stormrage'. Leeg = niet mailen."
+NL["Name of your alt, e.g. 'Thrall', or 'Thrall-Stormrage' on another realm. Empty = no mail."] = "Naam van je alt, bijv. 'Thrall', of 'Thrall-Stormrage' op een andere realm. Leeg = niet mailen."
 NL["Items go back to Other."] = "Items gaan terug naar Overig."
 NL["Sell at a vendor. Shift = skip once."] = "Verkopen bij de vendor. Shift = één keer overslaan."
 NL["Sort: %s"] = "Sortering: %s"
@@ -397,6 +398,8 @@ end
 ---------------------------------------------------------------------------
 
 local LAST_BAG = NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
+-- Retail heeft een aparte reagent-tas (alleen voor crafting reagents). In Classic is die er niet.
+local REAGENT_BAG = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag
 local needInfo = false
 
 local function ItemExtra(itemID)
@@ -470,10 +473,13 @@ local function IsBoE(e)
 	return e.bindType == 2 and not e.bound and (e.quality or 0) >= 2
 end
 
--- Keyring (sleutelring): alleen als Forever die toont.
+-- Keyring (sleutelring): alleen als het spel die heeft en toont.
 local function KeyringBag()
 	local id = KEYRING_CONTAINER or (Enum and Enum.BagIndex and Enum.BagIndex.Keyring)
 	if not id then return nil end
+	-- Classic Era en TBC hebben een keyring; retail en MoP niet (0 vakjes = geen keyring).
+	local okN, n = pcall(C_Container.GetContainerNumSlots, id)
+	if not okN or not n or n == 0 then return nil end
 	if C_ActionBar and C_ActionBar.ShouldShowKeyring then
 		local ok, show = pcall(C_ActionBar.ShouldShowKeyring)
 		if ok and not show then return nil end
@@ -512,7 +518,7 @@ local function Scan()
 					key = isKey,
 				}
 			elseif not isKey then
-				free[#free + 1] = { bag = bag, slot = slot }
+				free[#free + 1] = { bag = bag, slot = slot, reagent = (bag == REAGENT_BAG) or nil }
 			end
 		end
 	end
@@ -1053,13 +1059,23 @@ local function FirstFreeSlot()
 		local okI, fam = pcall(C_Item.GetItemFamily, id)
 		if okI and fam then itemFam = fam end
 	end
+	local isReagent = false
+	if id and C_Item.GetItemInfo then
+		local okR, r = pcall(function() return select(17, C_Item.GetItemInfo(id)) end)
+		isReagent = okR and r and true or false
+	end
 	local best
 	for _, f in ipairs(lastFree) do
-		local okF, _, family = pcall(C_Container.GetContainerNumFreeSlots, f.bag)
-		family = okF and family or 0
-		if family == 0 then return f end
-		-- beroepstas: alleen als het item erin past
-		if bit and bit.band and itemFam ~= 0 and bit.band(itemFam, family) ~= 0 then best = best or f end
+		if f.reagent then
+			-- reagent-tas: alleen crafting reagents passen erin, en dan alleen als laatste keus
+			if isReagent then best = best or f end
+		else
+			local okF, _, family = pcall(C_Container.GetContainerNumFreeSlots, f.bag)
+			family = okF and family or 0
+			if family == 0 then return f end
+			-- beroepstas: alleen als het item erin past
+			if bit and bit.band and itemFam ~= 0 and bit.band(itemFam, family) ~= 0 then best = best or f end
+		end
 	end
 	return best
 end
@@ -2342,7 +2358,9 @@ local function BuildConfig()
 		end
 		r.mail:SetScript("OnEnterPressed", setMail)
 		r.mail:SetScript("OnEditFocusLost", setMail)
-		Tooltip(r.mail, T("Mail to"), T("Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail."))
+		-- Forever heeft voor- en achternaam; de andere WoW-versies naam(-realm).
+		Tooltip(r.mail, T("Mail to"), SurnameSep() and T("Full name of your alt, e.g. 'Thrall Stormrage'. Empty = no mail.")
+			or T("Name of your alt, e.g. 'Thrall', or 'Thrall-Stormrage' on another realm. Empty = no mail."))
 
 		-- Vinkjes voor vaste groepen (in de kolom van het postadres).
 		r.cb1 = NewCheck(r, "", nil, function() return r.cb1Field and DB[r.cb1Field] end, function(v) if r.cb1Field then DB[r.cb1Field] = v end end)

@@ -1,4 +1,4 @@
-## Interface: 16001
+## Interface: 11508, 11509, 16001, 20505, 20506, 50503, 50504, 120100, 120105, 120107
 ## Title: CarefreeBag
 ## Notes: Carefree bags: questing or in a dungeon, you never have to think about your inventory. One window, drag-and-drop groups, Auto Sell, auto-restack and mail to your alts.
 ## Notes-deDE: Sorgenfreie Taschen: Beim Questen oder im Dungeon musst du nie an dein Inventar denken. Ein Fenster, Drag-and-Drop-Gruppen, Auto Sell, automatisches Stacken und Post an deine Twinks.

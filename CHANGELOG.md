@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0
+- Now also loads in retail (Midnight), MoP Classic, TBC Classic Anniversary and Classic Era. These versions are new and less tested: please report problems on GitHub.
+- Retail: normal items are never dropped into the reagent bag.
+- Classic: the keyring works in the Keys group.
+- The mail address tip shows the right name format for your game version.
+
 ## 1.3.0
 - Groups are now per character: each character has its own groups, order, sorting and mail settings. Existing characters start with the groups you had.
 
