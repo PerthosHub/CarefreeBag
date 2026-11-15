@@ -10,7 +10,7 @@
 
 local ADDON, ns = ...
 ns = ns or {}
-local VERSION = "1.4.0"
+local VERSION = "1.5.0"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -181,6 +181,14 @@ NL["Send everything in %s to %s?"] = "Wil je alles uit %s versturen naar %s?"
 NL["After that: %s"] = "Daarna: %s"
 NL["Yes, send"] = "Ja, versturen"
 NL["Skip"] = "Overslaan"
+NL["Bags"] = "Tassen"
+NL["Bank"] = "Bank"
+NL["Bank & alts"] = "Bank & alts"
+NL["See your bank, and the bags and bank of your other characters."] = "Bekijk je bank, en de tassen en bank van je andere karakters."
+NL["Updated %s"] = "Bijgewerkt %s"
+NL["Visit a banker once to see this bank here."] = "Ga één keer naar een bankier om deze bank hier te zien."
+NL["Log in with this character once to see its bags here."] = "Log één keer in met dit karakter om zijn tassen hier te zien."
+NL["Empty"] = "Leeg"
 
 -- Logboek in de SavedVariables (laatste 80 regels). Lees met /cfb log.
 local function Log(msg)
@@ -317,7 +325,11 @@ end
 -- één lijst voor het hele account (DB.assign); elk karakter begint met een kopie daarvan.
 local charKey
 local catsNamed
+-- Bekijk je de tassen of bank van een ander karakter, dan wijst viewKey even naar dat
+-- karakter: zo gebruiken we dezelfde groepen-indeling zonder iets dubbel te bouwen.
+local viewKey
 local function CharEntry()
+	if viewKey and DB.chars[viewKey] then return DB.chars[viewKey] end
 	if not charKey then
 		local name = UnitName and UnitName("player")
 		if not name or name == "" or name == UNKNOWNOBJECT then return nil end
@@ -453,6 +465,7 @@ local function AddAHLines(tt, g)
 		tt:AddLine("|cff66ccffCarefreeBag:|r |cffffd100" .. T("Sell to a vendor for the best price") .. "|r")
 	end
 end
+local AddOwnerLines -- vooruit: "waar heb je dit nog meer" (zie Overzicht van je karakters)
 local ahHooked
 local function HookAHTooltip()
 	if ahHooked then return end
@@ -461,6 +474,7 @@ local function HookAHTooltip()
 		if tt ~= GameTooltip or not tt.GetOwner then return end
 		local owner = tt:GetOwner()
 		if owner and owner.isCarefreeItem and owner.group then AddAHLines(tt, owner.group) end
+		if AddOwnerLines then pcall(AddOwnerLines, tt) end
 	end
 	if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
 		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, post)
@@ -523,6 +537,160 @@ local function Scan()
 		end
 	end
 	return items, free, total
+end
+
+---------------------------------------------------------------------------
+-- Overzicht van je karakters: wat zit er in hun tassen en bank?
+-- De bank kun je alleen bij de bankier uitlezen; daarna onthouden we wat erin zat.
+---------------------------------------------------------------------------
+
+local bankOpen = false
+local ViewRefresh -- vooruit: paneel met bank en alts bijwerken
+local ownerIndex -- [itemID] = { { key, bags, bank }, ... }; nil = opnieuw opbouwen
+
+-- Compacte kopie van een lijst items (zelfde item + gebonden = één regel).
+local function Snapshot(items)
+	local list, at = {}, {}
+	for _, e in ipairs(items) do
+		local id = (e.link or e.itemID) .. (e.bound and "b" or "")
+		local r = at[id]
+		if r then
+			r.n = r.n + e.count
+		else
+			r = { id = e.itemID, n = e.count, l = e.link, q = e.quality, i = e.info and e.info.iconFileID,
+				b = e.bound or nil, qu = e.quest or nil, bt = e.bindType, c = e.classID, s = e.subclassID,
+				e = e.equipLoc, p = e.price, k = e.key or nil }
+			at[id] = r
+			list[#list + 1] = r
+		end
+	end
+	return list
+end
+
+-- Alle bankvakken: oude bank (vak -1 + banktassen; Forever en Classic) en de
+-- nieuwe banktabbladen (retail). We nemen alleen wat echt vakjes heeft.
+local function BankBags()
+	local ids, seen = {}, {}
+	local function add(id)
+		if id and not seen[id] then
+			seen[id] = true
+			local ok, n = pcall(C_Container.GetContainerNumSlots, id)
+			if ok and n and n > 0 then ids[#ids + 1] = id end
+		end
+	end
+	add(BANK_CONTAINER or (Enum and Enum.BagIndex and Enum.BagIndex.Bank) or -1)
+	for i = 1, (NUM_BANKBAGSLOTS or 0) do add(LAST_BAG + i) end
+	if Enum and Enum.BagIndex then
+		for i = 1, 12 do add(Enum.BagIndex["CharacterBankTab_" .. i]) end
+	end
+	return ids
+end
+
+local function ScanBags(bags)
+	local items = {}
+	for _, bag in ipairs(bags) do
+		local n = C_Container.GetContainerNumSlots(bag) or 0
+		for slot = 1, n do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if info and info.itemID then
+				local stack, bind, price, classID, equipLoc, subclassID = ItemExtra(info.itemID)
+				items[#items + 1] = { itemID = info.itemID, count = info.stackCount or 1, info = info,
+					quality = info.quality or 1, bound = info.isBound, link = info.hyperlink,
+					bindType = bind or 0, price = price or 0, quest = IsQuestItem(bag, slot, classID),
+					classID = classID, subclassID = subclassID, equipLoc = equipLoc }
+			end
+		end
+	end
+	return items
+end
+
+local function MySnap()
+	if viewKey then return nil end
+	local ch = CharEntry()
+	if not ch then return nil end
+	ch.snap = ch.snap or {}
+	ch.snap.name = MyFullName()
+	local _, class = UnitClass and UnitClass("player")
+	ch.snap.class = class
+	return ch.snap
+end
+
+local function SnapBags()
+	local s = MySnap()
+	if not s then return end
+	local items = Scan()
+	s.bags, s.bagsTime = Snapshot(items), time and time() or nil
+	ownerIndex = nil
+end
+
+local function SnapBank()
+	if not bankOpen then return end
+	local s = MySnap()
+	if not s then return end
+	s.bank, s.bankTime = Snapshot(ScanBags(BankBags())), time and time() or nil
+	ownerIndex = nil
+end
+
+-- Na veranderingen in je tassen (of bank) even wachten en dan één keer opslaan.
+local snapPending = false
+local function ScheduleSnap()
+	if snapPending then return end
+	snapPending = true
+	C_Timer.After(1, function()
+		snapPending = false
+		pcall(SnapBags)
+		if bankOpen then pcall(SnapBank) end
+		if ViewRefresh then pcall(ViewRefresh) end
+	end)
+end
+
+-- Waar heb je dit item nog meer? Voor de tooltip.
+local function BuildOwnerIndex()
+	ownerIndex = {}
+	for key, ch in pairs(DB.chars or {}) do
+		local s = ch.snap
+		if s then
+			for _, part in ipairs({ "bags", "bank" }) do
+				for _, r in ipairs(s[part] or {}) do
+					local list = ownerIndex[r.id]
+					if not list then list = {}; ownerIndex[r.id] = list end
+					local row
+					for _, x in ipairs(list) do if x.key == key then row = x end end
+					if not row then row = { key = key, name = s.name or key, bags = 0, bank = 0 }; list[#list + 1] = row end
+					row[part] = row[part] + r.n
+				end
+			end
+		end
+	end
+end
+
+AddOwnerLines = function(tt)
+	local id
+	if tt.GetItem then
+		local _, link = tt:GetItem()
+		id = link and tonumber(link:match("item:(%d+)"))
+	end
+	if not id then return end
+	if not ownerIndex then BuildOwnerIndex() end
+	local list = ownerIndex[id]
+	if not list or #list == 0 then return end
+	-- alleen tonen als het ergens anders ligt dan in je eigen tassen
+	local other = false
+	for _, row in ipairs(list) do
+		if row.key ~= charKey or row.bank > 0 then other = true end
+	end
+	if not other then return end
+	tt:AddLine(" ")
+	tt:AddLine("|cff66ccffCarefreeBag:|r")
+	table.sort(list, function(a, b) return (a.key == charKey) and b.key ~= charKey or ((a.key == charKey) == (b.key == charKey) and a.name < b.name) end)
+	for i, row in ipairs(list) do
+		if i > 8 then break end
+		local parts = {}
+		if row.bags > 0 then parts[#parts + 1] = T("Bags") .. " " .. row.bags end
+		if row.bank > 0 then parts[#parts + 1] = T("Bank") .. " " .. row.bank end
+		tt:AddDoubleLine(row.name, table.concat(parts, ", "), 1, 0.82, 0, 1, 1, 1)
+	end
+	tt:Show()
 end
 
 local function On(k) return not (DB.fixedOn and DB.fixedOn[k] == false) end
@@ -1493,6 +1661,7 @@ end
 
 local ToggleConfig -- vooruit
 
+local ToggleViewer -- vooruit (paneel met bank en alts)
 local function BuildMain()
 	main = NewWindow("CarefreeBagFrame", "CarefreeBag", 438, 300)
 	main:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); SavePos() end)
@@ -1527,6 +1696,15 @@ local function BuildMain()
 	main.hiddenBtn.count:SetPoint("BOTTOMRIGHT", main.hiddenBtn, "BOTTOMRIGHT", 2, -2)
 	main.hiddenBtn:SetScript("OnClick", function() showHidden = not showHidden; Refresh() end)
 	Tooltip(main.hiddenBtn, T("Hide items"))
+	-- Bank en je andere karakters bekijken (paneel ernaast).
+	main.bankBtn = RedButton(main, "CarefreeBagBankButton", 24, "128-RedButton", "Interface\\Icons\\INV_Misc_Bag_10_Blue")
+	main.bankBtn:SetPoint("RIGHT", main.hiddenBtn, "LEFT", -4, 0)
+	main.bankBtn.icon = main.bankBtn:CreateTexture(nil, "OVERLAY")
+	main.bankBtn.icon:SetTexture("Interface\\Minimap\\Tracking\\Banker")
+	main.bankBtn.icon:SetSize(16, 16)
+	main.bankBtn.icon:SetPoint("CENTER", 0, 1)
+	main.bankBtn:SetScript("OnClick", function() ToggleViewer() end)
+	Tooltip(main.bankBtn, T("Bank & alts"), T("See your bank, and the bags and bank of your other characters."))
 
 	-- Zoekbalk: typ een naam, alles wat niet past wordt grijs.
 	local okS, sb = pcall(CreateFrame, "EditBox", "CarefreeBagSearch", main, "SearchBoxTemplate")
@@ -1534,10 +1712,10 @@ local function BuildMain()
 	sb:SetSize(200, 20)
 	sb:SetAutoFocus(false)
 	sb:SetPoint("TOPLEFT", main, "TOPLEFT", PAD + 6, -34)
-	sb:SetPoint("RIGHT", main.hiddenBtn, "LEFT", -8, 0)
+	sb:SetPoint("RIGHT", main.bankBtn, "LEFT", -8, 0)
 	sb:HookScript("OnTextChanged", function(self)
 		local t = (self:GetText() or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
-		if t ~= searchText then searchText = t; Refresh() end
+		if t ~= searchText then searchText = t; Refresh(); if ViewRefresh then ViewRefresh() end end
 	end)
 	sb:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
 	sb:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
@@ -1593,6 +1771,249 @@ local function BuildMain()
 	main.money = main:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	main.money:SetJustifyH("RIGHT")
 	main.money:SetPoint("RIGHT", main, "BOTTOMRIGHT", -PAD - 4, PAD - 2 + TILE / 2)
+end
+
+---------------------------------------------------------------------------
+-- Paneel naast je tassen: je bank, en de tassen en bank van je andere karakters
+-- (alleen bekijken; verplaatsen doe je bij de bankier zoals altijd)
+---------------------------------------------------------------------------
+
+local viewer
+local viewTiles, viewHeads = {}, {}
+
+local function ViewChoices()
+	local list = {}
+	local function add(key, part)
+		local ch = DB.chars[key]
+		local s = ch and ch.snap
+		local name = (s and s.name) or key
+		list[#list + 1] = { key = key, part = part, name = name,
+			label = name .. " – " .. (part == "bank" and T("Bank") or T("Bags")) }
+	end
+	if charKey and DB.chars[charKey] then add(charKey, "bank") end
+	local others = {}
+	for key, ch in pairs(DB.chars or {}) do
+		if key ~= charKey and ch.snap and (ch.snap.bags or ch.snap.bank) then others[#others + 1] = key end
+	end
+	table.sort(others, function(a, b)
+		return ((DB.chars[a].snap.name or a)) < ((DB.chars[b].snap.name or b))
+	end)
+	for _, key in ipairs(others) do add(key, "bags"); add(key, "bank") end
+	return list
+end
+
+local function ViewTile(i)
+	local t = viewTiles[i]
+	if not t then
+		t = CreateFrame("Button", nil, viewer.content)
+		t:SetSize(TILE, TILE)
+		t.bg = t:CreateTexture(nil, "BACKGROUND")
+		t.bg:SetAllPoints(t)
+		t.bg:SetTexture(SLOT_TEX)
+		t.icon = t:CreateTexture(nil, "ARTWORK")
+		t.icon:SetPoint("TOPLEFT", t, "TOPLEFT", 1, -1)
+		t.icon:SetPoint("BOTTOMRIGHT", t, "BOTTOMRIGHT", -1, 1)
+		t.border = t:CreateTexture(nil, "OVERLAY")
+		t.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+		t.border:SetBlendMode("ADD")
+		t.border:SetPoint("CENTER", t, "CENTER", 0, 0)
+		t.border:SetSize(TILE * 1.8, TILE * 1.8)
+		t.count = t:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+		t.count:SetPoint("BOTTOMRIGHT", t, "BOTTOMRIGHT", -2, 2)
+		t:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+		t:SetScript("OnEnter", function(self)
+			if not self.link then return end
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			pcall(GameTooltip.SetHyperlink, GameTooltip, self.link)
+			GameTooltip:Show()
+		end)
+		t:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		t:SetScript("OnClick", function(self)
+			if self.link and HandleModifiedItemClick then pcall(HandleModifiedItemClick, self.link) end
+		end)
+		viewTiles[i] = t
+	end
+	t:Show()
+	return t
+end
+
+local function ViewHead(i)
+	local h = viewHeads[i]
+	if not h then
+		h = viewer.content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		h:SetJustifyH("LEFT")
+		viewHeads[i] = h
+	end
+	h:Show()
+	return h
+end
+
+local function ViewLayout()
+	if not viewer or not viewer:IsShown() then return end
+	for _, t in ipairs(viewTiles) do t:Hide() end
+	for _, h in ipairs(viewHeads) do h:Hide() end
+	local choice = viewer.choice
+	if not choice then
+		local list = ViewChoices()
+		choice = list[1]
+		viewer.choice = choice
+	end
+	if not choice then return end
+	viewer.pick:SetText(choice.label .. "  |TInterface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up:14:14|t")
+	local ch = DB.chars[choice.key]
+	local s = ch and ch.snap
+	local rows = s and s[choice.part]
+	local stamp = s and s[choice.part .. "Time"]
+	if choice.key == charKey and choice.part == "bank" and bankOpen then
+		viewer.note:SetText("")
+	elseif stamp and date then
+		viewer.note:SetText(T("Updated %s"):format(date("%d-%m %H:%M", stamp)))
+	else
+		viewer.note:SetText("")
+	end
+	local cols = math.max(5, math.min(DB.maxCols or 14, 10))
+	local width = cols * (TILE + GAP) - GAP
+	local y = 0
+	if not rows then
+		local h = ViewHead(1)
+		h:SetPoint("TOPLEFT", viewer.content, "TOPLEFT", 0, 0)
+		h:SetWidth(width)
+		h:SetText("|cffaaaaaa" .. (choice.part == "bank" and T("Visit a banker once to see this bank here.")
+			or T("Log in with this character once to see its bags here.")) .. "|r")
+		y = 40
+	else
+		-- Indelen met de groepen van dat karakter.
+		local bySec, order, titles = {}, {}, {}
+		local ok, err = pcall(function()
+			viewKey = choice.key
+			for _, r in ipairs(rows) do
+				local e = { itemID = r.id, quality = r.q or 1, bound = r.b, quest = r.qu, bindType = r.bt or 0,
+					classID = r.c, subclassID = r.s, equipLoc = r.e, key = r.k }
+				local sec = SectionOf(e)
+				if sec ~= "hidden" then
+					bySec[sec] = bySec[sec] or {}
+					table.insert(bySec[sec], r)
+				end
+			end
+			for _, sec in ipairs(SectionList()) do order[#order + 1] = sec.key; titles[sec.key] = sec.title end
+		end)
+		viewKey = nil
+		if not ok then Log("viewer: " .. tostring(err)) end
+		if not titles.other then order[#order + 1] = "other"; titles.other = T("Other") end
+		local nt, nh = 0, 0
+		for _, key in ipairs(order) do
+			local list = bySec[key]
+			if list and #list > 0 then
+				table.sort(list, function(a, b)
+					if (a.q or 1) ~= (b.q or 1) then return (a.q or 1) > (b.q or 1) end
+					return (a.l or "") < (b.l or "")
+				end)
+				nh = nh + 1
+				local h = ViewHead(nh)
+				h:SetPoint("TOPLEFT", viewer.content, "TOPLEFT", 0, -y)
+				h:SetText(titles[key])
+				y = y + 18
+				for idx, r in ipairs(list) do
+					nt = nt + 1
+					local t = ViewTile(nt)
+					local col = (idx - 1) % cols
+					if idx > 1 and col == 0 then y = y + TILE + GAP end
+					t:SetPoint("TOPLEFT", viewer.content, "TOPLEFT", col * (TILE + GAP), -y)
+					t.link = r.l
+					t.icon:SetTexture(r.i or (C_Item.GetItemIconByID and C_Item.GetItemIconByID(r.id)) or 134400)
+					t.count:SetText((r.n or 1) > 1 and r.n or "")
+					local q = r.q or 1
+					if q >= 2 and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[q] then
+						local c = ITEM_QUALITY_COLORS[q]
+						t.border:SetVertexColor(c.r, c.g, c.b, 0.9); t.border:Show()
+					else
+						t.border:Hide()
+					end
+					-- zoekbalk van je tassen telt hier ook
+					local match = searchText == "" or ((r.l or ""):lower():match("%[(.-)%]") or ""):find(searchText, 1, true)
+					t.icon:SetDesaturated(not match)
+					t:SetAlpha(match and 1 or 0.35)
+				end
+				y = y + TILE + GAP + 6
+			end
+		end
+		if nt == 0 then
+			local h = ViewHead(nh + 1)
+			h:SetPoint("TOPLEFT", viewer.content, "TOPLEFT", 0, -y)
+			h:SetText("|cffaaaaaa" .. T("Empty") .. "|r")
+			y = y + 20
+		end
+	end
+	local maxH = math.max(200, (UIParent:GetHeight() or 800) - 200)
+	local h = math.min(y, maxH)
+	viewer.content:SetSize(width, math.max(y, 1))
+	viewer.scroll:SetSize(width, math.max(h, 40))
+	viewer.scrollMax = math.max(0, y - h)
+	viewer:SetSize(width + PAD * 2, math.max(h, 40) + 62 + PAD)
+end
+
+local function OpenViewMenu()
+	local list = ViewChoices()
+	local m = viewer.menu
+	if not m then
+		m = NewMenu("CarefreeBagViewMenu")
+		m.buttons = {}
+		viewer.menu = m
+	end
+	for _, b in ipairs(m.buttons) do b:Hide() end
+	for i, c in ipairs(list) do
+		local b = m.buttons[i]
+		if not b then
+			b = MakeButton(m, "", 220)
+			m.buttons[i] = b
+		end
+		b:SetPoint("TOP", m, "TOP", 0, -4 - (i - 1) * 22)
+		b:SetText(c.label)
+		b:SetScript("OnClick", function()
+			viewer.choice = c
+			m:Hide()
+			if viewer.scroll then viewer.scroll:SetVerticalScroll(0) end
+			ViewLayout()
+		end)
+		b:Show()
+	end
+	m:SetSize(230, #list * 22 + 8)
+	m:ClearAllPoints()
+	m:SetPoint("TOPLEFT", viewer.pick, "BOTTOMLEFT", 0, -2)
+	ShowMenu(m)
+end
+
+local function BuildViewer()
+	viewer = NewWindow("CarefreeBagViewer", T("Bank & alts"), 300, 200)
+	viewer:SetMovable(false)
+	viewer:SetScript("OnDragStart", nil)
+	viewer.pick = MakeButton(viewer, "", 260)
+	viewer.pick:SetPoint("TOPLEFT", viewer, "TOPLEFT", PAD, -32)
+	viewer.pick:SetScript("OnClick", OpenViewMenu)
+	viewer.note = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	viewer.note:SetPoint("LEFT", viewer.pick, "RIGHT", 8, 0)
+	viewer.scroll = CreateFrame("ScrollFrame", nil, viewer)
+	viewer.scroll:SetPoint("TOPLEFT", viewer, "TOPLEFT", PAD, -62)
+	viewer.content = CreateFrame("Frame", nil, viewer.scroll)
+	viewer.scroll:SetScrollChild(viewer.content)
+	viewer.scroll:EnableMouseWheel(true)
+	viewer.scroll:SetScript("OnMouseWheel", function(self, delta)
+		local v = (self:GetVerticalScroll() or 0) - delta * (TILE + GAP)
+		self:SetVerticalScroll(math.max(0, math.min(viewer.scrollMax or 0, v)))
+	end)
+	viewer:SetScript("OnShow", ViewLayout)
+	viewer:SetScript("OnHide", function() if viewer.menu then viewer.menu:Hide() end end)
+	-- Vast naast je tassen (links ervan), en dicht als je tassen dichtgaan.
+	viewer:ClearAllPoints()
+	viewer:SetPoint("TOPRIGHT", main, "TOPLEFT", -4, 0)
+	main:HookScript("OnHide", function() viewer:Hide() end)
+end
+
+ViewRefresh = function() if viewer and viewer:IsShown() then ViewLayout() end end
+
+ToggleViewer = function()
+	if not viewer then BuildViewer() end
+	if viewer:IsShown() then viewer:Hide() else viewer.choice = nil; viewer:Show() end
 end
 
 ---------------------------------------------------------------------------
@@ -2720,7 +3141,8 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		for _, ev in ipairs({ "BAG_UPDATE_DELAYED", "ITEM_LOCK_CHANGED", "BAG_UPDATE_COOLDOWN", "PLAYER_MONEY",
 			"GET_ITEM_INFO_RECEIVED", "MERCHANT_SHOW", "MERCHANT_CLOSED", "MAIL_SHOW", "MAIL_CLOSED",
 			"MAIL_SEND_SUCCESS", "MAIL_FAILED", "PLAYER_REGEN_ENABLED", "ADDON_ACTION_BLOCKED",
-			"ADDON_ACTION_FORBIDDEN" }) do
+			"ADDON_ACTION_FORBIDDEN", "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED",
+			"PLAYERBANKBAGSLOTS_CHANGED", "PLAYER_LOGOUT" }) do
 			pcall(driver.RegisterEvent, driver, ev)
 		end
 		Print(T("v%s loaded. Open your bags as usual, or type /cfb for options."):format(VERSION))
@@ -2729,6 +3151,21 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		pcall(driver.RegisterEvent, driver, "UI_ERROR_MESSAGE")
 		pcall(driver.RegisterEvent, driver, "UPDATE_BINDINGS")
 		ScheduleRestack()
+		C_Timer.After(3, function() Try("snapshot", SnapBags) end)
+	elseif event == "BANKFRAME_OPENED" then
+		bankOpen = true
+		Try("bank", SnapBank)
+		if ViewRefresh then ViewRefresh() end
+	elseif event == "BANKFRAME_CLOSED" then
+		Try("bank", SnapBank)
+		bankOpen = false
+	elseif event == "PLAYERBANKSLOTS_CHANGED" or event == "PLAYERBANKBAGSLOTS_CHANGED" then
+		if bankOpen then
+			Try("bank", SnapBank)
+			if ViewRefresh then ViewRefresh() end
+		end
+	elseif event == "PLAYER_LOGOUT" then
+		pcall(SnapBags)
 	elseif event == "MERCHANT_SHOW" then
 		Refresh()
 		local ok, err = pcall(SellStart)
@@ -2794,6 +3231,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		Refresh()
 		if event == "BAG_UPDATE_DELAYED" then
 			ScheduleRestack()
+			ScheduleSnap()
 			if mailPanel and mailPanel:IsShown() and not mail.busy then UpdateMailPanel() end
 		end
 	end

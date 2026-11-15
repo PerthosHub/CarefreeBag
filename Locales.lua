@@ -4,6 +4,14 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.de = {
+	["Bags"] = "Taschen",
+	["Bank"] = "Bank",
+	["Bank & alts"] = "Bank & Twinks",
+	["See your bank, and the bags and bank of your other characters."] = "Sieh dir deine Bank an, und die Taschen und Bank deiner anderen Charaktere.",
+	["Updated %s"] = "Aktualisiert %s",
+	["Visit a banker once to see this bank here."] = "Besuche einmal einen Bankier, um diese Bank hier zu sehen.",
+	["Log in with this character once to see its bags here."] = "Melde dich einmal mit diesem Charakter an, um seine Taschen hier zu sehen.",
+	["Empty"] = "Leer",
 	[" Note: Buyback only keeps the last 12."] = " Hinweis: Zurückkaufen merkt sich nur die letzten 12.",
 	["Add"] = "Hinzufügen",
 	["Auto Sell skipped (Shift)."] = "Auto Sell übersprungen (Shift).",
@@ -130,6 +138,14 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Bags"] = "Sacs",
+	["Bank"] = "Banque",
+	["Bank & alts"] = "Banque & rerolls",
+	["See your bank, and the bags and bank of your other characters."] = "Consulte ta banque, ainsi que les sacs et la banque de tes autres personnages.",
+	["Updated %s"] = "Mis à jour %s",
+	["Visit a banker once to see this bank here."] = "Passe une fois voir un banquier pour voir cette banque ici.",
+	["Log in with this character once to see its bags here."] = "Connecte-toi une fois avec ce personnage pour voir ses sacs ici.",
+	["Empty"] = "Vide",
 	[" Note: Buyback only keeps the last 12."] = " Remarque : le rachat ne garde que les 12 derniers.",
 	["Add"] = "Ajouter",
 	["Auto Sell skipped (Shift)."] = "Auto Sell ignoré (Maj).",
@@ -256,6 +272,14 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Bags"] = "Bolsas",
+	["Bank"] = "Banco",
+	["Bank & alts"] = "Banco y alters",
+	["See your bank, and the bags and bank of your other characters."] = "Mira tu banco, y las bolsas y el banco de tus otros personajes.",
+	["Updated %s"] = "Actualizado %s",
+	["Visit a banker once to see this bank here."] = "Visita una vez a un banquero para ver este banco aquí.",
+	["Log in with this character once to see its bags here."] = "Entra una vez con este personaje para ver sus bolsas aquí.",
+	["Empty"] = "Vacío",
 	[" Note: Buyback only keeps the last 12."] = " Nota: Recomprar solo guarda los últimos 12.",
 	["Add"] = "Añadir",
 	["Auto Sell skipped (Shift)."] = "Auto Sell omitido (Shift).",
@@ -382,6 +406,14 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Bags"] = "Bolsas",
+	["Bank"] = "Banco",
+	["Bank & alts"] = "Banco e alts",
+	["See your bank, and the bags and bank of your other characters."] = "Veja seu banco, e as bolsas e o banco dos seus outros personagens.",
+	["Updated %s"] = "Atualizado %s",
+	["Visit a banker once to see this bank here."] = "Visite um banqueiro uma vez para ver este banco aqui.",
+	["Log in with this character once to see its bags here."] = "Entre uma vez com este personagem para ver as bolsas dele aqui.",
+	["Empty"] = "Vazio",
 	[" Note: Buyback only keeps the last 12."] = " Observação: a Recompra só guarda os últimos 12.",
 	["Add"] = "Adicionar",
 	["Auto Sell skipped (Shift)."] = "Auto Sell ignorado (Shift).",
@@ -508,6 +540,14 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Bags"] = "Borse",
+	["Bank"] = "Banca",
+	["Bank & alts"] = "Banca e alt",
+	["See your bank, and the bags and bank of your other characters."] = "Guarda la tua banca, e le borse e la banca degli altri tuoi personaggi.",
+	["Updated %s"] = "Aggiornato %s",
+	["Visit a banker once to see this bank here."] = "Visita una volta un banchiere per vedere qui questa banca.",
+	["Log in with this character once to see its bags here."] = "Entra una volta con questo personaggio per vedere qui le sue borse.",
+	["Empty"] = "Vuoto",
 	[" Note: Buyback only keeps the last 12."] = " Nota: il riacquisto conserva solo gli ultimi 12.",
 	["Add"] = "Aggiungi",
 	["Auto Sell skipped (Shift)."] = "Auto Sell saltato (Shift).",
@@ -634,6 +674,14 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Bags"] = "Сумки",
+	["Bank"] = "Банк",
+	["Bank & alts"] = "Банк и твинки",
+	["See your bank, and the bags and bank of your other characters."] = "Смотри свой банк, а также сумки и банк других персонажей.",
+	["Updated %s"] = "Обновлено %s",
+	["Visit a banker once to see this bank here."] = "Зайди один раз к банкиру, чтобы видеть этот банк здесь.",
+	["Log in with this character once to see its bags here."] = "Зайди один раз этим персонажем, чтобы видеть его сумки здесь.",
+	["Empty"] = "Пусто",
 	[" Note: Buyback only keeps the last 12."] = " Внимание: выкуп хранит только последние 12.",
 	["Add"] = "Добавить",
 	["Auto Sell skipped (Shift)."] = "Auto Sell пропущен (Shift).",

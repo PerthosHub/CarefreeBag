@@ -18,6 +18,7 @@ CarefreeBag is a simple bag addon for WoW Forever, made with retail and Classic 
 - **Stacks**: the same item shows as one tile; half stacks are combined in your bags (never during combat).
 - **Mail to alts**: give a group an address. At a mailbox you're asked per group: Yes, send or Skip.
 - **Per group**: collapse it, and (optional) pick the sorting: stack price, newest last or manual (drag to reorder).
+- **Bank & alts**: a panel next to your bags shows your bank, and the bags and bank of your other characters (view only). Tooltips show where else you have an item.
 - **AH value** of a stack after the AH cut in the tooltip, if you have Auctionator.
 - Search box, bag fill bar, hide items you never need (like your Hearthstone), new items flash once.
 - English, Nederlands, Deutsch, Français, Español, Italiano, Português and Русский. Picks your client language automatically.

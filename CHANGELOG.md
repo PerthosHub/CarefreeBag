@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0
+- New "Bank & alts" button: a panel next to your bags shows your bank, and the bags and bank of your other characters, sorted into that character's groups. View only; at the banker you move items as usual.
+- Your bank is remembered each time you visit a banker. Your bags are remembered as you play.
+- Item tooltips show where else you have the item, per character (bags and bank).
+- The search box also dims items in the panel.
+
 ## 1.4.0
 - Now also loads in retail (Midnight), MoP Classic, TBC Classic Anniversary and Classic Era. These versions are new and less tested: please report problems on GitHub.
 - Retail: normal items are never dropped into the reagent bag.
