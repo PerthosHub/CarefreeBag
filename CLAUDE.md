@@ -66,6 +66,8 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 ## Uitbrengen
 1. `CHANGELOG.md` bijwerken, `VERSION` in `Core.lua`.
 2. Commit als `git -c user.name="Perthos" -c user.email="perthos@users.noreply.github.com"`; push naar `main`.
+   **Geen** `Co-Authored-By`-, `Claude-Session`- of "Generated with Claude"-regels in commits, releases of PR's (Johans wens).
+   De changelog op GitHub/CurseForge/Wago komt uit `CHANGELOG.md` (`.pkgmeta` → `manual-changelog`), niet uit de commits.
 3. GitHub-release maken met tag `vX.Y.Z` (via de browser: `releases/new?tag=vX.Y.Z&target=main&title=CarefreeBag%20X.Y.Z`).
 4. De workflow test, pakt in en uploadt naar CurseForge (project 1803698) en Wago (n6VYpWNd). Controleer het log op "Success".
 5. CurseForge keurt elk bestand handmatig goed (meestal binnen een paar uur).
