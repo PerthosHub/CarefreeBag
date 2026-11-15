@@ -4,6 +4,9 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["Mail %s to:"] = "%s mailen naar:",
+	["no mail"] = "geen post",
+	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Klik: kies naar welke alt deze groep gemaild wordt, en of dat zonder vragen gaat.",
 	["Advanced settings"] = "Geavanceerde instellingen",
 	["Bag width"] = "Breedte van de tas",
 	["How many items fit next to each other in the bag window (5 to 30)."] = "Hoeveel items er naast elkaar passen in het tassenvenster (5 tot 30).",
@@ -180,6 +183,9 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["Mail %s to:"] = "%s senden an:",
+	["no mail"] = "keine Post",
+	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Klick: wähle, an welchen Twink diese Gruppe geht und ob ohne Nachfrage gesendet wird.",
 	["Advanced settings"] = "Erweiterte Einstellungen",
 	["Bag width"] = "Taschenbreite",
 	["How many items fit next to each other in the bag window (5 to 30)."] = "Wie viele Gegenstände im Taschenfenster nebeneinander passen (5 bis 30).",
@@ -357,6 +363,9 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Mail %s to:"] = "Envoyer %s à :",
+	["no mail"] = "pas de courrier",
+	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Clic : choisis le reroll qui reçoit ce groupe, et s'il est envoyé sans demander.",
 	["Advanced settings"] = "Paramètres avancés",
 	["Bag width"] = "Largeur du sac",
 	["How many items fit next to each other in the bag window (5 to 30)."] = "Combien d'objets tiennent côte à côte dans la fenêtre des sacs (5 à 30).",
@@ -534,6 +543,9 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Mail %s to:"] = "Enviar %s a:",
+	["no mail"] = "sin correo",
+	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Clic: elige a qué alter se envía este grupo y si se envía sin preguntar.",
 	["Advanced settings"] = "Ajustes avanzados",
 	["Bag width"] = "Ancho de la bolsa",
 	["How many items fit next to each other in the bag window (5 to 30)."] = "Cuántos objetos caben uno al lado del otro en la ventana de bolsas (5 a 30).",
@@ -711,6 +723,9 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Mail %s to:"] = "Enviar %s para:",
+	["no mail"] = "sem correio",
+	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Clique: escolha para qual alt este grupo é enviado e se vai sem perguntar.",
 	["Advanced settings"] = "Configurações avançadas",
 	["Bag width"] = "Largura da bolsa",
 	["How many items fit next to each other in the bag window (5 to 30)."] = "Quantos itens cabem lado a lado na janela das bolsas (5 a 30).",
@@ -888,6 +903,9 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Mail %s to:"] = "Invia %s a:",
+	["no mail"] = "nessuna posta",
+	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Clic: scegli a quale alt inviare questo gruppo e se inviarlo senza chiedere.",
 	["Advanced settings"] = "Impostazioni avanzate",
 	["Bag width"] = "Larghezza della borsa",
 	["How many items fit next to each other in the bag window (5 to 30)."] = "Quanti oggetti stanno uno accanto all'altro nella finestra delle borse (da 5 a 30).",
@@ -1065,6 +1083,9 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Mail %s to:"] = "Отправлять %s:",
+	["no mail"] = "без почты",
+	["Click: choose the alt this group is mailed to, and whether it is sent without asking."] = "Клик: выбери, какому твинку отправлять эту группу и отправлять ли без вопросов.",
 	["Advanced settings"] = "Дополнительные настройки",
 	["Bag width"] = "Ширина сумки",
 	["How many items fit next to each other in the bag window (5 to 30)."] = "Сколько предметов помещается в ряд в окне сумок (от 5 до 30).",

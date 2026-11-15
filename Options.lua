@@ -41,7 +41,7 @@ end
 
 local function Trim(t) return ((t or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
 
-local CW = 440 -- breedte optievenster
+local CW = 520 -- breedte optievenster
 
 function ns.BuildConfig()
 	config = NewWindow("CarefreeBagConfig", T("CarefreeBag options"), CW, 600)
@@ -204,13 +204,11 @@ function ns.BuildConfig()
 	colB:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 148, y)
 	colB:SetText(T("Mail to / settings"))
 	local colC = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	colC:SetPoint("TOPRIGHT", config, "TOPLEFT", ns.PAD + 406, y) -- rechts boven het vinkje (tekst is langer dan de kolom)
+	colC:SetPoint("TOP", config, "TOPLEFT", ns.PAD + 452, y) -- midden boven het vinkje
 	colC:SetText(T("Always keep"))
-	-- Kolom van het vinkje "zonder vragen" achter het postadres
-	local colD = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	colD:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 264, y)
-	colD:SetText(T("Auto"))
 	y = y - 14
+	-- Venstertjes voor post sluiten mee met de opties
+	config:HookScript("OnHide", function() for _, r in ipairs(catRows) do if r.mailPop then r.mailPop:Hide() end end end)
 	config.catTop = y
 
 	local function MoveKey(idx, dir)
@@ -285,8 +283,37 @@ function ns.BuildConfig()
 		r.onCb:SetPoint("LEFT", r, "LEFT", 8, 0) -- vinkje vóór de naam
 		Tooltip(r.onCb, T("Off: items go to Other."))
 
-		r.mail = NewEdit(r, 114)
-		r.mail:SetPoint("LEFT", r, "LEFT", 146, 0)
+		-- Post: in de rij alleen een envelop (+ ontvanger). Klik = venstertje met het
+		-- adres en "zonder vragen".
+		r.mailBtn = CreateFrame("Button", nil, r)
+		r.mailBtn:SetSize(22, 22)
+		r.mailBtn:SetPoint("LEFT", r, "LEFT", 148, 0)
+		r.mailBtn:SetNormalTexture("Interface\\Icons\\INV_Letter_15")
+		r.mailBtn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+		r.mailInfo = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		r.mailInfo:SetPoint("LEFT", r.mailBtn, "RIGHT", 6, 0)
+		r.mailInfo:SetWidth(150)
+		r.mailInfo:SetJustifyH("LEFT")
+		r.mailInfo:SetWordWrap(false)
+		Tooltip(r.mailBtn, T("Mail to"), T("Click: choose the alt this group is mailed to, and whether it is sent without asking."))
+
+		r.mailPop = ns.NewMenu(nil)
+		r.mailPop:SetSize(250, 112)
+		r.mailPop.title = r.mailPop:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		r.mailPop.title:SetPoint("TOPLEFT", r.mailPop, "TOPLEFT", 12, -10)
+		r.mail = NewEdit(r.mailPop, 222)
+		r.mail:SetPoint("TOPLEFT", r.mailPop, "TOPLEFT", 16, -30)
+		r.mailOk = MakeButton(r.mailPop, OKAY or "OK", 70)
+		r.mailOk:SetPoint("BOTTOMRIGHT", r.mailPop, "BOTTOMRIGHT", -10, 10)
+		r.mailOk:SetScript("OnClick", function() r.mail:ClearFocus(); r.mailPop:Hide() end)
+		r.mailBtn:SetScript("OnClick", function(self)
+			local c = r.key and CatByKey(r.key)
+			r.mailPop.title:SetText(T("Mail %s to:"):format(r.key == "boe" and "BoE" or (c and c.name or "?")))
+			r.mailPop:ClearAllPoints()
+			r.mailPop:SetPoint("TOPLEFT", self, "BOTTOMLEFT", 0, -2)
+			ShowMenu(r.mailPop)
+			r.mail:SetFocus()
+		end)
 		local function setMail(self)
 			if r.key == "boe" then
 				ns.DB.boeMail = Trim(self:GetText())
@@ -309,12 +336,12 @@ function ns.BuildConfig()
 			or T("Name of your alt, e.g. 'Thrall', or 'Thrall-Stormrage' on another realm. Empty = no mail."))
 
 		-- Zonder vragen versturen (alleen zichtbaar als er een ontvanger is).
-		r.mailAuto = NewCheck(r, "", nil, function() return r.key and MailAuto(r.key) end, function(v)
+		r.mailAuto = NewCheck(r.mailPop, T("Send without asking"), nil, function() return r.key and MailAuto(r.key) end, function(v)
 			if r.key == "boe" then ns.DB.boeMailAuto = v or nil
 			else local c = r.key and CatByKey(r.key); if c then c.mailAuto = v or nil end end
 			Log("mail without asking for " .. tostring(r.key) .. ": " .. tostring(v))
 		end)
-		r.mailAuto:SetPoint("LEFT", r.mail, "RIGHT", 2, 0)
+		r.mailAuto:SetPoint("TOPLEFT", r.mailPop, "TOPLEFT", 10, -54)
 		Tooltip(r.mailAuto, T("Send without asking"), T("At the mailbox this group is sent right away, without the Yes/Skip question."))
 
 		-- Vinkjes voor vaste groepen (in de kolom van het postadres).
@@ -334,7 +361,7 @@ function ns.BuildConfig()
 		end
 
 		r.up = MakeButton(r, "^", 24)
-		r.up:SetPoint("LEFT", r, "LEFT", 294, 0)
+		r.up:SetPoint("LEFT", r, "LEFT", 334, 0)
 		r.down = MakeButton(r, "v", 24)
 		r.down:SetPoint("LEFT", r.up, "RIGHT", 2, 0)
 		r.del = MakeButton(r, "X", 24)
@@ -357,7 +384,7 @@ function ns.BuildConfig()
 		r.keep = NewCheck(r, "", nil, function() return r.key and ns.KeptGroups()[r.key] end, function(v)
 			if r.key then ns.KeptGroups()[r.key] = v or nil; Log("loot: keep group " .. r.key .. ": " .. tostring(v)) end
 		end)
-		r.keep:SetPoint("LEFT", r, "LEFT", 380, 0)
+		r.keep:SetPoint("LEFT", r, "LEFT", 440, 0)
 		Tooltip(r.keep, T("Always keep"), T("Never destroy anything from this group when your bags are full."))
 		catRows[i] = r
 	end
@@ -496,6 +523,18 @@ local function SetupCheck(r, cb, field, spec)
 	end
 end
 
+-- Wat er naast de envelop staat: de ontvanger (+ "auto"), of grijs "no mail".
+local function MailInfo(r, to)
+	local has = (to or "") ~= ""
+	local tex = r.mailBtn.GetNormalTexture and r.mailBtn:GetNormalTexture()
+	if tex and tex.SetDesaturated then tex:SetDesaturated(not has); tex:SetAlpha(has and 1 or 0.5) end
+	if has then
+		r.mailInfo:SetText(to .. (MailAuto(r.key) and ("  |cff40ff40" .. T("Auto") .. "|r") or ""))
+	else
+		r.mailInfo:SetText("|cff777777" .. T("no mail") .. "|r")
+	end
+end
+
 ns.RefreshConfig = function()
 	if not config or not config:IsShown() then return end
 	for _, cb in ipairs(config.checks) do cb:SetChecked(cb.get() and true or false) end
@@ -538,24 +577,29 @@ ns.RefreshConfig = function()
 				r.fixedName.fs:SetText((On(key) and BLUE or "|cff777777") .. nm .. "|r")
 				SetupCheck(r, r.cb1, "cb1Field", spec.cb1)
 				SetupCheck(r, r.cb2, "cb2Field", spec.cb2)
+				r.mailBtn:SetShown(spec.mail and true or false)
+				r.mailInfo:SetShown(spec.mail and true or false)
 				if spec.mail then
-					r.mail:Show()
 					if not r.mail:HasFocus() then r.mail:SetText(ns.DB.boeMail or "") end
-				else
-					r.mail:Hide()
+					MailInfo(r, ns.DB.boeMail)
+				elseif r.mailPop:IsShown() then
+					r.mailPop:Hide()
 				end
 				r.mailAuto:SetShown(spec.mail and (ns.DB.boeMail or "") ~= "" and true or false)
+				r.mailAuto.label:SetShown(r.mailAuto:IsShown())
 				r.mailAuto:SetChecked(MailAuto(key))
 				r.mailAuto:SetEnabled(not ns.DB.mailAlwaysAuto)
 			else
 				local c = CatByKey(key)
 				SetupCheck(r, r.cb1, "cb1Field", nil)
 				SetupCheck(r, r.cb2, "cb2Field", nil)
-				r.mail:Show()
+				r.mailBtn:Show(); r.mailInfo:Show()
 				if preset then r.fixedName.fs:SetText("|cffffd100" .. c.name .. "|r")
 				elseif not r.name:HasFocus() then r.name:SetText(c.name) end
 				if not r.mail:HasFocus() then r.mail:SetText(c.mailTo or "") end
+				MailInfo(r, c.mailTo)
 				r.mailAuto:SetShown((c.mailTo or "") ~= "")
+				r.mailAuto.label:SetShown(r.mailAuto:IsShown())
 				r.mailAuto:SetChecked(MailAuto(key))
 				r.mailAuto:SetEnabled(not ns.DB.mailAlwaysAuto) -- staat "altijd" aan: vinkje per groep doet niets
 			end

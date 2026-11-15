@@ -7,6 +7,7 @@
 - Want to keep the offered item? "Always keep item" or "Always keep group" in the same window, and the next cheapest item is shown right away. Each character remembers its own.
 - Options: an "Always keep" tick per group (not for Auto Sell and Other: those hold things you can get rid of). Under the new "Advanced settings" at the bottom (click to open): bag width, and "Clear" for the items you chose to always keep. Kept items say so in their tooltip.
 - Options: the "Send without asking" tick behind the mail address now has a column title (Auto).
+- Options: the window is wider. Per group you see an envelope with the alt it mails to; click it to type the name and tick "Send without asking". Groups that mail without asking show "Auto".
 
 ## 1.5.1
 - Items you loot while your bags are open keep blinking, also when you already had that item (for example one more potion). Move the mouse over it to stop the blinking; loot more of it and it blinks again. Closing the bags stops all blinking.

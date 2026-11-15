@@ -129,3 +129,13 @@ check(not CarefreeBagConfig.adv:IsShown(), "geavanceerde instellingen standaard 
 CarefreeBagConfig.advBtn:Fire("OnClick")
 check(CarefreeBagConfig.adv:IsShown(), "klik: geavanceerde instellingen open")
 check(CarefreeBagDB.showSort == false, "sorteeropties standaard uit")
+
+-- 14. Post per groep: envelop in de rij, adres + "zonder vragen" in een venstertje
+local mrow; for _, f in ipairs(ALLFRAMES) do if f.mailBtn and f.key == "boe" and f.shown then mrow = f end end
+check(mrow and mrow.mailBtn:IsShown() and mrow.mailInfo.text:find("no mail"), "BoE: envelop met 'no mail'")
+mrow.mailBtn:Fire("OnClick")
+check(mrow.mailPop:IsShown() and mrow.mailPop.title.text:find("BoE"), "klik envelop: venstertje voor BoE")
+mrow.mail:SetText("Jaina Frostwolf"); mrow.mail:Fire("OnEnterPressed"); RunTimers()
+check(CarefreeBagDB.boeMail == "Jaina Frostwolf" and mrow.mailInfo.text:find("Jaina") and mrow.mailAuto:IsShown(), "adres ingevuld: naam in de rij, vinkje zonder vragen zichtbaar")
+mrow.mailOk:Fire("OnClick")
+check(not mrow.mailPop:IsShown(), "OK sluit het venstertje")
