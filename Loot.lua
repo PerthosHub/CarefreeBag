@@ -225,7 +225,7 @@ local function BuildPanel()
 	panel.junkRow = Row(panel, -76, T("Cheapest in your bags"))
 	-- Dit item of deze groep nooit weggooien: dan komt meteen het volgende goedkoopste item.
 	local half = (W - 2 * ns.PAD - 6) / 2
-	panel.keepItem = MakeButton(panel, T("Keep this item"), half)
+	panel.keepItem = MakeButton(panel, T("Always keep item"), half)
 	panel.keepItem:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -120)
 	panel.keepItem:SetScript("OnClick", function()
 		local o = panel.offer
@@ -235,19 +235,19 @@ local function BuildPanel()
 		Log("loot: keep item " .. tostring(o.junk.e.itemID))
 		Evaluate()
 	end)
-	ns.Tooltip(panel.keepItem, T("Keep this item"), T("Never destroy this item when your bags are full. The next cheapest item is shown."))
-	panel.keepGroup = MakeButton(panel, T("Keep this group"), half)
+	ns.Tooltip(panel.keepItem, T("Always keep item"), T("Never destroy this item when your bags are full. The next cheapest item is shown."))
+	panel.keepGroup = MakeButton(panel, T("Always keep group"), half)
 	panel.keepGroup:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -ns.PAD, -120)
 	panel.keepGroup:SetScript("OnClick", function()
 		local o = panel.offer
 		if not o then return end
 		KeptGroups()[o.junk.sec] = true
-		Print(T("Nothing from the group %s is destroyed when your bags are full. Change it in the options (Keep)."):format(GroupName(o.junk.sec)))
+		Print(T("Nothing from the group %s is destroyed when your bags are full. Change it in the options (Always keep)."):format(GroupName(o.junk.sec)))
 		Log("loot: keep group " .. tostring(o.junk.sec))
 		if ns.RefreshConfig then ns.RefreshConfig() end
 		Evaluate()
 	end)
-	ns.Tooltip(panel.keepGroup, T("Keep this group"), T("Never destroy anything from this group when your bags are full. Change it in the options (Keep)."))
+	ns.Tooltip(panel.keepGroup, T("Always keep group"), T("Never destroy anything from this group when your bags are full. Change it in the options (Always keep)."))
 	panel.verdict = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	panel.verdict:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -154)
 	panel.verdict:SetWidth(W - 2 * ns.PAD)

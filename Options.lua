@@ -178,8 +178,8 @@ function ns.BuildConfig()
 	colB:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 148, y)
 	colB:SetText(T("Mail to / settings"))
 	local colC = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	colC:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 378, y)
-	colC:SetText(T("Keep"))
+	colC:SetPoint("TOPRIGHT", config, "TOPLEFT", ns.PAD + 406, y) -- rechts boven het vinkje (tekst is langer dan de kolom)
+	colC:SetText(T("Always keep"))
 	y = y - 14
 	config.catTop = y
 
@@ -328,7 +328,7 @@ function ns.BuildConfig()
 			if r.key then ns.KeptGroups()[r.key] = v or nil; Log("loot: keep group " .. r.key .. ": " .. tostring(v)) end
 		end)
 		r.keep:SetPoint("LEFT", r, "LEFT", 380, 0)
-		Tooltip(r.keep, T("Keep"), T("Never destroy anything from this group when your bags are full."))
+		Tooltip(r.keep, T("Always keep"), T("Never destroy anything from this group when your bags are full."))
 		catRows[i] = r
 	end
 

@@ -4,8 +4,8 @@
 - Bags full and the loot does not fit? A small window next to the loot shows the loot and the cheapest item or stack in your bags, with their prices side by side (vendor price, or the AH price after the cut if Auctionator has a better one). Green: the loot is worth more. Red: it is worth less.
 - One click on "Destroy & loot" destroys that cheapest item and picks up the loot. WoW only allows destroying items after a click, so this never happens by itself. "Skip" leaves it alone until you close the loot.
 - Items without a price (like your Hearthstone), quest items, keys and hidden items are never offered. Quest loot is always worth it.
-- Want to keep the offered item? "Keep this item" or "Keep this group" in the same window, and the next cheapest item is shown right away. Each character remembers its own.
-- Options: a "Keep" tick per group (not for Auto Sell: that group is there to get rid of things), and "Clear" for the items you chose to keep. Kept items say so in their tooltip.
+- Want to keep the offered item? "Always keep item" or "Always keep group" in the same window, and the next cheapest item is shown right away. Each character remembers its own.
+- Options: an "Always keep" tick per group (not for Auto Sell: that group is there to get rid of things), and "Clear" for the items you chose to keep. Kept items say so in their tooltip.
 
 ## 1.5.1
 - Items you loot while your bags are open keep blinking, also when you already had that item (for example one more potion). Move the mouse over it to stop the blinking; loot more of it and it blinks again. Closing the bags stops all blinking.
