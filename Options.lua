@@ -46,7 +46,14 @@ local CW = 440 -- breedte optievenster
 function ns.BuildConfig()
 	config = NewWindow("CarefreeBagConfig", T("CarefreeBag options"), CW, 600)
 	config:SetPoint("CENTER", UIParent, "CENTER", -200, 40)
+	-- Vast links naast de tassen (zoals het bankpaneel); los slepen kan alleen als
+	-- CarefreeBag uit staat (dan zijn er geen tassen om aan vast te zitten).
+	config:SetScript("OnDragStart", function(self) if not self.docked then self:StartMoving() end end)
 	config:SetScript("OnDragStop", config.StopMovingOrSizing)
+	ns.main:HookScript("OnHide", function()
+		if not config:IsShown() or not config.docked then return end
+		if ns.DB.enabled then config:Hide() else ns.PlaceConfig() end -- net uitgezet: venster blijft open
+	end)
 	config:SetScript("OnShow", function() ns.RefreshConfig() end)
 	config.checks, config.edits = {}, {}
 
@@ -119,6 +126,17 @@ function ns.BuildConfig()
 		function() return ns.DB.showSort end, function(v) ns.DB.showSort = v; ns.Refresh() end)
 	sortCb:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 4, y)
 	config.checks[#config.checks + 1] = sortCb
+	y = y - 28
+
+	-- Post: alles zonder vragen (bij de eerste mailbox wordt dit gevraagd)
+	local mailCb = NewCheck(config, T("Always mail without asking"), T("At the mailbox every group with a recipient is sent right away, without the Yes/Skip question."),
+		function() return ns.DB.mailAlwaysAuto end, function(v)
+			ns.DB.mailAlwaysAuto = v
+			Log("mail always without asking: " .. tostring(v))
+			if ns.UpdateMailPanel then ns.UpdateMailPanel() end
+		end)
+	mailCb:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 4, y)
+	config.checks[#config.checks + 1] = mailCb
 	y = y - 38
 
 	-- 1. Groepen: eigen categorieën en vaste groepen in één lijst ---------------
@@ -471,6 +489,7 @@ ns.RefreshConfig = function()
 				end
 				r.mailAuto:SetShown(spec.mail and (ns.DB.boeMail or "") ~= "" and true or false)
 				r.mailAuto:SetChecked(MailAuto(key))
+				r.mailAuto:SetEnabled(not ns.DB.mailAlwaysAuto)
 			else
 				local c = CatByKey(key)
 				SetupCheck(r, r.cb1, "cb1Field", nil)
@@ -481,6 +500,7 @@ ns.RefreshConfig = function()
 				if not r.mail:HasFocus() then r.mail:SetText(c.mailTo or "") end
 				r.mailAuto:SetShown((c.mailTo or "") ~= "")
 				r.mailAuto:SetChecked(MailAuto(key))
+				r.mailAuto:SetEnabled(not ns.DB.mailAlwaysAuto) -- staat "altijd" aan: vinkje per groep doet niets
 			end
 			r.up:SetEnabled(i > 1)
 			r.down:SetEnabled(i < #order)
@@ -503,8 +523,28 @@ ns.RefreshConfig = function()
 	config:SetHeight(-y + 40)
 end
 
+-- Plaats van het optievenster: links naast de tassen als CarefreeBag aan staat,
+-- anders los in het midden van het scherm.
+ns.PlaceConfig = function()
+	config:ClearAllPoints()
+	if ns.DB.enabled and ns.main and ns.main:IsShown() then
+		config.docked = true
+		config:SetPoint("TOPRIGHT", ns.main, "TOPLEFT", -4, 0)
+	else
+		config.docked = false
+		config:SetPoint("CENTER", UIParent, "CENTER", -200, 40)
+	end
+end
+
+ns.HideConfig = function() if config then config:Hide() end end
+
 ns.ToggleConfig = function()
-	if config:IsShown() then config:Hide() else config:Show() end
+	if config:IsShown() then config:Hide(); return end
+	if ns.DB.enabled and ns.main and not ns.main:IsShown() then ShowMain() end
+	-- Bankpaneel en opties zitten op dezelfde plek: één tegelijk.
+	if ns.HideViewer then ns.HideViewer() end
+	ns.PlaceConfig()
+	config:Show()
 end
 
 ---------------------------------------------------------------------------

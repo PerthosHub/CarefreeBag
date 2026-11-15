@@ -76,7 +76,8 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 - Pushen naar `main` brengt niets uit: dat gebeurt pas met een release-tag.
 
 ## Stand van zaken (bijwerken na elke sessie)
-- 1.5.0 is nog **niet** uitgebracht. Bankpaneel (tassen en bank van een ander karakter) is door Johan in het spel getest: werkt. Nog te testen: de opsplitsing in het algemeen en mail "zonder vragen".
+- 1.5.0 is nog **niet** uitgebracht. Door Johan in het spel getest en goed: bankpaneel, de opsplitsing, mail "zonder vragen" per groep.
+- Nieuw (2026-11-15), nog in het spel te testen: eenmalige mailvraag "voortaan altijd zonder vragen?" (`DB.mailAlwaysAuto`: nil = nog niet gevraagd, optie in Algemeen); optievenster vast links naast de tassen (`ns.PlaceConfig`, één tegelijk met het bankpaneel); bankpaneel-titel "Your bank" / "Bank of X" / "Bags of X" en "(you)" in de keuzelijst.
 - Volgende stap: UI-verbeteringen (Johan geeft per chat aan welke).
 - Nog niet gedaan: Warband-bank (retail), een verwijderd karakter uit de lijst halen.
 - Johans karakters (Forever): main en bank alt hebben dezelfde voornaam. Echte namen staan niet in de repo.

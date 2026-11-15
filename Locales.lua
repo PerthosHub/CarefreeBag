@@ -137,6 +137,17 @@ ns.L.nl = {
 	["Visit a banker once to see this bank here."] = "Ga één keer naar een bankier om deze bank hier te zien.",
 	["Log in with this character once to see its bags here."] = "Log één keer in met dit karakter om zijn tassen hier te zien.",
 	["Empty"] = "Leeg",
+	["Mail is sent without asking from now on. You can change this in the options."] = "Post wordt voortaan zonder vragen verstuurd. Je kunt dit aanpassen in de opties.",
+	["Send mail to your alts automatically from now on, without asking?"] = "Wil je post naar je alts voortaan automatisch versturen, zonder vragen?",
+	["You can change this in the options."] = "Je kunt dit aanpassen in de opties.",
+	["Yes, always"] = "Ja, altijd",
+	["No, ask me"] = "Nee, vraag het",
+	["Always mail without asking"] = "Post altijd zonder vragen versturen",
+	["At the mailbox every group with a recipient is sent right away, without the Yes/Skip question."] = "Bij de mailbox wordt elke groep met een ontvanger meteen verstuurd, zonder de vraag Ja/Overslaan.",
+	["Your bank"] = "Jouw bank",
+	["Bank of %s"] = "Bank van %s",
+	["Bags of %s"] = "Tassen van %s",
+	["(you)"] = "(jij)",
 }
 
 ns.L.de = {
@@ -274,6 +285,17 @@ ns.L.de = {
 	["Bag width: %d columns"] = "Taschenbreite: %d Spalten",
 	["Sell on the AH to earn %s more than at a vendor"] = "Im AH verkaufen, um %s mehr als beim Händler zu bekommen",
 	["Sell to a vendor for the best price"] = "Beim Händler verkaufen, da gibt's am meisten",
+	["Mail is sent without asking from now on. You can change this in the options."] = "Post wird ab jetzt ohne Nachfrage gesendet. Du kannst das in den Optionen ändern.",
+	["Send mail to your alts automatically from now on, without asking?"] = "Post an deine Twinks ab jetzt automatisch senden, ohne Nachfrage?",
+	["You can change this in the options."] = "Du kannst das in den Optionen ändern.",
+	["Yes, always"] = "Ja, immer",
+	["No, ask me"] = "Nein, frag mich",
+	["Always mail without asking"] = "Post immer ohne Nachfrage senden",
+	["At the mailbox every group with a recipient is sent right away, without the Yes/Skip question."] = "Am Briefkasten wird jede Gruppe mit Empfänger sofort gesendet, ohne die Frage Ja/Überspringen.",
+	["Your bank"] = "Deine Bank",
+	["Bank of %s"] = "Bank von %s",
+	["Bags of %s"] = "Taschen von %s",
+	["(you)"] = "(du)",
 }
 
 ns.L.fr = {
@@ -411,6 +433,17 @@ ns.L.fr = {
 	["Bag width: %d columns"] = "Largeur du sac : %d colonnes",
 	["Sell on the AH to earn %s more than at a vendor"] = "Vends à l'HV pour gagner %s de plus qu'au marchand",
 	["Sell to a vendor for the best price"] = "Vends au marchand, c'est le meilleur prix",
+	["Mail is sent without asking from now on. You can change this in the options."] = "Le courrier est désormais envoyé sans demander. Tu peux changer cela dans les options.",
+	["Send mail to your alts automatically from now on, without asking?"] = "Envoyer désormais le courrier à tes rerolls automatiquement, sans demander ?",
+	["You can change this in the options."] = "Tu peux changer cela dans les options.",
+	["Yes, always"] = "Oui, toujours",
+	["No, ask me"] = "Non, demande-moi",
+	["Always mail without asking"] = "Toujours envoyer le courrier sans demander",
+	["At the mailbox every group with a recipient is sent right away, without the Yes/Skip question."] = "À la boîte aux lettres, chaque groupe avec un destinataire est envoyé tout de suite, sans la question Oui/Passer.",
+	["Your bank"] = "Ta banque",
+	["Bank of %s"] = "Banque de %s",
+	["Bags of %s"] = "Sacs de %s",
+	["(you)"] = "(toi)",
 }
 
 ns.L.es = {
@@ -548,6 +581,17 @@ ns.L.es = {
 	["Bag width: %d columns"] = "Ancho de la bolsa: %d columnas",
 	["Sell on the AH to earn %s more than at a vendor"] = "Vende en la subasta para ganar %s más que en el vendedor",
 	["Sell to a vendor for the best price"] = "Vende al vendedor, es el mejor precio",
+	["Mail is sent without asking from now on. You can change this in the options."] = "El correo se envía sin preguntar a partir de ahora. Puedes cambiarlo en las opciones.",
+	["Send mail to your alts automatically from now on, without asking?"] = "¿Enviar el correo a tus alters automáticamente a partir de ahora, sin preguntar?",
+	["You can change this in the options."] = "Puedes cambiarlo en las opciones.",
+	["Yes, always"] = "Sí, siempre",
+	["No, ask me"] = "No, pregúntame",
+	["Always mail without asking"] = "Enviar siempre el correo sin preguntar",
+	["At the mailbox every group with a recipient is sent right away, without the Yes/Skip question."] = "En el buzón, cada grupo con destinatario se envía enseguida, sin la pregunta Sí/Saltar.",
+	["Your bank"] = "Tu banco",
+	["Bank of %s"] = "Banco de %s",
+	["Bags of %s"] = "Bolsas de %s",
+	["(you)"] = "(tú)",
 }
 
 ns.L.pt = {
@@ -685,6 +729,17 @@ ns.L.pt = {
 	["Bag width: %d columns"] = "Largura da bolsa: %d colunas",
 	["Sell on the AH to earn %s more than at a vendor"] = "Venda no leilão para ganhar %s a mais que no vendedor",
 	["Sell to a vendor for the best price"] = "Venda ao vendedor, é o melhor preço",
+	["Mail is sent without asking from now on. You can change this in the options."] = "O correio agora é enviado sem perguntar. Você pode mudar isso nas opções.",
+	["Send mail to your alts automatically from now on, without asking?"] = "Enviar o correio para seus alts automaticamente a partir de agora, sem perguntar?",
+	["You can change this in the options."] = "Você pode mudar isso nas opções.",
+	["Yes, always"] = "Sim, sempre",
+	["No, ask me"] = "Não, pergunte",
+	["Always mail without asking"] = "Sempre enviar correio sem perguntar",
+	["At the mailbox every group with a recipient is sent right away, without the Yes/Skip question."] = "Na caixa de correio, cada grupo com destinatário é enviado na hora, sem a pergunta Sim/Pular.",
+	["Your bank"] = "Seu banco",
+	["Bank of %s"] = "Banco de %s",
+	["Bags of %s"] = "Bolsas de %s",
+	["(you)"] = "(você)",
 }
 
 ns.L.it = {
@@ -822,6 +877,17 @@ ns.L.it = {
 	["Bag width: %d columns"] = "Larghezza della borsa: %d colonne",
 	["Sell on the AH to earn %s more than at a vendor"] = "Vendi all'AH per guadagnare %s in più che dal mercante",
 	["Sell to a vendor for the best price"] = "Vendi al mercante, è il prezzo migliore",
+	["Mail is sent without asking from now on. You can change this in the options."] = "D'ora in poi la posta viene inviata senza chiedere. Puoi cambiarlo nelle opzioni.",
+	["Send mail to your alts automatically from now on, without asking?"] = "Inviare d'ora in poi la posta ai tuoi alt automaticamente, senza chiedere?",
+	["You can change this in the options."] = "Puoi cambiarlo nelle opzioni.",
+	["Yes, always"] = "Sì, sempre",
+	["No, ask me"] = "No, chiedimi",
+	["Always mail without asking"] = "Invia sempre la posta senza chiedere",
+	["At the mailbox every group with a recipient is sent right away, without the Yes/Skip question."] = "Alla cassetta postale ogni gruppo con un destinatario viene inviato subito, senza la domanda Sì/Salta.",
+	["Your bank"] = "La tua banca",
+	["Bank of %s"] = "Banca di %s",
+	["Bags of %s"] = "Borse di %s",
+	["(you)"] = "(tu)",
 }
 
 ns.L.ru = {
@@ -959,4 +1025,15 @@ ns.L.ru = {
 	["Bag width: %d columns"] = "Ширина сумки (столбцов): %d",
 	["Sell on the AH to earn %s more than at a vendor"] = "Продайте на аукционе: на %s больше, чем у торговца",
 	["Sell to a vendor for the best price"] = "Продайте торговцу — так выгоднее всего",
+	["Mail is sent without asking from now on. You can change this in the options."] = "Теперь почта отправляется без вопросов. Это можно изменить в настройках.",
+	["Send mail to your alts automatically from now on, without asking?"] = "Отправлять почту твинкам автоматически, без вопросов?",
+	["You can change this in the options."] = "Это можно изменить в настройках.",
+	["Yes, always"] = "Да, всегда",
+	["No, ask me"] = "Нет, спрашивать",
+	["Always mail without asking"] = "Всегда отправлять почту без вопросов",
+	["At the mailbox every group with a recipient is sent right away, without the Yes/Skip question."] = "У почтового ящика каждая группа с получателем отправляется сразу, без вопроса Да/Пропустить.",
+	["Your bank"] = "Твой банк",
+	["Bank of %s"] = "Банк: %s",
+	["Bags of %s"] = "Сумки: %s",
+	["(you)"] = "(ты)",
 }

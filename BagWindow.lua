@@ -36,10 +36,12 @@ function ns.NewWindow(name, title, w, h)
 	local okH, header = pcall(CreateFrame, "Frame", nil, f, "DialogHeaderTemplate")
 	if okH and header and header.Setup then
 		pcall(header.Setup, header, title)
+		f.SetHeaderText = function(_, t) pcall(header.Setup, header, t) end
 	else
 		local t = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 		t:SetPoint("TOP", f, "TOP", 0, -12)
 		t:SetText(title)
+		f.SetHeaderText = function(_, s) t:SetText(s) end
 	end
 	local okC, close = pcall(CreateFrame, "Button", nil, f, "UIPanelCloseButton")
 	if okC then

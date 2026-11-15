@@ -46,21 +46,35 @@ check(B and B ~= A and A.snap.bank, "Stormrage heeft eigen gegevens, Frostwolf b
 SlashCmdList.CAREFREEBAG("show"); E("BAG_UPDATE_DELAYED")
 CarefreeBagBankButton:Fire("OnClick"); RunTimers()
 check(CarefreeBagViewer:IsShown() and CarefreeBagViewer.part == "bank" and CarefreeBagViewer.key == "Thrall Stormrage-", "standaard: bank van jezelf")
-check(CarefreeBagViewer.pick.text:find("^Thrall Stormrage"), "keuzeknop toont je eigen naam")
+check(CarefreeBagViewer.pick.text:find("^Thrall Stormrage") and CarefreeBagViewer.pick.text:find("(you)", 1, true), "keuzeknop toont je eigen naam (jij)")
+check(CarefreeBagViewer.title == "Your bank", "titel: jouw bank")
 check(not CarefreeBagViewer.tabs.bags:IsShown(), "bij jezelf geen knop Tassen (die staan al open)")
 CarefreeBagViewer.pick:Fire("OnClick"); RunTimers()
 local names = {}; for _, b in ipairs(CarefreeBagViewMenu.buttons) do if b.shown then names[#names+1] = b.text end end
-check(table.concat(names, ",") == "Thrall Stormrage,Thrall Frostwolf", "keuzelijst met karakters (jij eerst): " .. table.concat(names, ","))
+check(table.concat(names, ",") == "Thrall Stormrage |cff33ff99(you)|r,Thrall Frostwolf", "keuzelijst met karakters (jij eerst): " .. table.concat(names, ","))
 for _, b in ipairs(CarefreeBagViewMenu.buttons) do if b.text == "Thrall Frostwolf" then b:Fire("OnClick") end end
+check(CarefreeBagViewer.title == "Bank of Thrall Frostwolf", "titel: bank van Frostwolf: " .. tostring(CarefreeBagViewer.title))
 check(CarefreeBagViewer.tabs.bags:IsShown(), "bij een ander karakter wel Tassen en Bank")
 check(table.concat(tiles(), ",") == "Green Sword,Linen Cloth", "bank van Frostwolf: " .. table.concat(tiles(), ","))
 CarefreeBagViewer.tabs.bags:Fire("OnClick")
+check(CarefreeBagViewer.title == "Bags of Thrall Frostwolf", "titel: tassen van Frostwolf")
 check(table.concat(tiles(), ",") == "Cured Ham Steak,Linen Cloth", "tassen van Frostwolf: " .. table.concat(tiles(), ","))
 check(CarefreeBagViewer.note.text:find("Updated"), "toont wanneer bijgewerkt")
 CarefreeBagFrame:Hide(); check(not CarefreeBagViewer:IsShown(), "paneel gaat dicht met de tassen")
 SlashCmdList.CAREFREEBAG("show"); CarefreeBagBankButton:Fire("OnClick"); RunTimers()
 local seen; for _, f in ipairs(ALLFRAMES) do if f.shown and type(f.text) == "string" and f.text:find("Visit a banker") then seen = true end end
 check(CarefreeBagViewer.key == "Thrall Stormrage-" and seen, "opnieuw open: weer je eigen bank (nog nooit bezocht = uitleg)")
+-- opties en bankpaneel: vast links naast de tassen, één tegelijk
+CarefreeBagOptionsButton:Fire("OnClick"); RunTimers()
+check(CarefreeBagConfig:IsShown() and CarefreeBagConfig.docked and not CarefreeBagViewer:IsShown(), "opties vast naast de tassen, bankpaneel dicht")
+CarefreeBagBankButton:Fire("OnClick"); RunTimers()
+check(CarefreeBagViewer:IsShown() and not CarefreeBagConfig:IsShown(), "bankpaneel open: opties dicht")
+CarefreeBagOptionsButton:Fire("OnClick"); RunTimers()
+CarefreeBagFrame:Hide()
+check(not CarefreeBagConfig:IsShown(), "opties gaan dicht met de tassen")
+SlashCmdList.CAREFREEBAG(""); RunTimers()
+check(CarefreeBagFrame:IsShown() and CarefreeBagConfig:IsShown() and CarefreeBagConfig.docked, "/cfb opent de tassen met de opties ernaast")
+CarefreeBagConfig:Hide()
 -- tooltip
 local lines = {}
 GameTooltip.GetItem = function() return "Linen Cloth", "|cff|Hitem:2589|h[Linen Cloth]|h|r" end

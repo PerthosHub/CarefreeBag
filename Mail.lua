@@ -15,7 +15,9 @@ ns.mail = { busy = false, plan = nil, step = false, skipped = {} }
 -- Per categorie: wat gaat waarheen. De volgorde is die van je groepen.
 -- Je krijgt per categorie de vraag of hij verstuurd moet worden.
 -- Mag deze groep zonder vraag verstuurd worden? (per groep in te stellen)
+-- ns.DB.mailAlwaysAuto: nil = nog niet gevraagd, true = alles zonder vragen, false = per groep.
 function ns.MailAuto(key)
+	if ns.DB.mailAlwaysAuto then return true end
 	if key == "boe" then return ns.DB.boeMailAuto and true or false end
 	local c = CatByKey(key)
 	return c and c.mailAuto and true or false
@@ -130,7 +132,21 @@ MailStart = function()
 	ns.UpdateMailPanel()
 end
 
+-- Eerste keer dat er iets met een vraag verstuurd gaat worden: vragen of het voortaan
+-- altijd zonder vragen mag (account-breed, aan te passen in de opties).
+local function AskingFirstTime(plan)
+	return ns.DB.mailAlwaysAuto == nil and not ns.mail.busy and plan[1] ~= nil and not plan[1].auto
+end
+
 local function MailButtonClick()
+	if AskingFirstTime(BuildMailPlan()) then
+		ns.DB.mailAlwaysAuto = true
+		Log("mail: always without asking (first mailbox)")
+		Print(T("Mail is sent without asking from now on. You can change this in the options."))
+		if ns.RefreshConfig then ns.RefreshConfig() end
+		MailStart()
+		return
+	end
 	if ns.mail.busy and ns.mail.step then
 		-- Stapmodus: elke klik doet één stap (inpakken of versturen).
 		if ns.mail.current and not ns.mail.waiting then ns.MailSend()
@@ -145,6 +161,13 @@ end
 local function MailSkip()
 	if ns.mail.busy then return end
 	local plan = BuildMailPlan()
+	if AskingFirstTime(plan) then
+		ns.DB.mailAlwaysAuto = false
+		Log("mail: keep asking (first mailbox)")
+		if ns.RefreshConfig then ns.RefreshConfig() end
+		ns.UpdateMailPanel()
+		return
+	end
 	if plan[1] then ns.mail.skipped[plan[1].key] = true end
 	ns.UpdateMailPanel()
 end
@@ -152,6 +175,19 @@ end
 ns.UpdateMailPanel = function()
 	if not ns.mailPanel or not ns.mailPanel:IsShown() then return end
 	local plan = ns.mail.busy and ns.mail.queue or BuildMailPlan()
+	if AskingFirstTime(plan) then
+		local to = {}
+		for _, q in ipairs(plan) do to[#to + 1] = "|cffffd100" .. q.cat .. "|r > |cff66ccff" .. q.to .. "|r" end
+		ns.mailPanel.text:SetText(T("Send mail to your alts automatically from now on, without asking?") .. "\n \n"
+			.. table.concat(to, "\n") .. "\n \n|cff888888" .. T("You can change this in the options.") .. "|r")
+		ns.mailPanel.send:SetText(T("Yes, always"))
+		ns.mailPanel.send:SetEnabled(true)
+		ns.mailPanel.skip:SetText(T("No, ask me"))
+		ns.mailPanel.skip:Show()
+		ns.mailPanel:SetHeight(math.max(120, ns.mailPanel.text:GetStringHeight() + 80))
+		return
+	end
+	ns.mailPanel.skip:SetText(T("Skip"))
 	local lines = {}
 	local p = plan[1]
 	local any = p ~= nil and #p.items > 0

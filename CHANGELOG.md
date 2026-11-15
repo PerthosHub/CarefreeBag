@@ -11,6 +11,9 @@
 - Item tooltips show where else you have the item, per character (bags and bank).
 - The search box also dims items in the panel.
 - Mail: per group you can tick "Send without asking" (shows up once the group has a recipient). At the mailbox those groups are sent right away, before the groups that still ask.
+- Mail: the first time something is about to be mailed, you are asked once whether mail may always be sent without asking. Change it any time with "Always mail without asking" in the options.
+- The options window now opens attached to the left of your bags, in the same spot as the Bank & alts panel (one of the two at a time).
+- Bank & alts panel: the title says whose bank or bags you see ("Your bank", "Bank of ..."), and your own character is marked "(you)" in the list.
 
 ## 1.4.0
 - Now also loads in retail (Midnight), MoP Classic, TBC Classic Anniversary and Classic Era. These versions are new and less tested: please report problems on GitHub.

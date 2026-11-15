@@ -88,8 +88,15 @@ local function ViewLayout()
 	viewer.tabs.bank:SetShown(viewer.key ~= ns.charKey)
 	local choice = { key = viewer.key, part = viewer.part }
 	local ch0 = ns.DB.chars[choice.key]
-	local who = (ch0 and ch0.snap and ch0.snap.name) or (choice.key == ns.charKey and MyFullName()) or choice.key
-	viewer.pick:SetText(who .. "  |TInterface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up:14:14|t")
+	local me = choice.key == ns.charKey
+	local who = (ch0 and ch0.snap and ch0.snap.name) or (me and MyFullName()) or choice.key
+	-- Titel zegt meteen wiens bank (of tassen) je ziet.
+	local title = me and T("Your bank") or (choice.part == "bank" and T("Bank of %s") or T("Bags of %s")):format(who)
+	viewer:SetHeaderText(title)
+	viewer.title = title
+	-- bij jezelf geen knoppen Tassen/Bank ernaast: de keuzeknop mag de hele breedte gebruiken
+	viewer.pick:SetWidth(me and (8 * (ns.TILE + GAP) - GAP) or 170)
+	viewer.pick:SetText(who .. (me and (" |cff33ff99" .. T("(you)") .. "|r") or "") .. "  |TInterface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up:14:14|t")
 	for part, b in pairs(viewer.tabs) do
 		if part == choice.part then b:LockHighlight() else b:UnlockHighlight() end
 	end
@@ -201,7 +208,7 @@ local function OpenViewMenu()
 			m.buttons[i] = b
 		end
 		b:SetPoint("TOP", m, "TOP", 0, -4 - (i - 1) * 22)
-		b:SetText(c.name)
+		b:SetText(c.key == ns.charKey and (c.name .. " |cff33ff99" .. T("(you)") .. "|r") or c.name)
 		b:SetScript("OnClick", function()
 			viewer.key = c.key
 			m:Hide()
@@ -256,5 +263,11 @@ ns.ViewRefresh = function() if viewer and viewer:IsShown() then ViewLayout() end
 
 ns.ToggleViewer = function()
 	if not viewer then BuildViewer() end
-	if viewer:IsShown() then viewer:Hide() else viewer.key, viewer.part = nil, nil; viewer:Show() end
+	if viewer:IsShown() then viewer:Hide(); return end
+	-- Opties en bankpaneel zitten op dezelfde plek: één tegelijk.
+	if ns.HideConfig then ns.HideConfig() end
+	viewer.key, viewer.part = nil, nil
+	viewer:Show()
 end
+
+ns.HideViewer = function() if viewer then viewer:Hide() end end
