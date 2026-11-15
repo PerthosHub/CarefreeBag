@@ -1,35 +1,27 @@
 -- CarefreeBag: BagWindow.lua
--- Het tassenvenster: stijl, knoppen, groepen-indeling (Layout) en slepen.
--- Alle bestanden delen één omgeving (zie Env.lua). De namen hieronder maakt dit bestand.
-local _, ns = ...
-setfenv(1, ns.Env(
-	"TILE", "GAP", "PAD", "GOLD", "DIALOG_BACKDROP", "SLOT_TEX", "NewWindow", "MakeButton", "Tooltip",
-	"main", "itemPool", "headerPool", "plusPool", "usedItems", "usedHeaders", "usedPlus",
-	"showHidden", "layoutPending", "inLayout", "lastFree", "lastItems", "searchText", "frozen",
-	"ResetOrder", "CursorItemID", "SORTS", "SORT_NAME", "SORT_TIP", "SortMode", "CharData",
-	"SetHidden", "lastOrder", "ReorderTarget", "Reorder", "NewItemButton", "GetItemButton",
-	"HasAtlas", "SetRedKit", "RedButton", "MAIL_ICON", "CHECK_ICON", "keepHeader", "menuCatcher",
-	"NewMenu", "ShowMenu", "sortMenu", "OpenSortMenu", "GetHeader", "DropOn", "NewSlotTile",
-	"GetPlus", "FirstFreeSlot", "SetupItemButton", "BLUE", "FIXED", "FixOrder", "FixedSection",
-	"SectionList", "gapPool", "usedGaps", "FOOTER_H", "GetGap", "StripColors", "Layout",
-	"refreshQueued", "ShowMain", "ToggleConfig", "ToggleViewer", "BuildMain"
-))
+-- Het tassenvenster: stijl, knoppen, menu's, Layout en slepen.
+-- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
+local ADDON, ns = ...
+-- uit eerdere bestanden:
+local AHPrice, Assign, CatByKey, CharEntry, CS, Hidden = ns.AHPrice, ns.Assign, ns.CatByKey, ns.CharEntry, ns.CS, ns.Hidden
+local HookAHTooltip, KeyringBag, LearnedCount, Log, On, PRESET = ns.HookAHTooltip, ns.KeyringBag, ns.LearnedCount, ns.Log, ns.On, ns.PRESET
+local Print, Scan, SectionOf, T = ns.Print, ns.Scan, ns.SectionOf, ns.T
 
 ---------------------------------------------------------------------------
 -- Stijl
 ---------------------------------------------------------------------------
 
-TILE, GAP, PAD = 37, 4, 16
-GOLD = { 1, 0.82, 0 }
-DIALOG_BACKDROP = BACKDROP_DIALOG_32_32 or {
+ns.TILE, ns.GAP, ns.PAD = 37, 4, 16
+local GOLD = { 1, 0.82, 0 }
+local DIALOG_BACKDROP = BACKDROP_DIALOG_32_32 or {
 	bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
 	edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
 	tile = true, tileEdge = true, tileSize = 32, edgeSize = 32,
 	insets = { left = 11, right = 12, top = 12, bottom = 11 },
 }
-SLOT_TEX = "Interface\\PaperDoll\\UI-Backpack-EmptySlot"
+ns.SLOT_TEX = "Interface\\PaperDoll\\UI-Backpack-EmptySlot"
 
-function NewWindow(name, title, w, h)
+function ns.NewWindow(name, title, w, h)
 	local ok, f = pcall(CreateFrame, "Frame", name, UIParent, "BackdropTemplate")
 	if not ok then f = CreateFrame("Frame", name, UIParent) end
 	f:SetSize(w, h)
@@ -59,7 +51,7 @@ function NewWindow(name, title, w, h)
 	return f
 end
 
-function MakeButton(parent, text, w)
+function ns.MakeButton(parent, text, w)
 	local ok, btn = pcall(CreateFrame, "Button", nil, parent, "UIPanelButtonTemplate")
 	if not ok then btn = CreateFrame("Button", nil, parent) end
 	btn:SetSize(w or 100, 22)
@@ -67,7 +59,7 @@ function MakeButton(parent, text, w)
 	return btn
 end
 
-function Tooltip(frame, title, ...)
+function ns.Tooltip(frame, title, ...)
 	local lines = { ... }
 	frame:HookScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -82,31 +74,31 @@ end
 -- Hoofdvenster
 ---------------------------------------------------------------------------
 
-itemPool, headerPool, plusPool = {}, {}, {}
-usedItems, usedHeaders, usedPlus = 0, 0, 0
-showHidden = false -- true = verbergmodus: verborgen groep zichtbaar, klik = verbergen/terughalen
-layoutPending, inLayout = false, false
-lastFree, lastItems = {}, {}
-searchText = ""
+local itemPool, headerPool, plusPool = {}, {}, {}
+local usedItems, usedHeaders, usedPlus = 0, 0, 0
+local showHidden = false -- true = verbergmodus: verborgen groep zichtbaar, klik = verbergen/terughalen
+local inLayout;  ns.layoutPending, inLayout = false, false
+local lastFree, lastItems = {}, {}
+ns.searchText = ""
 -- Vaste volgorde zolang het venster open is: [sectie] = { key, key, ... }.
 -- Leeg = opnieuw sorteren (bij openen, of als je een categorie wijzigt).
-frozen = {}
-function ResetOrder() frozen = {} end
+local frozen = {}
+function ns.ResetOrder() frozen = {} end
 
-function CursorItemID()
+local function CursorItemID()
 	local kind, id = GetCursorInfo()
 	if kind == "item" then return id end
 end
 
 -- Sorteren per categorie: soort, stapelprijs, nieuwste als laatst of handmatig.
-SORTS = { "value", "newest", "manual" }
-SORT_NAME = { value = "Stack price", newest = "Newest last", manual = "Manual" }
-SORT_TIP = {
+local SORTS = { "value", "newest", "manual" }
+local SORT_NAME = { value = "Stack price", newest = "Newest last", manual = "Manual" }
+local SORT_TIP = {
 	value = "Most valuable stack first (with Auctionator: AH value).",
 	newest = "What you got last is at the end.",
 	manual = "Your own order: drag items onto each other.",
 }
-function SortMode(sec)
+local function SortMode(sec)
 	CS().sort = CS().sort or {}
 	local m = CS().sort[sec.key]
 	if m and SORT_NAME[m] then return m end
@@ -114,15 +106,14 @@ function SortMode(sec)
 end
 
 -- Per karakter: wanneer is een item voor het eerst gezien, en jouw eigen volgorde.
-function CharData()
+local function CharData()
 	return CharEntry() or { seen = {}, manual = {} }
 end
 
--- vooruit (SetHidden)
-lastOrder = {} -- per groep: de item-ID's in de volgorde zoals ze nu in beeld staan
+local lastOrder = {} -- per groep: de item-ID's in de volgorde zoals ze nu in beeld staan
 
 -- Komt het item op de cursor uit dezelfde groep als deze tegel?
-function ReorderTarget(b)
+local function ReorderTarget(b)
 	local id = CursorItemID()
 	local g = b.group
 	if not id or not g or id == g.itemID or not b.secKey then return false end
@@ -132,7 +123,7 @@ function ReorderTarget(b)
 	return false
 end
 
-function Reorder(b)
+local function Reorder(b)
 	if not ReorderTarget(b) then return false end
 	local id, target, key = CursorItemID(), b.group.itemID, b.secKey
 	local list = {}
@@ -159,13 +150,13 @@ function Reorder(b)
 	Log("reorder " .. key .. ": " .. id .. " " .. (b.dropMode or "swap") .. " " .. target)
 	ClearCursor()
 	b.insertMark:Hide(); b.swapMark:Hide(); b.watch:Hide()
-	ResetOrder(); Refresh()
+	ns.ResetOrder(); ns.Refresh()
 	return true
 end
 
-function NewItemButton(i)
-	local b = CreateFrame("ItemButton", "CarefreeBagItem" .. i, main.content, "ContainerFrameItemButtonTemplate")
-	b:SetSize(TILE, TILE)
+local function NewItemButton(i)
+	local b = CreateFrame("ItemButton", "CarefreeBagItem" .. i, ns.main.content, "ContainerFrameItemButtonTemplate")
+	b:SetSize(ns.TILE, ns.TILE)
 	b.isCarefreeItem = true
 	HookAHTooltip()
 	-- Volgorde aanpassen: sleep een item op een ander item in dezelfde groep.
@@ -181,7 +172,7 @@ function NewItemButton(i)
 	b.swapMark:SetBlendMode("ADD")
 	b.swapMark:SetVertexColor(1, 0.82, 0)
 	b.swapMark:SetPoint("CENTER")
-	b.swapMark:SetSize(TILE * 1.8, TILE * 1.8)
+	b.swapMark:SetSize(ns.TILE * 1.8, ns.TILE * 1.8)
 	b.swapMark:Hide()
 	-- Nieuw item: pulserende gouden rand, tot je er met de muis overheen gaat.
 	b.newGlow = b:CreateTexture(nil, "OVERLAY", nil, 6)
@@ -189,7 +180,7 @@ function NewItemButton(i)
 	b.newGlow:SetBlendMode("ADD")
 	b.newGlow:SetVertexColor(1, 0.85, 0.2)
 	b.newGlow:SetPoint("CENTER")
-	b.newGlow:SetSize(TILE * 1.9, TILE * 1.9)
+	b.newGlow:SetSize(ns.TILE * 1.9, ns.TILE * 1.9)
 	b.newGlow:Hide()
 	local okA, ag = pcall(b.newGlow.CreateAnimationGroup, b.newGlow)
 	if okA and ag then
@@ -213,7 +204,7 @@ function NewItemButton(i)
 			b.insertMark:Hide(); b.swapMark:Hide(); b.dropMode = nil; b.watch:Hide(); return
 		end
 		local x = GetCursorPosition() / (b:GetEffectiveScale() or 1)
-		local left, w = b:GetLeft() or 0, b:GetWidth() or TILE
+		local left, w = b:GetLeft() or 0, b:GetWidth() or ns.TILE
 		b.dropMode = ((x - left) / w < 0.35) and "insert" or "swap"
 		b.insertMark:SetShown(b.dropMode == "insert")
 		b.swapMark:SetShown(b.dropMode == "swap")
@@ -240,7 +231,7 @@ function NewItemButton(i)
 	o.tex:SetAllPoints(o)
 	o:SetScript("OnClick", function(self)
 		local g = b.group
-		if g then SetHidden(g.itemID, not Hidden()[g.itemID]) end
+		if g then ns.SetHidden(g.itemID, not Hidden()[g.itemID]) end
 	end)
 	o:SetScript("OnEnter", function(self)
 		local g = b.group
@@ -257,7 +248,7 @@ function NewItemButton(i)
 	return b
 end
 
-function GetItemButton()
+local function GetItemButton()
 	usedItems = usedItems + 1
 	local b = itemPool[usedItems]
 	if not b then
@@ -268,8 +259,8 @@ function GetItemButton()
 end
 
 -- Rode vierkante knop zoals Blizzard die gebruikt (128-RedButton-...).
-function HasAtlas(a) return a and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(a) ~= nil end
-function SetRedKit(b, kit, fallback)
+local function HasAtlas(a) return a and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(a) ~= nil end
+local function SetRedKit(b, kit, fallback)
 	if HasAtlas(kit) then
 		b:SetNormalAtlas(kit)
 		if HasAtlas(kit .. "-Pressed") then b:SetPushedAtlas(kit .. "-Pressed") end
@@ -280,7 +271,7 @@ function SetRedKit(b, kit, fallback)
 		b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
 	end
 end
-function RedButton(parent, name, size, kit, fallback, iconAtlases)
+local function RedButton(parent, name, size, kit, fallback, iconAtlases)
 	local b = CreateFrame("Button", name, parent)
 	b:SetSize(size, size)
 	SetRedKit(b, kit, fallback)
@@ -298,12 +289,13 @@ function RedButton(parent, name, size, kit, fallback, iconAtlases)
 	return b
 end
 
-MAIL_ICON = "|TInterface\\Minimap\\Tracking\\Mailbox:14:14|t"
-CHECK_ICON = "|TInterface\\Buttons\\UI-CheckBox-Check:14:14|t"
--- na in-/uitklappen: dit kopje moet op dezelfde plek blijven (keepHeader)
+local MAIL_ICON = "|TInterface\\Minimap\\Tracking\\Mailbox:14:14|t"
+local CHECK_ICON = "|TInterface\\Buttons\\UI-CheckBox-Check:14:14|t"
+local keepHeader -- na in-/uitklappen: dit kopje moet op dezelfde plek blijven
 
 -- Keuzelijst: zelfde stijl overal; klik je ernaast, dan gaat hij dicht.
-function NewMenu(name, parent)
+local menuCatcher
+function ns.NewMenu(name, parent)
 	local m = CreateFrame("Frame", name, parent or UIParent, "BackdropTemplate")
 	m:SetFrameStrata("FULLSCREEN_DIALOG")
 	m:SetClampedToScreen(true)
@@ -317,7 +309,7 @@ function NewMenu(name, parent)
 	m:Hide()
 	return m
 end
-function ShowMenu(m)
+function ns.ShowMenu(m)
 	if not menuCatcher then
 		menuCatcher = CreateFrame("Button", "CarefreeBagMenuCatcher", UIParent)
 		menuCatcher:SetAllPoints(UIParent)
@@ -336,14 +328,15 @@ function ShowMenu(m)
 end
 
 -- Keuzelijstje voor sorteren (één lijstje, gedeeld door alle groepen).
-function OpenSortMenu(anchor, sec)
+local sortMenu
+local function OpenSortMenu(anchor, sec)
 	if not sec then return end
 	if not sortMenu then
-		sortMenu = NewMenu("CarefreeBagSortMenu")
+		sortMenu = ns.NewMenu("CarefreeBagSortMenu")
 		sortMenu:SetSize(180, #SORTS * 22 + 8)
 		sortMenu.buttons = {}
 		for i, m in ipairs(SORTS) do
-			local b = MakeButton(sortMenu, "", 170)
+			local b = ns.MakeButton(sortMenu, "", 170)
 			b:SetPoint("TOP", sortMenu, "TOP", 0, -4 - (i - 1) * 22)
 			b.mode = m
 			b:SetScript("OnClick", function(self)
@@ -351,7 +344,7 @@ function OpenSortMenu(anchor, sec)
 				CS().sort[sortMenu.sec.key] = self.mode
 				Log("sort " .. sortMenu.sec.key .. ": " .. self.mode)
 				sortMenu:Hide()
-				ResetOrder(); Refresh()
+				ns.ResetOrder(); ns.Refresh()
 			end)
 			b:SetScript("OnEnter", function(self)
 				GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -362,7 +355,7 @@ function OpenSortMenu(anchor, sec)
 			b:SetScript("OnLeave", function() GameTooltip:Hide() end)
 			sortMenu.buttons[i] = b
 		end
-		main:HookScript("OnHide", function() sortMenu:Hide() end)
+		ns.main:HookScript("OnHide", function() sortMenu:Hide() end)
 	end
 	sortMenu.sec = sec
 	local cur = SortMode(sec)
@@ -372,14 +365,14 @@ function OpenSortMenu(anchor, sec)
 	end
 	sortMenu:ClearAllPoints()
 	sortMenu:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -2)
-	ShowMenu(sortMenu)
+	ns.ShowMenu(sortMenu)
 end
 
-function GetHeader()
+local function GetHeader()
 	usedHeaders = usedHeaders + 1
 	local h = headerPool[usedHeaders]
 	if not h then
-		h = CreateFrame("Frame", nil, main.content)
+		h = CreateFrame("Frame", nil, ns.main.content)
 		h:SetSize(200, 16)
 		h:EnableMouse(true)
 		-- [-] / [+]: groep in- of uitklappen
@@ -390,7 +383,7 @@ function GetHeader()
 			CS().collapsed = CS().collapsed or {}
 			CS().collapsed[h.key] = not CS().collapsed[h.key] or nil
 			keepHeader = { key = h.key, top = h:GetTop() } -- het minnetje blijft onder je muis
-			Refresh()
+			ns.Refresh()
 		end)
 		h.fs = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 		h.fs:SetPoint("LEFT", h, "LEFT", 18, 0)
@@ -443,7 +436,7 @@ function GetHeader()
 end
 
 -- Assign: wat er gebeurt als je een item op een "+"-vakje laat vallen.
-function DropOn(sectionKey)
+local function DropOn(sectionKey)
 	local id = CursorItemID()
 	if not id then return end
 	if sectionKey == "hidden" then
@@ -457,16 +450,16 @@ function DropOn(sectionKey)
 	end
 	Log("dropped " .. id .. " -> " .. sectionKey)
 	ClearCursor() -- item gaat terug naar zijn eigen vakje
-	ResetOrder()
-	Refresh()
+	ns.ResetOrder()
+	ns.Refresh()
 end
 
-function NewSlotTile(parent)
+local function NewSlotTile(parent)
 	local t = CreateFrame("Button", nil, parent)
-	t:SetSize(TILE, TILE)
+	t:SetSize(ns.TILE, ns.TILE)
 	t:RegisterForClicks("LeftButtonUp")
 	t.bg = t:CreateTexture(nil, "BACKGROUND")
-	t.bg:SetTexture(SLOT_TEX)
+	t.bg:SetTexture(ns.SLOT_TEX)
 	t.bg:SetPoint("TOPLEFT", -1, 1)
 	t.bg:SetPoint("BOTTOMRIGHT", 1, -1)
 	t.bg:SetVertexColor(0.8, 0.8, 0.8, 0.7)
@@ -476,11 +469,11 @@ function NewSlotTile(parent)
 	return t
 end
 
-function GetPlus()
+local function GetPlus()
 	usedPlus = usedPlus + 1
 	local t = plusPool[usedPlus]
 	if not t then
-		t = NewSlotTile(main.content)
+		t = NewSlotTile(ns.main.content)
 		t.text:SetText("+")
 		t.text:SetTextColor(0.6, 0.6, 0.6)
 		local function drop(self) DropOn(self.section) end
@@ -500,7 +493,7 @@ function GetPlus()
 end
 
 -- Vrije vakjes: liever een gewone tas dan een speciale (quiver, herb bag).
-function FirstFreeSlot()
+local function FirstFreeSlot()
 	local id = CursorItemID()
 	local itemFam = 0
 	if id and C_Item.GetItemFamily then
@@ -528,7 +521,7 @@ function FirstFreeSlot()
 	return best
 end
 
-function SetupItemButton(b, g)
+local function SetupItemButton(b, g)
 	local e = g.rep
 	local info = e.info
 	b.group = g
@@ -552,7 +545,7 @@ function SetupItemButton(b, g)
 	end
 	pcall(b.UpdateJunkItem, b, info.quality, info.hasNoValue)
 	pcall(b.UpdateCooldown, b, info.iconFileID)
-	local match = searchText == "" or (g.name or ""):lower():find(searchText, 1, true) ~= nil
+	local match = ns.searchText == "" or (g.name or ""):lower():find(ns.searchText, 1, true) ~= nil
 	if b.SetMatchesSearch then pcall(b.SetMatchesSearch, b, match) end
 	b:SetAlpha(match and 1 or 0.3)
 	if #g.slots > 1 then
@@ -571,22 +564,22 @@ function SetupItemButton(b, g)
 	b:Show()
 end
 
-BLUE = "|cff66ccff"
+ns.BLUE = "|cff66ccff"
 
 -- Volgorde van alle groepen (eigen categorieën + vaste groepen), aanpasbaar in de opties.
-FIXED = { quest = true, keys = true, boe = true, grey = true, other = true }
+ns.FIXED = { quest = true, keys = true, boe = true, grey = true, other = true }
 
-function FixOrder()
+function ns.FixOrder()
 	CS().order = CS().order or {}
 	local seen, clean = {}, {}
 	for _, k in ipairs(CS().order) do
-		if not seen[k] and (FIXED[k] or CatByKey(k)) then clean[#clean + 1] = k; seen[k] = true end
+		if not seen[k] and (ns.FIXED[k] or CatByKey(k)) then clean[#clean + 1] = k; seen[k] = true end
 	end
 	-- Ontbrekende eigen categorieën: na de laatste eigen categorie (of bovenaan).
 	for _, c in ipairs(CS().cats) do
 		if not seen[c.key] then
 			local pos = 0
-			for idx, k in ipairs(clean) do if not FIXED[k] then pos = idx end end
+			for idx, k in ipairs(clean) do if not ns.FIXED[k] then pos = idx end end
 			table.insert(clean, pos + 1, c.key)
 			seen[c.key] = true
 		end
@@ -598,7 +591,7 @@ function FixOrder()
 	return clean
 end
 
-function FixedSection(key)
+local function FixedSection(key)
 	if key ~= "other" and not On(key) then return nil end
 	if key == "quest" then
 		return { key = "quest", title = T("Quest"), plus = true, fixed = true,
@@ -608,11 +601,11 @@ function FixedSection(key)
 		return { key = "keys", title = T("Keys"), plus = false, fixed = true,
 			rules = T("Your keyring.") }
 	elseif key == "boe" then
-		return { key = "boe", title = "BoE", mailTo = (DB.boeMail ~= "" and DB.boeMail or nil), plus = true, fixed = true,
+		return { key = "boe", title = "BoE", mailTo = (ns.DB.boeMail ~= "" and ns.DB.boeMail or nil), plus = true, fixed = true,
 			tip = T("Drop an item: it goes here from now on."),
 			rules = T("Unbound BoE items, green and better.") }
 	elseif key == "grey" then
-		return { key = "grey", title = "Auto Sell" .. ((DB.autoSell or not DB.autoSellAsked) and "" or ("  |cff888888(" .. T("selling is off") .. ")|r")), plus = true, byValue = true, fixed = true,
+		return { key = "grey", title = "Auto Sell" .. ((ns.DB.autoSell or not ns.DB.autoSellAsked) and "" or ("  |cff888888(" .. T("selling is off") .. ")|r")), plus = true, byValue = true, fixed = true,
 			tip = T("Drop an item: it goes here from now on."),
 			rules = T("Grey items. Sold at a vendor (Shift = skip).") }
 	elseif key == "other" then
@@ -622,10 +615,10 @@ function FixedSection(key)
 	end
 end
 
-function SectionList()
+function ns.SectionList()
 	local list = {}
-	for _, key in ipairs(FixOrder()) do
-		if FIXED[key] then
+	for _, key in ipairs(ns.FixOrder()) do
+		if ns.FIXED[key] then
 			local sec = FixedSection(key)
 			if sec then list[#list + 1] = sec end
 		else
@@ -645,16 +638,16 @@ function SectionList()
 	return list
 end
 
-gapPool, usedGaps = {}, 0
-FOOTER_H = TILE + 6
+local gapPool, usedGaps = {}, 0
+local FOOTER_H = ns.TILE + 6
 
 -- Gat op de plek van een item dat net op is (tot je de tassen sluit).
 -- Laat je er een item op vallen, dan gaat het naar een leeg vakje.
-function GetGap()
+local function GetGap()
 	usedGaps = usedGaps + 1
 	local t = gapPool[usedGaps]
 	if not t then
-		t = NewSlotTile(main.content)
+		t = NewSlotTile(ns.main.content)
 		t.bg:SetVertexColor(0.5, 0.5, 0.5, 0.5)
 		local function drop()
 			if not CursorHasItem() then return end
@@ -669,13 +662,13 @@ function GetGap()
 	return t
 end
 
-function StripColors(t)
+local function StripColors(t)
 	return (t:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end
 
-function Layout()
-	if not main or not main:IsShown() then return end
-	if not DB.enabled then main:Hide(); return end
+local function Layout()
+	if not ns.main or not ns.main:IsShown() then return end
+	if not ns.DB.enabled then ns.main:Hide(); return end
 	-- Tassenknoppen zijn geen beschermde frames: opbouwen mag ook in een gevecht.
 	if inLayout then return end
 	inLayout = true
@@ -690,7 +683,7 @@ function Layout()
 		if sec == "hidden" then hiddenCount = hiddenCount + 1 end
 		local s = bySection[sec]
 		if not s then s = { groups = {}, byKey = {} }; bySection[sec] = s end
-		local key = (DB.merge and e.maxStack > 1) and ("i" .. e.itemID) or ("s" .. e.bag .. ":" .. e.slot)
+		local key = (ns.DB.merge and e.maxStack > 1) and ("i" .. e.itemID) or ("s" .. e.bag .. ":" .. e.slot)
 		local g = s.byKey[key]
 		if not g then
 			g = { key = key, slots = {}, count = 0, quality = e.quality, name = e.name, link = e.link, itemID = e.itemID, price = e.price, value = 0, ahValue = 0 }
@@ -721,7 +714,7 @@ function Layout()
 
 	-- 2. Per sectie sorteren, of de vaste volgorde aanhouden zolang het venster open is.
 	local full = {}
-	for _, sec in ipairs(SectionList()) do
+	for _, sec in ipairs(ns.SectionList()) do
 		local s = bySection[sec.key]
 		local groups = s and s.groups or {}
 		local field = (sec.byValue == "ah") and "ahValue" or "value"
@@ -788,7 +781,7 @@ function Layout()
 		local h = 8
 		for _, f in ipairs(full) do
 			local n = f.collapsed and 0 or (#f.cells + (f.sec.plus and 1 or 0))
-			h = h + 18 + math.ceil(n / cols) * (TILE + GAP) + 6
+			h = h + 18 + math.ceil(n / cols) * (ns.TILE + ns.GAP) + 6
 		end
 		return h
 	end
@@ -797,31 +790,31 @@ function Layout()
 	local top = showHidden and 78 or 62
 	local screenH = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 768
 	if screenH <= 0 then screenH = 768 end
-	local maxView = math.floor(screenH * 0.8) - top - FOOTER_H - PAD
+	local maxView = math.floor(screenH * 0.8) - top - FOOTER_H - ns.PAD
 	-- Breedte = het aantal kolommen uit de opties, maar nooit breder dan je scherm.
-	local fit = math.floor(((UIParent:GetWidth() or 1200) - 80) / (TILE + GAP))
-	local cols = math.max(5, math.min(DB.maxCols, fit))
+	local fit = math.floor(((UIParent:GetWidth() or 1200) - 80) / (ns.TILE + ns.GAP))
+	local cols = math.max(5, math.min(ns.DB.maxCols, fit))
 	local contentH = Measure(cols)
-	local width = cols * (TILE + GAP) - GAP
+	local width = cols * (ns.TILE + ns.GAP) - ns.GAP
 
 	-- 6. Plaatsen.
 	local y = -8
 	local function place(frame, col)
 		frame:ClearAllPoints()
-		frame:SetPoint("TOPLEFT", main.content, "TOPLEFT", col * (TILE + GAP), y)
+		frame:SetPoint("TOPLEFT", ns.main.content, "TOPLEFT", col * (ns.TILE + ns.GAP), y)
 	end
 	for _, f in ipairs(full) do
 		local h = GetHeader()
 		h:ClearAllPoints()
-		h:SetPoint("TOPLEFT", main.content, "TOPLEFT", 0, y)
+		h:SetPoint("TOPLEFT", ns.main.content, "TOPLEFT", 0, y)
 		h:SetWidth(width)
 		h.key, h.sec = f.sec.key, f.sec
-		local t = f.sec.fixed and (BLUE .. f.title .. "|r") or f.title
+		local t = f.sec.fixed and (ns.BLUE .. f.title .. "|r") or f.title
 		if f.collapsed and f.n > 0 then t = t .. "  |cff888888(" .. f.n .. ")|r" end
 		h:SetText(t)
 		SetRedKit(h.toggle, f.collapsed and "128-redbutton-plus" or "128-redbutton-minus",
 			f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
-		h.sort:SetShown(DB.showSort and not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys" or false)
+		h.sort:SetShown(ns.DB.showSort and not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys" or false)
 		h.mail:SetShown(f.sec.mailTo ~= nil)
 		h.sort.mode = SortMode(f.sec)
 		h.rules, h.ruleTitle = f.sec.rules, StripColors(f.sec.title)
@@ -841,7 +834,7 @@ function Layout()
 			end
 			place(b, col)
 			col = col + 1
-			if col == cols then col = 0; y = y - (TILE + GAP) end
+			if col == cols then col = 0; y = y - (ns.TILE + ns.GAP) end
 		end
 		if f.sec.plus and not f.collapsed then
 			local p = GetPlus()
@@ -851,7 +844,7 @@ function Layout()
 			place(p, col)
 			col = col + 1
 		end
-		if col > 0 then y = y - (TILE + GAP) end
+		if col > 0 then y = y - (ns.TILE + ns.GAP) end
 		y = y - 6
 	end
 	for i = usedItems + 1, #itemPool do itemPool[i]:Hide(); itemPool[i].group = nil end
@@ -863,25 +856,25 @@ function Layout()
 	local keep = keepHeader
 	contentH = -y
 	local viewH = math.min(contentH, maxView)
-	main.content:SetSize(width, contentH)
-	main.scroll:ClearAllPoints()
-	main.scroll:SetPoint("TOPLEFT", main, "TOPLEFT", PAD, -top)
-	main.scroll:SetSize(width, viewH)
-	main.scrollMax = math.max(0, contentH - viewH)
-	local cur = main.scroll.GetVerticalScroll and main.scroll:GetVerticalScroll() or 0
-	if cur > main.scrollMax then main.scroll:SetVerticalScroll(main.scrollMax) end
-	main.scrollHint:SetShown(main.scrollMax > 0)
+	ns.main.content:SetSize(width, contentH)
+	ns.main.scroll:ClearAllPoints()
+	ns.main.scroll:SetPoint("TOPLEFT", ns.main, "TOPLEFT", ns.PAD, -top)
+	ns.main.scroll:SetSize(width, viewH)
+	ns.main.scrollMax = math.max(0, contentH - viewH)
+	local cur = ns.main.scroll.GetVerticalScroll and ns.main.scroll:GetVerticalScroll() or 0
+	if cur > ns.main.scrollMax then ns.main.scroll:SetVerticalScroll(ns.main.scrollMax) end
+	ns.main.scrollHint:SetShown(ns.main.scrollMax > 0)
 	if keep then
 		keepHeader = nil
 		for i = 1, usedHeaders do
 			local h = headerPool[i]
 			if h.key == keep.key and keep.top then
 				local now = h:GetTop()
-				local p, rel, rp, x, yy = main:GetPoint(1)
+				local p, rel, rp, x, yy = ns.main:GetPoint(1)
 				if now and p then
-					main:ClearAllPoints()
-					main:SetPoint(p, rel, rp, x, yy + (keep.top - now))
-					SavePos()
+					ns.main:ClearAllPoints()
+					ns.main:SetPoint(p, rel, rp, x, yy + (keep.top - now))
+					ns.SavePos()
 				end
 			end
 		end
@@ -890,70 +883,68 @@ function Layout()
 	-- Voetregel: vrije vakjes + goud, altijd onderaan in beeld.
 	local used = math.max(0, total - #free)
 	local frac = total > 0 and used / total or 0
-	main.freeBar:SetValue(frac)
+	ns.main.freeBar:SetValue(frac)
 	-- vloeiend van groen naar oranje naar rood
 	local r, g, bl
 	if frac < 0.6 then r, g, bl = 0.30, 0.80, 0.40
 	elseif frac < 0.85 then local t = (frac - 0.6) / 0.25; r, g, bl = 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t
 	else local t = math.min(1, (frac - 0.85) / 0.15); r, g, bl = 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t end
-	main.freeBar:SetStatusBarColor(r, g, bl)
-	main.freeBar.text:SetText(used .. "/" .. total)
-	main.freeBar.free, main.freeBar.total = #free, total
+	ns.main.freeBar:SetStatusBarColor(r, g, bl)
+	ns.main.freeBar.text:SetText(used .. "/" .. total)
+	ns.main.freeBar.free, ns.main.freeBar.total = #free, total
 	local money = GetMoney()
 	if money >= 10000 then money = money - money % 100 end -- met goud: geen koper meer tonen
-	main.money:SetText(GetMoneyString and GetMoneyString(money, true) or tostring(money))
+	ns.main.money:SetText(GetMoneyString and GetMoneyString(money, true) or tostring(money))
 
-	main.hiddenBtn.count:SetText(hiddenCount > 0 and hiddenCount or "")
-	SetRedKit(main.hiddenBtn, showHidden and "128-redbutton-visibilityon" or "128-redbutton-visibilityoff", "Interface\\Icons\\Spell_Shadow_EvilEye")
-	main.hint:SetShown(showHidden)
+	ns.main.hiddenBtn.count:SetText(hiddenCount > 0 and hiddenCount or "")
+	SetRedKit(ns.main.hiddenBtn, showHidden and "128-redbutton-visibilityon" or "128-redbutton-visibilityoff", "Interface\\Icons\\Spell_Shadow_EvilEye")
+	ns.main.hint:SetShown(showHidden)
 
-	main:SetSize(width + 2 * PAD, top + viewH + FOOTER_H + PAD)
+	ns.main:SetSize(width + 2 * ns.PAD, top + viewH + FOOTER_H + ns.PAD)
 	inLayout = false
 
-	if needInfo and not main.infoRetry then
-		main.infoRetry = true
-		C_Timer.After(1, function() main.infoRetry = nil; Refresh() end)
+	if ns.needInfo and not ns.main.infoRetry then
+		ns.main.infoRetry = true
+		C_Timer.After(1, function() ns.main.infoRetry = nil; ns.Refresh() end)
 	end
 end
 
-refreshQueued = false
-Refresh = function()
+local refreshQueued = false
+ns.Refresh = function()
 	if refreshQueued then return end
 	refreshQueued = true
 	C_Timer.After(0.05, function()
 		refreshQueued = false
 		local ok, err = pcall(Layout)
 		inLayout = false
-		if not ok then DB.lastError = tostring(err); Log("error: " .. tostring(err)); Print(T("error: %s"):format(tostring(err))) end
+		if not ok then ns.DB.lastError = tostring(err); Log("error: " .. tostring(err)); Print(T("error: %s"):format(tostring(err))) end
 	end)
 end
 
-function ShowMain()
+function ns.ShowMain()
 	if InCombatLockdown() then Log("opened during combat") end
-	main:Show()
-	Refresh()
+	ns.main:Show()
+	ns.Refresh()
 end
 
-SavePos = function()
-	local point, _, rel, x, y = main:GetPoint(1)
-	DB.pos = { point = point, rel = rel, x = x, y = y }
+ns.SavePos = function()
+	local point, _, rel, x, y = ns.main:GetPoint(1)
+	ns.DB.pos = { point = point, rel = rel, x = x, y = y }
 end
 
--- vooruit (ToggleConfig)
 
--- vooruit (paneel met bank en alts) (ToggleViewer)
-function BuildMain()
-	main = NewWindow("CarefreeBagFrame", "CarefreeBag", 438, 300)
-	main:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); SavePos() end)
-	if DB.pos then
-		main:SetPoint(DB.pos.point or "BOTTOMRIGHT", UIParent, DB.pos.rel or DB.pos.point or "BOTTOMRIGHT", DB.pos.x or -80, DB.pos.y or 120)
+function ns.BuildMain()
+	ns.main = ns.NewWindow("CarefreeBagFrame", "CarefreeBag", 438, 300)
+	ns.main:SetScript("OnDragStop", function(self) self:StopMovingOrSizing(); ns.SavePos() end)
+	if ns.DB.pos then
+		ns.main:SetPoint(ns.DB.pos.point or "BOTTOMRIGHT", UIParent, ns.DB.pos.rel or ns.DB.pos.point or "BOTTOMRIGHT", ns.DB.pos.x or -80, ns.DB.pos.y or 120)
 	else
-		main:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 120)
+		ns.main:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 120)
 	end
-	main:SetScript("OnShow", function() if PlaySound and SOUNDKIT then pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN) end end)
-	main:SetScript("OnHide", function()
+	ns.main:SetScript("OnShow", function() if PlaySound and SOUNDKIT then pcall(PlaySound, SOUNDKIT.IG_BACKPACK_OPEN) end end)
+	ns.main:SetScript("OnHide", function()
 		showHidden = false
-		ResetOrder() -- volgende keer openen: netjes opnieuw gesorteerd
+		ns.ResetOrder() -- volgende keer openen: netjes opnieuw gesorteerd
 		-- Nieuwe items hebben nu één keer geknipperd: markering weghalen.
 		if C_NewItems and C_NewItems.RemoveNewItem then
 			for _, e in ipairs(lastItems) do
@@ -965,71 +956,71 @@ function BuildMain()
 	end)
 
 	-- Twee rode Blizzard-knoppen rechtsboven: verbergen en opties.
-	main.optBtn = RedButton(main, "CarefreeBagOptionsButton", 24, "128-RedButton", "Interface\\Icons\\Trade_Engineering",
+	ns.main.optBtn = RedButton(ns.main, "CarefreeBagOptionsButton", 24, "128-RedButton", "Interface\\Icons\\Trade_Engineering",
 		{ "GM-icon-settings", "questlog-icon-setting", "OptionsIcon-Brown" })
-	main.optBtn:SetPoint("TOPRIGHT", main, "TOPRIGHT", -PAD, -32)
-	main.optBtn:SetScript("OnClick", function() ToggleConfig() end)
-	Tooltip(main.optBtn, T("Options"))
-	main.hiddenBtn = RedButton(main, "CarefreeBagHideButton", 24, "128-redbutton-visibilityoff", "Interface\\Icons\\Spell_Shadow_EvilEye")
-	main.hiddenBtn:SetPoint("RIGHT", main.optBtn, "LEFT", -4, 0)
-	main.hiddenBtn.count = main.hiddenBtn:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
-	main.hiddenBtn.count:SetPoint("BOTTOMRIGHT", main.hiddenBtn, "BOTTOMRIGHT", 2, -2)
-	main.hiddenBtn:SetScript("OnClick", function() showHidden = not showHidden; Refresh() end)
-	Tooltip(main.hiddenBtn, T("Hide items"))
+	ns.main.optBtn:SetPoint("TOPRIGHT", ns.main, "TOPRIGHT", -ns.PAD, -32)
+	ns.main.optBtn:SetScript("OnClick", function() ns.ToggleConfig() end)
+	ns.Tooltip(ns.main.optBtn, T("Options"))
+	ns.main.hiddenBtn = RedButton(ns.main, "CarefreeBagHideButton", 24, "128-redbutton-visibilityoff", "Interface\\Icons\\Spell_Shadow_EvilEye")
+	ns.main.hiddenBtn:SetPoint("RIGHT", ns.main.optBtn, "LEFT", -4, 0)
+	ns.main.hiddenBtn.count = ns.main.hiddenBtn:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+	ns.main.hiddenBtn.count:SetPoint("BOTTOMRIGHT", ns.main.hiddenBtn, "BOTTOMRIGHT", 2, -2)
+	ns.main.hiddenBtn:SetScript("OnClick", function() showHidden = not showHidden; ns.Refresh() end)
+	ns.Tooltip(ns.main.hiddenBtn, T("Hide items"))
 	-- Bank en je andere karakters bekijken (paneel ernaast).
-	main.bankBtn = RedButton(main, "CarefreeBagBankButton", 24, "128-RedButton", "Interface\\Icons\\INV_Misc_Bag_10_Blue")
-	main.bankBtn:SetPoint("RIGHT", main.hiddenBtn, "LEFT", -4, 0)
-	main.bankBtn.icon = main.bankBtn:CreateTexture(nil, "OVERLAY")
-	main.bankBtn.icon:SetTexture("Interface\\Minimap\\Tracking\\Banker")
-	main.bankBtn.icon:SetSize(16, 16)
-	main.bankBtn.icon:SetPoint("CENTER", 0, 1)
-	main.bankBtn:SetScript("OnClick", function() ToggleViewer() end)
-	Tooltip(main.bankBtn, T("Bank & alts"), T("See your bank, and the bags and bank of your other characters."))
+	ns.main.bankBtn = RedButton(ns.main, "CarefreeBagBankButton", 24, "128-RedButton", "Interface\\Icons\\INV_Misc_Bag_10_Blue")
+	ns.main.bankBtn:SetPoint("RIGHT", ns.main.hiddenBtn, "LEFT", -4, 0)
+	ns.main.bankBtn.icon = ns.main.bankBtn:CreateTexture(nil, "OVERLAY")
+	ns.main.bankBtn.icon:SetTexture("Interface\\Minimap\\Tracking\\Banker")
+	ns.main.bankBtn.icon:SetSize(16, 16)
+	ns.main.bankBtn.icon:SetPoint("CENTER", 0, 1)
+	ns.main.bankBtn:SetScript("OnClick", function() ns.ToggleViewer() end)
+	ns.Tooltip(ns.main.bankBtn, T("Bank & alts"), T("See your bank, and the bags and bank of your other characters."))
 
 	-- Zoekbalk: typ een naam, alles wat niet past wordt grijs.
-	local okS, sb = pcall(CreateFrame, "EditBox", "CarefreeBagSearch", main, "SearchBoxTemplate")
-	if not okS then sb = CreateFrame("EditBox", "CarefreeBagSearch", main, "InputBoxTemplate") end
+	local okS, sb = pcall(CreateFrame, "EditBox", "CarefreeBagSearch", ns.main, "SearchBoxTemplate")
+	if not okS then sb = CreateFrame("EditBox", "CarefreeBagSearch", ns.main, "InputBoxTemplate") end
 	sb:SetSize(200, 20)
 	sb:SetAutoFocus(false)
-	sb:SetPoint("TOPLEFT", main, "TOPLEFT", PAD + 6, -34)
-	sb:SetPoint("RIGHT", main.bankBtn, "LEFT", -8, 0)
+	sb:SetPoint("TOPLEFT", ns.main, "TOPLEFT", ns.PAD + 6, -34)
+	sb:SetPoint("RIGHT", ns.main.bankBtn, "LEFT", -8, 0)
 	sb:HookScript("OnTextChanged", function(self)
 		local t = (self:GetText() or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
-		if t ~= searchText then searchText = t; Refresh(); if ViewRefresh then ViewRefresh() end end
+		if t ~= ns.searchText then ns.searchText = t; ns.Refresh(); if ns.ViewRefresh then ns.ViewRefresh() end end
 	end)
 	sb:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
 	sb:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
 	if type(sb.Instructions) == "table" and sb.Instructions.SetText then pcall(sb.Instructions.SetText, sb.Instructions, T("Search...")) end
-	main.search = sb
+	ns.main.search = sb
 
-	main.hint = main:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	main.hint:SetPoint("TOPLEFT", main, "TOPLEFT", PAD, -60)
-	main.hint:SetText(T("|cffffd100Hiding:|r click an item to hide it or show it again."))
-	main.hint:Hide()
+	ns.main.hint = ns.main:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	ns.main.hint:SetPoint("TOPLEFT", ns.main, "TOPLEFT", ns.PAD, -60)
+	ns.main.hint:SetText(T("|cffffd100Hiding:|r click an item to hide it or show it again."))
+	ns.main.hint:Hide()
 
 	-- Scrollgebied: alleen nodig als het venster op zijn breedst nog te hoog is.
-	main.scroll = CreateFrame("ScrollFrame", nil, main)
-	main.scroll:SetPoint("TOPLEFT", main, "TOPLEFT", PAD, -62)
-	main.scroll:SetSize(100, 100)
-	main.content = CreateFrame("Frame", nil, main.scroll)
-	main.content:SetSize(100, 100)
-	main.scroll:SetScrollChild(main.content)
-	main.scrollMax = 0
-	main.scroll:EnableMouseWheel(true)
-	main.scroll:SetScript("OnMouseWheel", function(self, delta)
-		local v = (self:GetVerticalScroll() or 0) - delta * (TILE + GAP)
-		self:SetVerticalScroll(math.max(0, math.min(main.scrollMax or 0, v)))
+	ns.main.scroll = CreateFrame("ScrollFrame", nil, ns.main)
+	ns.main.scroll:SetPoint("TOPLEFT", ns.main, "TOPLEFT", ns.PAD, -62)
+	ns.main.scroll:SetSize(100, 100)
+	ns.main.content = CreateFrame("Frame", nil, ns.main.scroll)
+	ns.main.content:SetSize(100, 100)
+	ns.main.scroll:SetScrollChild(ns.main.content)
+	ns.main.scrollMax = 0
+	ns.main.scroll:EnableMouseWheel(true)
+	ns.main.scroll:SetScript("OnMouseWheel", function(self, delta)
+		local v = (self:GetVerticalScroll() or 0) - delta * (ns.TILE + ns.GAP)
+		self:SetVerticalScroll(math.max(0, math.min(ns.main.scrollMax or 0, v)))
 	end)
-	main.scrollHint = main:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	main.scrollHint:SetPoint("BOTTOMRIGHT", main, "BOTTOMRIGHT", -PAD, FOOTER_H + 2)
-	main.scrollHint:SetText(T("scroll for more"))
-	main.scrollHint:Hide()
+	ns.main.scrollHint = ns.main:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	ns.main.scrollHint:SetPoint("BOTTOMRIGHT", ns.main, "BOTTOMRIGHT", -ns.PAD, FOOTER_H + 2)
+	ns.main.scrollHint:SetText(T("scroll for more"))
+	ns.main.scrollHint:Hide()
 
 	-- Balk die laat zien hoe vol je tassen zitten (groen, oranje, rood).
 	-- Balk in Blizzard-stijl, zoals de levensbalk in een tooltip.
-	local bar = CreateFrame("StatusBar", "CarefreeBagFreeBar", main)
+	local bar = CreateFrame("StatusBar", "CarefreeBagFreeBar", ns.main)
 	bar:SetSize(150, 10)
-	bar:SetPoint("LEFT", main, "BOTTOMLEFT", PAD + 4, PAD - 2 + TILE / 2)
+	bar:SetPoint("LEFT", ns.main, "BOTTOMLEFT", ns.PAD + 4, ns.PAD - 2 + ns.TILE / 2)
 	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
 	bar:SetMinMaxValues(0, 1)
 	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
@@ -1047,8 +1038,8 @@ function BuildMain()
 		GameTooltip:Show()
 	end)
 	bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	main.freeBar = bar
-	main.money = main:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	main.money:SetJustifyH("RIGHT")
-	main.money:SetPoint("RIGHT", main, "BOTTOMRIGHT", -PAD - 4, PAD - 2 + TILE / 2)
+	ns.main.freeBar = bar
+	ns.main.money = ns.main:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	ns.main.money:SetJustifyH("RIGHT")
+	ns.main.money:SetPoint("RIGHT", ns.main, "BOTTOMRIGHT", -ns.PAD - 4, ns.PAD - 2 + ns.TILE / 2)
 end

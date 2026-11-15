@@ -1,11 +1,9 @@
 -- CarefreeBag: Chores.lua
 -- Klusjes: stapels samenvoegen en Auto Sell bij de vendor.
--- Alle bestanden delen één omgeving (zie Env.lua). De namen hieronder maakt dit bestand.
-local _, ns = ...
-setfenv(1, ns.Env(
-	"stack", "mail", "sell", "RestackStep", "ScheduleRestack", "SellStop", "SellNext", "SellStart",
-	"AskAutoSell"
-))
+-- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
+local ADDON, ns = ...
+-- uit eerdere bestanden:
+local Log, On, Print, Scan, SectionOf, T = ns.Log, ns.On, ns.Print, ns.Scan, ns.SectionOf, ns.T
 
 ---------------------------------------------------------------------------
 -- Stapels op de achtergrond samenvoegen (echt, in de tassen)
@@ -14,13 +12,12 @@ setfenv(1, ns.Env(
 -- Eén verplaatsing per keer: pak de kleinste losse stapel op en laat hem vallen
 -- op de grootste niet-volle stapel van hetzelfde item. Daarna wachten we tot de
 -- game klaar is (BAG_UPDATE_DELAYED) en doen we de volgende.
-stack = { moves = 0, burst = 0, scheduled = false }
--- vooruit (post-status) (mail)
--- vooruit (auto sell) (sell)
+local stack = { moves = 0, burst = 0, scheduled = false }
+local sell -- vooruit (auto sell)
 
-function RestackStep()
-	if not DB.enabled or InCombatLockdown() or CursorHasItem() then return false end
-	if mail and mail.busy then return false end
+local function RestackStep()
+	if not ns.DB.enabled or InCombatLockdown() or CursorHasItem() then return false end
+	if ns.mail and ns.mail.busy then return false end
 	if sell and sell.busy then return false end
 	if stack.burst >= 40 then return false end -- veiligheidsrem
 	local items = Scan()
@@ -50,13 +47,13 @@ function RestackStep()
 	return false
 end
 
-function ScheduleRestack()
-	if stack.scheduled or not DB.enabled then return end
+function ns.ScheduleRestack()
+	if stack.scheduled or not ns.DB.enabled then return end
 	stack.scheduled = true
 	C_Timer.After(0.3, function()
 		stack.scheduled = false
 		local ok, err = pcall(RestackStep)
-		if not ok then DB.lastError = "restack: " .. tostring(err); Log("restack error: " .. tostring(err)) end
+		if not ok then ns.DB.lastError = "restack: " .. tostring(err); Log("restack error: " .. tostring(err)) end
 	end)
 end
 
@@ -66,7 +63,7 @@ end
 
 sell = { busy = false, queue = nil, n = 0, value = 0 }
 
-function SellStop(reason)
+function ns.SellStop(reason)
 	if not sell.busy then return end
 	sell.busy = false
 	sell.queue = nil
@@ -75,14 +72,14 @@ function SellStop(reason)
 		Print(T("Auto Sell: sold %d item(s) for %s."):format(sell.n, money) .. (sell.n > 12 and T(" Note: Buyback only keeps the last 12.") or ""))
 		Log("auto sell: " .. sell.n .. " item(s), " .. sell.value .. " copper" .. (reason and (" (" .. reason .. ")") or ""))
 	end
-	Refresh()
+	ns.Refresh()
 end
 
-function SellNext()
+local function SellNext()
 	if not sell.busy then return end
-	if not (MerchantFrame and MerchantFrame:IsShown()) then SellStop("vendor closed"); return end
+	if not (MerchantFrame and MerchantFrame:IsShown()) then ns.SellStop("vendor closed"); return end
 	local it = table.remove(sell.queue, 1)
-	if not it then SellStop(); return end
+	if not it then ns.SellStop(); return end
 	local info = C_Container.GetContainerItemInfo(it.bag, it.slot)
 	if info and info.itemID == it.itemID and not info.isLocked then
 		C_Container.UseContainerItem(it.bag, it.slot)
@@ -94,23 +91,23 @@ end
 
 
 -- Eerste keer bij een vendor (nieuwe gebruikers): vragen of Auto Sell aan moet.
-function AskAutoSell()
+local function AskAutoSell()
 	if not StaticPopupDialogs or not StaticPopup_Show then return end
 	StaticPopupDialogs["CAREFREEBAG_AUTOSELL"] = {
 		text = T("CarefreeBag: automatically sell everything in the Auto Sell group whenever you open a vendor?\n\nYou can change this later in the options."),
 		button1 = T("Yes, sell"),
 		button2 = T("No"),
 		OnAccept = function()
-			DB.autoSell, DB.autoSellAsked = true, true
+			ns.DB.autoSell, ns.DB.autoSellAsked = true, true
 			Log("auto sell turned on (first vendor)")
-			SellStart(true)
-			Refresh()
+			ns.SellStart(true)
+			ns.Refresh()
 		end,
 		OnCancel = function(_, _, reason)
 			if reason == "clicked" then
-				DB.autoSell, DB.autoSellAsked = false, true
+				ns.DB.autoSell, ns.DB.autoSellAsked = false, true
 				Log("auto sell turned off (first vendor)")
-				Refresh()
+				ns.Refresh()
 			end
 		end,
 		timeout = 0, whileDead = true, hideOnEscape = true,
@@ -118,9 +115,9 @@ function AskAutoSell()
 	StaticPopup_Show("CAREFREEBAG_AUTOSELL")
 end
 
-SellStart = function(confirmed)
-	if sell.busy or not DB.enabled then return end
-	if not confirmed and DB.autoSellAsked and not DB.autoSell then return end
+ns.SellStart = function(confirmed)
+	if sell.busy or not ns.DB.enabled then return end
+	if not confirmed and ns.DB.autoSellAsked and not ns.DB.autoSell then return end
 	if not On("grey") then return end
 	if IsShiftKeyDown and IsShiftKeyDown() then Print(T("Auto Sell skipped (Shift).")); return end
 	local items = Scan()
@@ -131,7 +128,7 @@ SellStart = function(confirmed)
 		end
 	end
 	if #q == 0 then return end
-	if not confirmed and not DB.autoSellAsked then AskAutoSell(); return end
+	if not confirmed and not ns.DB.autoSellAsked then AskAutoSell(); return end
 	sell.busy, sell.queue, sell.n, sell.value = true, q, 0, 0
 	C_Timer.After(0.2, SellNext)
 end

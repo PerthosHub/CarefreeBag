@@ -1,26 +1,22 @@
 -- CarefreeBag: Blizzard.lua
 -- Koppeling met WoW: tassen openen/vervangen, aan/uit, andere tassen-addons herkennen.
--- Alle bestanden delen één omgeving (zie Env.lua). De namen hieronder maakt dit bestand.
-local _, ns = ...
-setfenv(1, ns.Env(
-	"lastToggle", "openedAt", "openedBy", "HideBlizzardBags", "OpenMain", "OnToggle", "OnOpenAll",
-	"OnCloseAll", "BindKeys", "toggleBtn", "binding", "bindPending", "ToggleFromKey", "HookBags",
-	"UpdateMinimapIcon", "RefreshConfig", "mailPanel", "AskReload", "reloadPrompt", "SetEnabled",
-	"OTHER_BAGS", "IsLoaded", "CheckOtherBags"
-))
+-- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
+local ADDON, ns = ...
+-- uit eerdere bestanden:
+local Hidden, Log, Print, ResetOrder, ShowMain, T = ns.Hidden, ns.Log, ns.Print, ns.ResetOrder, ns.ShowMain, ns.T
 
 ---------------------------------------------------------------------------
 -- Bewerkmenu per item
 ---------------------------------------------------------------------------
 
-SetHidden = function(id, v) Hidden()[id] = v or nil; Log((v and "hidden: " or "visible: ") .. id); ResetOrder(); Refresh() end
+ns.SetHidden = function(id, v) Hidden()[id] = v or nil; Log((v and "hidden: " or "visible: ") .. id); ResetOrder(); ns.Refresh() end
 ---------------------------------------------------------------------------
 -- Standaardtassen vervangen
 ---------------------------------------------------------------------------
 
-lastToggle, openedAt, openedBy = -1, -1, nil
+local lastToggle, openedAt, openedBy = -1, -1, nil
 
-function HideBlizzardBags()
+local function HideBlizzardBags()
 	if ContainerFrameCombinedBags and ContainerFrameCombinedBags:IsShown() then ContainerFrameCombinedBags:Hide() end
 	for i = 1, (NUM_CONTAINER_FRAMES or 13) do
 		local f = _G["ContainerFrame" .. i]
@@ -30,9 +26,9 @@ end
 
 -- Openen door de game (vendor, mailbox, backpack-knop). Als het venster nu door
 -- een frame geopend wordt, onthouden we welk frame: dat mag het ook weer sluiten.
-function OpenMain(frame)
+local function OpenMain(frame)
 	local t = GetTime()
-	if not main:IsShown() then
+	if not ns.main:IsShown() then
 		openedAt = t
 		openedBy = nil
 		ShowMain()
@@ -40,15 +36,15 @@ function OpenMain(frame)
 	if frame and frame.GetName and openedAt == t then openedBy = frame:GetName() end
 end
 
-function OnToggle()
-	if not DB.enabled then return end
+local function OnToggle()
+	if not ns.DB.enabled then return end
 	HideBlizzardBags()
 	local t = GetTime()
 	-- Eén toetsdruk kan meerdere Blizzard-functies aanroepen: maar één keer wisselen.
 	if t == openedAt or t == lastToggle then return end
 	lastToggle = t
-	if main:IsShown() then
-		main:Hide()
+	if ns.main:IsShown() then
+		ns.main:Hide()
 	else
 		openedAt = t
 		openedBy = nil
@@ -56,32 +52,31 @@ function OnToggle()
 	end
 end
 
-function OnOpenAll(frame)
-	if not DB.enabled then return end
+local function OnOpenAll(frame)
+	if not ns.DB.enabled then return end
 	HideBlizzardBags()
 	OpenMain(frame)
 end
 
-function OnCloseAll(frame)
-	if not DB.enabled then return end
+local function OnCloseAll(frame)
+	if not ns.DB.enabled then return end
 	HideBlizzardBags()
 	local name = frame and frame.GetName and frame:GetName()
 	if not frame or (openedBy and name == openedBy) then
 		openedBy = nil
-		main:Hide()
+		ns.main:Hide()
 	end
 end
 
 -- De tas-toetsen van de speler (alle tassen, rugzak, losse tassen) direct aan CarefreeBag koppelen. Zo hoeft de toets
 -- niet via Blizzards eigen tasfuncties, en is het altijd: open <-> dicht.
--- hieronder ingevuld (BindKeys)
-toggleBtn, binding, bindPending = nil, false, false
+local toggleBtn;  toggleBtn, ns.binding, ns.bindPending = nil, false, false
 
-function ToggleFromKey()
+local function ToggleFromKey()
 	local t = GetTime()
 	lastToggle = t
-	if main:IsShown() then
-		main:Hide()
+	if ns.main:IsShown() then
+		ns.main:Hide()
 	else
 		openedAt = t
 		openedBy = nil
@@ -90,13 +85,13 @@ function ToggleFromKey()
 	end
 end
 
-BindKeys = function()
+ns.BindKeys = function()
 	if not toggleBtn then return end
-	if InCombatLockdown() then bindPending = true; return end
-	binding = true
+	if InCombatLockdown() then ns.bindPending = true; return end
+	ns.binding = true
 	ClearOverrideBindings(toggleBtn)
 	local keys = {}
-	if DB.enabled then
+	if ns.DB.enabled then
 		-- Elke toets waarmee jij je tassen opent: alles, rugzak of een losse tas.
 		for _, action in ipairs({ "OPENALLBAGS", "TOGGLEBACKPACK", "TOGGLEBAG1", "TOGGLEBAG2", "TOGGLEBAG3", "TOGGLEBAG4" }) do
 			for _, k in ipairs({ GetBindingKey(action) }) do
@@ -105,18 +100,18 @@ BindKeys = function()
 			end
 		end
 	end
-	binding = false
+	ns.binding = false
 	local list = table.concat(keys, ", ")
-	if list ~= DB.lastKeys then
-		DB.lastKeys = list
+	if list ~= ns.DB.lastKeys then
+		ns.DB.lastKeys = list
 		Log("keys for CarefreeBag: " .. (list ~= "" and list or "none"))
 	end
 end
 
-function HookBags()
+function ns.HookBags()
 	toggleBtn = CreateFrame("Button", "CarefreeBagToggleButton", UIParent)
 	toggleBtn:SetScript("OnClick", ToggleFromKey)
-	BindKeys()
+	ns.BindKeys()
 	if ToggleAllBags then hooksecurefunc("ToggleAllBags", OnToggle) end
 	if ToggleBackpack then hooksecurefunc("ToggleBackpack", OnToggle) end
 	if ToggleBag then hooksecurefunc("ToggleBag", OnToggle) end -- klik op een tas onderin beeld
@@ -129,11 +124,11 @@ end
 -- CarefreeBag aan/uit (minimapknop en bovenaan de opties)
 ---------------------------------------------------------------------------
 
--- vooruit (UpdateMinimapIcon, RefreshConfig, mailPanel)
 
 -- Herladen mag een addon in Forever niet zelf (ReloadUI wordt geblokkeerd).
 -- Daarom een los venstertje met een beveiligde knop die de macro /reload uitvoert.
-AskReload = function()
+local reloadPrompt
+ns.AskReload = function()
 	if InCombatLockdown() then Print(T("Type /reload to switch language.")); return end
 	if not reloadPrompt then
 		local f = CreateFrame("Frame", "CarefreeBagReloadPrompt", UIParent, "BackdropTemplate")
@@ -170,29 +165,29 @@ AskReload = function()
 	reloadPrompt:Show()
 end
 
-function SetEnabled(v)
-	DB.enabled = v and true or false
-	Log("CarefreeBag " .. (DB.enabled and "on" or "off"))
-	if BindKeys then BindKeys() end
-	if not DB.enabled then
-		if main then main:Hide() end
-		if mailPanel then mailPanel:Hide() end
+function ns.SetEnabled(v)
+	ns.DB.enabled = v and true or false
+	Log("CarefreeBag " .. (ns.DB.enabled and "on" or "off"))
+	if ns.BindKeys then ns.BindKeys() end
+	if not ns.DB.enabled then
+		if ns.main then ns.main:Hide() end
+		if ns.mailPanel then ns.mailPanel:Hide() end
 		Print(T("CarefreeBag is off. Your normal bags are back."))
 	else
 		Print(T("CarefreeBag is on."))
 	end
-	if UpdateMinimapIcon then UpdateMinimapIcon() end
-	if RefreshConfig then RefreshConfig() end
+	if ns.UpdateMinimapIcon then ns.UpdateMinimapIcon() end
+	if ns.RefreshConfig then ns.RefreshConfig() end
 end
 
 ---------------------------------------------------------------------------
 -- Andere tassen-addons herkennen
 ---------------------------------------------------------------------------
 
-OTHER_BAGS = { "Baganator", "Bagnon", "AdiBags", "ArkInventory", "BetterBags", "Combuctor", "GudaBags",
+local OTHER_BAGS = { "Baganator", "Bagnon", "AdiBags", "ArkInventory", "BetterBags", "Combuctor", "GudaBags",
 	"OneBag3", "Inventorian", "LiteBag", "BagDaddy", "BazBags", "Bagforge", "HardcoreBags", "BlockBags", "MyBags", "Sorted" }
 
-function IsLoaded(name)
+local function IsLoaded(name)
 	if C_AddOns and C_AddOns.IsAddOnLoaded then
 		local ok, loaded = pcall(C_AddOns.IsAddOnLoaded, name)
 		return ok and loaded
@@ -200,17 +195,17 @@ function IsLoaded(name)
 	return IsAddOnLoaded and IsAddOnLoaded(name)
 end
 
-function CheckOtherBags()
-	if not DB.enabled or not StaticPopupDialogs or not StaticPopup_Show then return end
+function ns.CheckOtherBags()
+	if not ns.DB.enabled or not StaticPopupDialogs or not StaticPopup_Show then return end
 	for _, name in ipairs(OTHER_BAGS) do
-		if IsLoaded(name) and not DB.conflictOK[name] then
+		if IsLoaded(name) and not ns.DB.conflictOK[name] then
 			Log("other bag addon found: " .. name)
 			StaticPopupDialogs["CAREFREEBAG_CONFLICT"] = {
 				text = T("CarefreeBag and %s both want to replace your bags. Which one do you want to use?"),
 				button1 = "CarefreeBag",
 				button2 = name,
 				OnAccept = function()
-					DB.conflictOK[name] = true
+					ns.DB.conflictOK[name] = true
 					Log("conflict: user chose CarefreeBag, disabling " .. name)
 					if C_AddOns and C_AddOns.DisableAddOn then pcall(C_AddOns.DisableAddOn, name)
 					elseif DisableAddOn then pcall(DisableAddOn, name) end
@@ -218,9 +213,9 @@ function CheckOtherBags()
 				end,
 				OnCancel = function(_, _, reason)
 					if reason ~= "clicked" then return end
-					DB.conflictOK[name] = true
+					ns.DB.conflictOK[name] = true
 					Log("conflict: user chose " .. name .. ", CarefreeBag turned off")
-					SetEnabled(false)
+					ns.SetEnabled(false)
 					Print(T("%s keeps your bags. CarefreeBag is turned off; turn it on again with the minimap button."):format(name))
 				end,
 				timeout = 0, whileDead = true, hideOnEscape = false,

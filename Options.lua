@@ -1,32 +1,35 @@
 -- CarefreeBag: Options.lua
 -- Optievenster en minimapknop.
--- Alle bestanden delen één omgeving (zie Env.lua). De namen hieronder maakt dit bestand.
-local _, ns = ...
-setfenv(1, ns.Env(
-	"config", "catRows", "NewCheck", "NewEdit", "Trim", "CW", "BuildConfig", "FIXED_ROW",
-	"FIXED_NAME", "SetupCheck", "PlaceMinimapButton", "BuildMinimapButton"
-))
+-- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
+local ADDON, ns = ...
+-- uit eerdere bestanden:
+local Assign, BLUE, CatByKey, CS, FIXED, FixOrder = ns.Assign, ns.BLUE, ns.CatByKey, ns.CS, ns.FIXED, ns.FixOrder
+local LangName, LANGS, LearnedCount, Log, MailAuto, MakeButton = ns.LangName, ns.LANGS, ns.LearnedCount, ns.Log, ns.MailAuto, ns.MakeButton
+local NewCatKey, NewMenu, NewWindow, On, PRESET, PRESETS = ns.NewCatKey, ns.NewMenu, ns.NewWindow, ns.On, ns.PRESET, ns.PRESETS
+local Print, ResetOrder, SetEnabled, ShowMain, ShowMenu, SurnameSep = ns.Print, ns.ResetOrder, ns.SetEnabled, ns.ShowMain, ns.ShowMenu, ns.SurnameSep
+local T, Tooltip = ns.T, ns.Tooltip
 
 ---------------------------------------------------------------------------
 -- Opties-venster
 ---------------------------------------------------------------------------
 
-catRows = {}
+local config
+local catRows = {}
 
-function NewCheck(parent, label, tip, get, set)
+local function NewCheck(parent, label, tip, get, set)
 	local ok, cb = pcall(CreateFrame, "CheckButton", nil, parent, "UICheckButtonTemplate")
 	if not ok then cb = CreateFrame("CheckButton", nil, parent) end
 	cb:SetSize(24, 24)
 	cb.label = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	cb.label:SetPoint("LEFT", cb, "RIGHT", 2, 0)
 	cb.label:SetText(label)
-	cb:SetScript("OnClick", function(self) set(self:GetChecked() and true or false); Refresh(); RefreshConfig() end)
+	cb:SetScript("OnClick", function(self) set(self:GetChecked() and true or false); ns.Refresh(); ns.RefreshConfig() end)
 	cb.get = get
 	if tip then Tooltip(cb, label, tip) end
 	return cb
 end
 
-function NewEdit(parent, w)
+local function NewEdit(parent, w)
 	local ok, eb = pcall(CreateFrame, "EditBox", nil, parent, "InputBoxTemplate")
 	if not ok then eb = CreateFrame("EditBox", nil, parent) end
 	eb:SetSize(w, 20)
@@ -36,28 +39,28 @@ function NewEdit(parent, w)
 	return eb
 end
 
-function Trim(t) return ((t or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
+local function Trim(t) return ((t or ""):gsub("^%s+", ""):gsub("%s+$", "")) end
 
-CW = 440 -- breedte optievenster
+local CW = 440 -- breedte optievenster
 
-function BuildConfig()
+function ns.BuildConfig()
 	config = NewWindow("CarefreeBagConfig", T("CarefreeBag options"), CW, 600)
 	config:SetPoint("CENTER", UIParent, "CENTER", -200, 40)
 	config:SetScript("OnDragStop", config.StopMovingOrSizing)
-	config:SetScript("OnShow", function() RefreshConfig() end)
+	config:SetScript("OnShow", function() ns.RefreshConfig() end)
 	config.checks, config.edits = {}, {}
 
 	local y = -32
 	-- Kopje: gouden tekst met een dunne lijn ernaast.
 	local function Heading(parent, text, yy)
 		local h = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-		h:SetPoint("TOPLEFT", parent, "TOPLEFT", PAD + 4, yy)
+		h:SetPoint("TOPLEFT", parent, "TOPLEFT", ns.PAD + 4, yy)
 		h:SetText(text)
 		local line = parent:CreateTexture(nil, "ARTWORK")
 		line:SetColorTexture(1, 0.82, 0, 0.35)
 		line:SetHeight(1)
 		line:SetPoint("LEFT", h, "RIGHT", 8, 0)
-		line:SetPoint("RIGHT", parent, "RIGHT", -PAD - 4, 0)
+		line:SetPoint("RIGHT", parent, "RIGHT", -ns.PAD - 4, 0)
 		return h
 	end
 
@@ -67,13 +70,13 @@ function BuildConfig()
 
 	-- 0. Aan/uit -------------------------------------------------------------
 	local onCb = NewCheck(config, T("CarefreeBag on"), T("Off = your normal bags."),
-		function() return DB.enabled end, function(v) SetEnabled(v) end)
-	onCb:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 4, y)
+		function() return ns.DB.enabled end, function(v) SetEnabled(v) end)
+	onCb:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 4, y)
 	config.checks[#config.checks + 1] = onCb
 	-- Taalknop: alleen een icoontje; de taal staat in de tooltip.
 	local langBtn = CreateFrame("Button", "CarefreeBagLangButton", config)
 	langBtn:SetSize(24, 24)
-	langBtn:SetPoint("TOPRIGHT", config, "TOPRIGHT", -PAD - 4, y)
+	langBtn:SetPoint("TOPRIGHT", config, "TOPRIGHT", -ns.PAD - 4, y)
 	langBtn:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Up")
 	langBtn:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Down")
 	langBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
@@ -88,33 +91,33 @@ function BuildConfig()
 		b.langCode = l[1]
 		b:SetScript("OnClick", function()
 			langMenu:Hide()
-			if DB.lang == l[1] then return end
-			DB.lang = l[1]
-			Log("language: " .. DB.lang)
-			AskReload()
+			if ns.DB.lang == l[1] then return end
+			ns.DB.lang = l[1]
+			Log("language: " .. ns.DB.lang)
+			ns.AskReload()
 		end)
 	end
 	langBtn:SetScript("OnClick", function()
 		ShowMenu(langMenu)
 	end)
-	Tooltip(langBtn, "Language: " .. LangName(DB.lang))
+	Tooltip(langBtn, "Language: " .. LangName(ns.DB.lang))
 	y = y - 28
 
 	-- Breedte van de tas
 	config.colsLabel = config:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	config.colsLabel:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 10, y - 4)
+	config.colsLabel:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 10, y - 4)
 	local minus = MakeButton(config, "-", 24)
-	minus:SetPoint("TOPRIGHT", config, "TOPRIGHT", -PAD - 32, y)
-	minus:SetScript("OnClick", function() DB.maxCols = math.max(5, DB.maxCols - 1); ResetOrder(); Refresh(); RefreshConfig() end)
+	minus:SetPoint("TOPRIGHT", config, "TOPRIGHT", -ns.PAD - 32, y)
+	minus:SetScript("OnClick", function() ns.DB.maxCols = math.max(5, ns.DB.maxCols - 1); ResetOrder(); ns.Refresh(); ns.RefreshConfig() end)
 	local plus = MakeButton(config, "+", 24)
 	plus:SetPoint("LEFT", minus, "RIGHT", 2, 0)
-	plus:SetScript("OnClick", function() DB.maxCols = math.min(30, DB.maxCols + 1); ResetOrder(); Refresh(); RefreshConfig() end)
+	plus:SetScript("OnClick", function() ns.DB.maxCols = math.min(30, ns.DB.maxCols + 1); ResetOrder(); ns.Refresh(); ns.RefreshConfig() end)
 	y = y - 28
 
 	-- Sorteeropties in de tas
 	local sortCb = NewCheck(config, T("Show sort options"), T("Choose per group how it is sorted."),
-		function() return DB.showSort end, function(v) DB.showSort = v; Refresh() end)
-	sortCb:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 4, y)
+		function() return ns.DB.showSort end, function(v) ns.DB.showSort = v; ns.Refresh() end)
+	sortCb:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 4, y)
 	config.checks[#config.checks + 1] = sortCb
 	y = y - 38
 
@@ -131,16 +134,16 @@ function BuildConfig()
 		config.groupBg:SetBackdropColor(0, 0, 0, 0.35)
 		config.groupBg:SetBackdropBorderColor(0.6, 0.6, 0.6, 0.6)
 	end
-	config.groupBg:SetPoint("TOPLEFT", config, "TOPLEFT", PAD - 4, y + 6)
-	config.groupBg:SetWidth(CW - 2 * PAD + 8)
+	config.groupBg:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD - 4, y + 6)
+	config.groupBg:SetWidth(CW - 2 * ns.PAD + 8)
 	-- "+ Groep toevoegen" bovenaan het vak, boven alle groepen.
 	config.addTop = y - 4
 	y = y - 32
 	local colA = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	colA:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 12, y)
+	colA:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 12, y)
 	colA:SetText(T("Name"))
 	local colB = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	colB:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 148, y)
+	colB:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 148, y)
 	colB:SetText(T("Mail to / settings"))
 	y = y - 14
 	config.catTop = y
@@ -150,7 +153,7 @@ function BuildConfig()
 		local j2 = idx + dir
 		if j2 < 1 or j2 > #o then return end
 		o[idx], o[j2] = o[j2], o[idx]
-		ResetOrder(); Refresh(); RefreshConfig()
+		ResetOrder(); ns.Refresh(); ns.RefreshConfig()
 	end
 
 	local FIXED_TIPS = {
@@ -163,7 +166,7 @@ function BuildConfig()
 
 	for i = 1, 20 do
 		local r = CreateFrame("Frame", nil, config)
-		r:SetSize(CW - 2 * PAD, 24)
+		r:SetSize(CW - 2 * ns.PAD, 24)
 		-- Eigen categorie: naam en postadres zijn invulvelden.
 		r.name = NewEdit(r, 120)
 		r.name:SetPoint("LEFT", r, "LEFT", 10, 0)
@@ -175,7 +178,7 @@ function BuildConfig()
 				c.name = new
 				local n = LearnedCount(c.key)
 				if n > 0 then Print(T("'%s': renaming does not move items. The %d items it learned still go here."):format(new, n)) end
-				Refresh()
+				ns.Refresh()
 			end
 			self:ClearFocus()
 			if c then self:SetText(c.name) end
@@ -213,7 +216,7 @@ function BuildConfig()
 		r.fixedName:SetScript("OnLeave", function() GameTooltip:Hide() end)
 		-- Aan/uit voor een vaste groep.
 		r.onCb = NewCheck(r, "", nil, function() return r.key and On(r.key) end,
-			function(v) if r.key then DB.fixedOn[r.key] = v and true or false; Log("fixed group " .. r.key .. " " .. (v and "on" or "off")); ResetOrder() end end)
+			function(v) if r.key then ns.DB.fixedOn[r.key] = v and true or false; Log("fixed group " .. r.key .. " " .. (v and "on" or "off")); ResetOrder() end end)
 		r.onCb:SetPoint("LEFT", r, "LEFT", 8, 0) -- vinkje vóór de naam
 		Tooltip(r.onCb, T("Off: items go to Other."))
 
@@ -221,7 +224,7 @@ function BuildConfig()
 		r.mail:SetPoint("LEFT", r, "LEFT", 146, 0)
 		local function setMail(self)
 			if r.key == "boe" then
-				DB.boeMail = Trim(self:GetText())
+				ns.DB.boeMail = Trim(self:GetText())
 			else
 				local c = r.key and CatByKey(r.key)
 				if c then
@@ -231,8 +234,8 @@ function BuildConfig()
 			end
 			Log("mail address for " .. tostring(r.key) .. " changed")
 			self:ClearFocus()
-			Refresh()
-			RefreshConfig() -- vinkje "zonder vragen" verschijnt pas met een ontvanger
+			ns.Refresh()
+			ns.RefreshConfig() -- vinkje "zonder vragen" verschijnt pas met een ontvanger
 		end
 		r.mail:SetScript("OnEnterPressed", setMail)
 		r.mail:SetScript("OnEditFocusLost", setMail)
@@ -242,7 +245,7 @@ function BuildConfig()
 
 		-- Zonder vragen versturen (alleen zichtbaar als er een ontvanger is).
 		r.mailAuto = NewCheck(r, "", nil, function() return r.key and MailAuto(r.key) end, function(v)
-			if r.key == "boe" then DB.boeMailAuto = v or nil
+			if r.key == "boe" then ns.DB.boeMailAuto = v or nil
 			else local c = r.key and CatByKey(r.key); if c then c.mailAuto = v or nil end end
 			Log("mail without asking for " .. tostring(r.key) .. ": " .. tostring(v))
 		end)
@@ -250,9 +253,9 @@ function BuildConfig()
 		Tooltip(r.mailAuto, T("Send without asking"), T("At the mailbox this group is sent right away, without the Yes/Skip question."))
 
 		-- Vinkjes voor vaste groepen (in de kolom van het postadres).
-		r.cb1 = NewCheck(r, "", nil, function() return r.cb1Field and DB[r.cb1Field] end, function(v) if r.cb1Field then DB[r.cb1Field] = v end end)
+		r.cb1 = NewCheck(r, "", nil, function() return r.cb1Field and ns.DB[r.cb1Field] end, function(v) if r.cb1Field then ns.DB[r.cb1Field] = v end end)
 		r.cb1:SetPoint("LEFT", r, "LEFT", 146, 0)
-		r.cb2 = NewCheck(r, "", nil, function() return r.cb2Field and DB[r.cb2Field] end, function(v) if r.cb2Field then DB[r.cb2Field] = v end end)
+		r.cb2 = NewCheck(r, "", nil, function() return r.cb2Field and ns.DB[r.cb2Field] end, function(v) if r.cb2Field then ns.DB[r.cb2Field] = v end end)
 		r.cb2:SetPoint("LEFT", r, "LEFT", 226, 0)
 		for _, cb in ipairs({ r.cb1, r.cb2 }) do
 			cb:HookScript("OnEnter", function(self)
@@ -282,7 +285,7 @@ function BuildConfig()
 				for id, k in pairs(own) do if k == c.key then own[id] = nil end end
 				Print(T("category '%s' removed. Its items are back in Other."):format(c.name))
 			end
-			ResetOrder(); Refresh(); RefreshConfig()
+			ResetOrder(); ns.Refresh(); ns.RefreshConfig()
 		end)
 		Tooltip(r.del, T("Remove"), T("Items go back to Other."))
 		catRows[i] = r
@@ -317,7 +320,7 @@ function BuildConfig()
 		if CatByKey(key) then key = NewCatKey("p" .. p.id) end
 		CS().cats[#CS().cats + 1] = { key = key, preset = p.id, name = T(p.name) }
 		Log("preset added: " .. p.id)
-		ResetOrder(); Refresh(); RefreshConfig()
+		ResetOrder(); ns.Refresh(); ns.RefreshConfig()
 	end
 	local function add()
 		if #CS().cats >= 12 then Print(T("at most 12 categories.")); return end
@@ -327,7 +330,7 @@ function BuildConfig()
 		config.newEdit:SetText("")
 		config.newEdit:ClearFocus()
 		config.choice = nil
-		ResetOrder(); Refresh(); RefreshConfig()
+		ResetOrder(); ns.Refresh(); ns.RefreshConfig()
 	end
 	config.newEdit:SetScript("OnEnterPressed", add)
 	config.addBtn:SetScript("OnClick", add)
@@ -346,7 +349,7 @@ function BuildConfig()
 	ownBtn:SetScript("OnClick", function()
 		pm:Hide()
 		config.choice = "own"
-		RefreshConfig()
+		ns.RefreshConfig()
 		config.newEdit:SetFocus()
 	end)
 	Tooltip(ownBtn, T("Custom group"), T("Name it yourself. It learns: every item you drag onto it goes there from now on."))
@@ -395,26 +398,26 @@ function BuildConfig()
 	end)
 
 	config.version = config:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	config.version:SetPoint("BOTTOMRIGHT", config, "BOTTOMRIGHT", -PAD, 14)
-	config.version:SetText("CarefreeBag " .. VERSION)
+	config.version:SetPoint("BOTTOMRIGHT", config, "BOTTOMRIGHT", -ns.PAD, 14)
+	config.version:SetText("CarefreeBag " .. ns.VERSION)
 end
 
 -- Per vaste groep: wat staat er in de middelste kolom.
-FIXED_ROW = {
+local FIXED_ROW = {
 	quest = {},
 	keys = {},
 	boe = { mail = true },
 	grey = { cb1 = { "autoSell", "sell automatically", "Sell at a vendor. Shift = skip once." } },
 	other = {},
 }
-FIXED_NAME = { quest = "Quest", keys = "Keys", boe = "BoE", grey = "Auto Sell", other = "Other" }
+local FIXED_NAME = { quest = "Quest", keys = "Keys", boe = "BoE", grey = "Auto Sell", other = "Other" }
 
-function SetupCheck(r, cb, field, spec)
+local function SetupCheck(r, cb, field, spec)
 	if spec then
 		r[field] = spec[1]
 		cb.label:SetText(spec[2] ~= "" and T(spec[2]) or "")
 		cb.tip = T(spec[3])
-		cb:SetChecked(DB[spec[1]] and true or false)
+		cb:SetChecked(ns.DB[spec[1]] and true or false)
 		cb:Show(); cb.label:Show()
 	else
 		r[field] = nil
@@ -422,10 +425,10 @@ function SetupCheck(r, cb, field, spec)
 	end
 end
 
-RefreshConfig = function()
+ns.RefreshConfig = function()
 	if not config or not config:IsShown() then return end
 	for _, cb in ipairs(config.checks) do cb:SetChecked(cb.get() and true or false) end
-	config.colsLabel:SetText(T("Bag width: %d columns"):format(DB.maxCols))
+	config.colsLabel:SetText(T("Bag width: %d columns"):format(ns.DB.maxCols))
 
 	local order = FixOrder()
 	local y = config.catTop
@@ -433,7 +436,7 @@ RefreshConfig = function()
 	local function PlaceAdd()
 		config.ShowChoice()
 		config.pickBtn:ClearAllPoints()
-		config.pickBtn:SetPoint("TOPLEFT", config, "TOPLEFT", PAD + 8, config.addTop)
+		config.pickBtn:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 8, config.addTop)
 		config.newEdit:ClearAllPoints()
 		config.newEdit:SetPoint("LEFT", config.pickBtn, "RIGHT", 10, 0)
 		config.addBtn:ClearAllPoints()
@@ -462,11 +465,11 @@ RefreshConfig = function()
 				SetupCheck(r, r.cb2, "cb2Field", spec.cb2)
 				if spec.mail then
 					r.mail:Show()
-					if not r.mail:HasFocus() then r.mail:SetText(DB.boeMail or "") end
+					if not r.mail:HasFocus() then r.mail:SetText(ns.DB.boeMail or "") end
 				else
 					r.mail:Hide()
 				end
-				r.mailAuto:SetShown(spec.mail and (DB.boeMail or "") ~= "" and true or false)
+				r.mailAuto:SetShown(spec.mail and (ns.DB.boeMail or "") ~= "" and true or false)
 				r.mailAuto:SetChecked(MailAuto(key))
 			else
 				local c = CatByKey(key)
@@ -482,7 +485,7 @@ RefreshConfig = function()
 			r.up:SetEnabled(i > 1)
 			r.down:SetEnabled(i < #order)
 			r:ClearAllPoints()
-			r:SetPoint("TOPLEFT", config, "TOPLEFT", PAD, y)
+			r:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD, y)
 			if not r.stripe then
 				r.stripe = r:CreateTexture(nil, "BACKGROUND")
 				r.stripe:SetAllPoints(r)
@@ -500,7 +503,7 @@ RefreshConfig = function()
 	config:SetHeight(-y + 40)
 end
 
-ToggleConfig = function()
+ns.ToggleConfig = function()
 	if config:IsShown() then config:Hide() else config:Show() end
 end
 
@@ -508,14 +511,14 @@ end
 -- Minimapknop
 ---------------------------------------------------------------------------
 
-function PlaceMinimapButton(btn)
-	local angle = math.rad(DB.minimapAngle or 230)
+local function PlaceMinimapButton(btn)
+	local angle = math.rad(ns.DB.minimapAngle or 230)
 	local radius = (Minimap:GetWidth() / 2) + 6
 	btn:ClearAllPoints()
 	btn:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * radius, math.sin(angle) * radius)
 end
 
-function BuildMinimapButton()
+function ns.BuildMinimapButton()
 	if not Minimap then return end
 	local btn = CreateFrame("Button", "CarefreeBagMinimapButton", Minimap)
 	btn:SetSize(31, 31)
@@ -542,31 +545,31 @@ function BuildMinimapButton()
 			local mx, my = Minimap:GetCenter()
 			local cx, cy = GetCursorPosition()
 			local scale = Minimap:GetEffectiveScale()
-			DB.minimapAngle = math.deg(math.atan2(cy / scale - my, cx / scale - mx))
+			ns.DB.minimapAngle = math.deg(math.atan2(cy / scale - my, cx / scale - mx))
 			PlaceMinimapButton(s)
 		end)
 	end)
 	btn:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
 	btn:SetScript("OnClick", function(_, mouse)
 		if IsShiftKeyDown and IsShiftKeyDown() then
-			SetEnabled(not DB.enabled)
+			SetEnabled(not ns.DB.enabled)
 		elseif mouse == "RightButton" then
-			ToggleConfig()
-		elseif DB.enabled then
-			if main:IsShown() then main:Hide() else ShowMain() end
+			ns.ToggleConfig()
+		elseif ns.DB.enabled then
+			if ns.main:IsShown() then ns.main:Hide() else ShowMain() end
 		else
 			Print(T("CarefreeBag is off. Shift-click the minimap button to turn it on."))
 		end
 	end)
 	btn.icon = icon
-	UpdateMinimapIcon = function()
-		if btn.icon.SetDesaturated then btn.icon:SetDesaturated(not DB.enabled) end
-		btn.icon:SetAlpha(DB.enabled and 1 or 0.5)
+	ns.UpdateMinimapIcon = function()
+		if btn.icon.SetDesaturated then btn.icon:SetDesaturated(not ns.DB.enabled) end
+		btn.icon:SetAlpha(ns.DB.enabled and 1 or 0.5)
 	end
-	UpdateMinimapIcon()
+	ns.UpdateMinimapIcon()
 	btn:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:AddLine("CarefreeBag  " .. (DB.enabled and ("|cff33ff99" .. T("on") .. "|r") or ("|cffff5555" .. T("off") .. "|r")))
+		GameTooltip:AddLine("CarefreeBag  " .. (ns.DB.enabled and ("|cff33ff99" .. T("on") .. "|r") or ("|cffff5555" .. T("off") .. "|r")))
 		GameTooltip:AddLine(T("Left-click: open/close bags"), 1, 1, 1)
 		GameTooltip:AddLine(T("Right-click: options"), 1, 1, 1)
 		GameTooltip:AddLine(T("Shift-click: turn CarefreeBag on/off"), 1, 1, 1)
@@ -574,6 +577,6 @@ function BuildMinimapButton()
 		GameTooltip:Show()
 	end)
 	btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-	btn:SetShown(not DB.hideMinimap)
+	btn:SetShown(not ns.DB.hideMinimap)
 	PlaceMinimapButton(btn)
 end

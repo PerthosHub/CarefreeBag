@@ -1,35 +1,31 @@
 -- CarefreeBag: Data.lua
--- Tassen en bank uitlezen (Scan), onthouden per karakter (snap) en de tooltip "waar heb je dit nog meer".
--- Alle bestanden delen één omgeving (zie Env.lua). De namen hieronder maakt dit bestand.
-local _, ns = ...
-setfenv(1, ns.Env(
-	"LAST_BAG", "REAGENT_BAG", "needInfo", "ItemExtra", "QUEST_CLASS", "IsQuestItem", "AHPrice",
-	"AH_CUT", "AddAHLines", "AddOwnerLines", "ahHooked", "HookAHTooltip", "IsBoE", "KeyringBag",
-	"MakeEntry", "Scan", "bankOpen", "ViewRefresh", "ownerIndex", "Snapshot", "BankBags", "ScanBags",
-	"MySnap", "SnapBags", "SnapBank", "snapPending", "ScheduleSnap", "BuildOwnerIndex", "On",
-	"SectionOf", "MailTarget"
-))
+-- Tassen en bank uitlezen (Scan), indeling (SectionOf), onthouden per karakter en de tooltip "waar heb je dit nog meer".
+-- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
+local ADDON, ns = ...
+-- uit eerdere bestanden:
+local Assign, CatByKey, CharEntry, CS, FullName, Hidden = ns.Assign, ns.CatByKey, ns.CharEntry, ns.CS, ns.FullName, ns.Hidden
+local MyFullName, PRESET, SameName, T = ns.MyFullName, ns.PRESET, ns.SameName, ns.T
 
 ---------------------------------------------------------------------------
 -- Tassen uitlezen
 ---------------------------------------------------------------------------
 
-LAST_BAG = NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
+local LAST_BAG = NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4
 -- Retail heeft een aparte reagent-tas (alleen voor crafting reagents). In Classic is die er niet.
-REAGENT_BAG = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag
-needInfo = false
+local REAGENT_BAG = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag
+ns.needInfo = false
 
-function ItemExtra(itemID)
+local function ItemExtra(itemID)
 	local ok, name, _, _, _, _, _, _, stack, equipLoc, _, price, classID, subclassID, bind = pcall(C_Item.GetItemInfo, itemID)
 	if ok and name then return stack or 1, bind or 0, price or 0, classID, equipLoc, subclassID end
-	needInfo = true
+	ns.needInfo = true
 	if C_Item.RequestLoadItemDataByID then pcall(C_Item.RequestLoadItemDataByID, itemID) end
 	return nil, nil, 0, nil, nil, nil
 end
 
-QUEST_CLASS = (Enum and Enum.ItemClass and Enum.ItemClass.Questitem) or 12
+local QUEST_CLASS = (Enum and Enum.ItemClass and Enum.ItemClass.Questitem) or 12
 
-function IsQuestItem(bag, slot, classID)
+local function IsQuestItem(bag, slot, classID)
 	if classID == QUEST_CLASS then return true end
 	if C_Container.GetContainerItemQuestInfo then
 		local ok, q = pcall(C_Container.GetContainerItemQuestInfo, bag, slot)
@@ -39,7 +35,7 @@ function IsQuestItem(bag, slot, classID)
 end
 
 -- AH-prijs per stuk via Auctionator (als die geïnstalleerd is en een scan heeft).
-function AHPrice(link)
+function ns.AHPrice(link)
 	local api = Auctionator and Auctionator.API and Auctionator.API.v1
 	if not (api and api.GetAuctionPriceByItemLink and link) then return nil end
 	local ok, price = pcall(api.GetAuctionPriceByItemLink, "CarefreeBag", link)
@@ -47,13 +43,13 @@ function AHPrice(link)
 	return nil
 end
 
-AH_CUT = 0.05
+local AH_CUT = 0.05
 
 -- Onze regels onder de item-tooltip: wat de stack op het AH oplevert na kosten,
 -- en of het AH of de vendor meer geeft.
-function AddAHLines(tt, g)
+local function AddAHLines(tt, g)
 	if not g then return end
-	local each = AHPrice(g.link)
+	local each = ns.AHPrice(g.link)
 	if not each then return end
 	local money = function(m) return GetMoneyString and GetMoneyString(math.floor(m), true) or tostring(math.floor(m)) end
 	local net = each * g.count * (1 - AH_CUT)
@@ -70,8 +66,9 @@ function AddAHLines(tt, g)
 		tt:AddLine("|cff66ccffCarefreeBag:|r |cffffd100" .. T("Sell to a vendor for the best price") .. "|r")
 	end
 end
--- vooruit: "waar heb je dit nog meer" (zie Overzicht van je karakters) (AddOwnerLines)
-function HookAHTooltip()
+local AddOwnerLines -- vooruit: "waar heb je dit nog meer" (zie Overzicht van je karakters)
+local ahHooked
+function ns.HookAHTooltip()
 	if ahHooked then return end
 	ahHooked = true
 	local function post(tt)
@@ -87,12 +84,12 @@ function HookAHTooltip()
 	end
 end -- het AH houdt 5% van de verkoopprijs in (de borg krijg je terug)
 
-function IsBoE(e)
+local function IsBoE(e)
 	return e.bindType == 2 and not e.bound and (e.quality or 0) >= 2
 end
 
 -- Keyring (sleutelring): alleen als het spel die heeft en toont.
-function KeyringBag()
+function ns.KeyringBag()
 	local id = KEYRING_CONTAINER or (Enum and Enum.BagIndex and Enum.BagIndex.Keyring)
 	if not id then return nil end
 	-- Classic Era en TBC hebben een keyring; retail en MoP niet (0 vakjes = geen keyring).
@@ -106,7 +103,7 @@ function KeyringBag()
 end
 
 -- Eén item uit een tasvak, met alles wat de indeling nodig heeft.
-function MakeEntry(bag, slot, info, isKey)
+local function MakeEntry(bag, slot, info, isKey)
 	local stack, bind, price, classID, equipLoc, subclassID = ItemExtra(info.itemID)
 	local link = info.hyperlink
 	return {
@@ -124,13 +121,13 @@ function MakeEntry(bag, slot, info, isKey)
 	}
 end
 
-function Scan()
+function ns.Scan()
 	local items, free = {}, {}
 	local total = 0
-	needInfo = false
+	ns.needInfo = false
 	local bags = {}
 	for bag = 0, LAST_BAG do bags[#bags + 1] = bag end
-	local keyBag = KeyringBag()
+	local keyBag = ns.KeyringBag()
 	if keyBag then bags[#bags + 1] = keyBag end
 	for _, bag in ipairs(bags) do
 		local isKey = (bag == keyBag)
@@ -153,12 +150,11 @@ end
 -- De bank kun je alleen bij de bankier uitlezen; daarna onthouden we wat erin zat.
 ---------------------------------------------------------------------------
 
-bankOpen = false
--- vooruit: paneel met bank en alts bijwerken (ViewRefresh)
--- [itemID] = { { key, bags, bank }, ... }; nil = opnieuw opbouwen (ownerIndex)
+ns.bankOpen = false
+local ownerIndex -- [itemID] = { { key, bags, bank }, ... }; nil = opnieuw opbouwen
 
 -- Compacte kopie van een lijst items (zelfde item + gebonden = één regel).
-function Snapshot(items)
+local function Snapshot(items)
 	local list, at = {}, {}
 	for _, e in ipairs(items) do
 		local id = (e.link or e.itemID) .. (e.bound and "b" or "")
@@ -178,7 +174,7 @@ end
 
 -- Alle bankvakken: oude bank (vak -1 + banktassen; Forever en Classic) en de
 -- nieuwe banktabbladen (retail). We nemen alleen wat echt vakjes heeft.
-function BankBags()
+local function BankBags()
 	local ids, seen = {}, {}
 	local function add(id)
 		if id and not seen[id] then
@@ -195,7 +191,7 @@ function BankBags()
 	return ids
 end
 
-function ScanBags(bags)
+local function ScanBags(bags)
 	local items = {}
 	for _, bag in ipairs(bags) do
 		local n = C_Container.GetContainerNumSlots(bag) or 0
@@ -207,8 +203,8 @@ function ScanBags(bags)
 	return items
 end
 
-function MySnap()
-	if viewKey then return nil end
+local function MySnap()
+	if ns.viewKey then return nil end
 	local ch = CharEntry()
 	if not ch then return nil end
 	ch.snap = ch.snap or {}
@@ -218,16 +214,16 @@ function MySnap()
 	return ch.snap
 end
 
-function SnapBags()
+function ns.SnapBags()
 	local s = MySnap()
 	if not s then return end
-	local items = Scan()
+	local items = ns.Scan()
 	s.bags, s.bagsTime = Snapshot(items), time and time() or nil
 	ownerIndex = nil
 end
 
-function SnapBank()
-	if not bankOpen then return end
+function ns.SnapBank()
+	if not ns.bankOpen then return end
 	local s = MySnap()
 	if not s then return end
 	s.bank, s.bankTime = Snapshot(ScanBags(BankBags())), time and time() or nil
@@ -235,22 +231,22 @@ function SnapBank()
 end
 
 -- Na veranderingen in je tassen (of bank) even wachten en dan één keer opslaan.
-snapPending = false
-function ScheduleSnap()
+local snapPending = false
+function ns.ScheduleSnap()
 	if snapPending then return end
 	snapPending = true
 	C_Timer.After(1, function()
 		snapPending = false
-		pcall(SnapBags)
-		if bankOpen then pcall(SnapBank) end
-		if ViewRefresh then pcall(ViewRefresh) end
+		pcall(ns.SnapBags)
+		if ns.bankOpen then pcall(ns.SnapBank) end
+		if ns.ViewRefresh then pcall(ns.ViewRefresh) end
 	end)
 end
 
 -- Waar heb je dit item nog meer? Voor de tooltip.
-function BuildOwnerIndex()
+local function BuildOwnerIndex()
 	ownerIndex = {}
-	for key, ch in pairs(DB.chars or {}) do
+	for key, ch in pairs(ns.DB.chars or {}) do
 		local s = ch.snap
 		if s then
 			for _, part in ipairs({ "bags", "bank" }) do
@@ -280,12 +276,12 @@ AddOwnerLines = function(tt)
 	-- alleen tonen als het ergens anders ligt dan in je eigen tassen
 	local other = false
 	for _, row in ipairs(list) do
-		if row.key ~= charKey or row.bank > 0 then other = true end
+		if row.key ~= ns.charKey or row.bank > 0 then other = true end
 	end
 	if not other then return end
 	tt:AddLine(" ")
 	tt:AddLine("|cff66ccffCarefreeBag:|r")
-	table.sort(list, function(a, b) return (a.key == charKey) and b.key ~= charKey or ((a.key == charKey) == (b.key == charKey) and a.name < b.name) end)
+	table.sort(list, function(a, b) return (a.key == ns.charKey) and b.key ~= ns.charKey or ((a.key == ns.charKey) == (b.key == ns.charKey) and a.name < b.name) end)
 	for i, row in ipairs(list) do
 		if i > 8 then break end
 		local parts = {}
@@ -296,20 +292,20 @@ AddOwnerLines = function(tt)
 	tt:Show()
 end
 
-function On(k) return not (DB.fixedOn and DB.fixedOn[k] == false) end
+function ns.On(k) return not (ns.DB.fixedOn and ns.DB.fixedOn[k] == false) end
 
-function SectionOf(e)
+function ns.SectionOf(e)
 	if Hidden()[e.itemID] then return "hidden" end
-	if e.key then return On("keys") and "keys" or "other" end
+	if e.key then return ns.On("keys") and "keys" or "other" end
 	local key = Assign()[e.itemID]
-	if key == "grey" and On("grey") then return "grey" end    -- zelf naar Auto Sell gesleept
+	if key == "grey" and ns.On("grey") then return "grey" end    -- zelf naar Auto Sell gesleept
 	if key == "other" then return "other" end                 -- zelf naar Overig gesleept: nooit automatisch
-	if key == "quest" and On("quest") then return "quest" end -- zelf naar Quest gesleept
-	if key == "boe" and On("boe") then return "boe" end       -- zelf naar BoE gesleept
+	if key == "quest" and ns.On("quest") then return "quest" end -- zelf naar Quest gesleept
+	if key == "boe" and ns.On("boe") then return "boe" end       -- zelf naar BoE gesleept
 	if key and CatByKey(key) then return key end
-	if On("quest") and DB.questAuto and e.quest then return "quest" end
-	if On("grey") and DB.greyAuto and e.quality == 0 then return "grey" end
-	if On("boe") and IsBoE(e) then return "boe" end
+	if ns.On("quest") and ns.DB.questAuto and e.quest then return "quest" end
+	if ns.On("grey") and ns.DB.greyAuto and e.quality == 0 then return "grey" end
+	if ns.On("boe") and IsBoE(e) then return "boe" end
 	local best, bestKey
 	for _, c in ipairs(CS().cats) do
 		local p = c.preset and PRESET[c.preset]
@@ -320,12 +316,12 @@ function SectionOf(e)
 end
 
 -- Waar moet een item heen bij de mailbox? (nil = nergens)
-function MailTarget(e)
+function ns.MailTarget(e)
 	if Hidden()[e.itemID] or e.bound or e.key then return nil end
-	local sec = SectionOf(e)
+	local sec = ns.SectionOf(e)
 	local name
 	if sec == "boe" then
-		name = DB.boeMail
+		name = ns.DB.boeMail
 	else
 		local c = CatByKey(sec)
 		name = c and c.mailTo

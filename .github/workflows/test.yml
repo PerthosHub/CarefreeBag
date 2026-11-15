@@ -17,3 +17,5 @@ jobs:
         run: lua5.1 tests/run.lua
       - name: Check translations
         run: python3 tests/check_locales.py
+      - name: Check globals
+        run: python3 tests/check_globals.py

@@ -7,7 +7,6 @@ antwoorden met emoji). Code-commentaar is Nederlands, teksten in het spel zijn E
 ## Bestanden (laadvolgorde = `CarefreeBag.toc`)
 | Bestand | Wat |
 |---|---|
-| `Env.lua` | Gedeelde omgeving voor alle bestanden (zie hieronder). Altijd als eerste. |
 | `Locales.lua` | Vertalingen `ns.L.nl/de/fr/es/pt/it/ru`. Engels = de tekst in `T("...")`. |
 | `Core.lua` | Versie, `T()`, `Log()`, `Defaults()`, kant-en-klare groepen (`PRESETS`), namen, `CharEntry()`/`CS()`/`Assign()`/`Hidden()`. |
 | `Data.lua` | Tassen uitlezen (`Scan`, `MakeEntry`), indeling (`SectionOf`), onthouden per karakter (`SnapBags`/`SnapBank`), tooltip "waar heb je dit nog meer". |
@@ -19,12 +18,14 @@ antwoorden met emoji). Code-commentaar is Nederlands, teksten in het spel zijn E
 | `Options.lua` | Optievenster, minimapknop. |
 | `Start.lua` | Events (`driver`), `/cfb`-commando's. |
 
-## Gedeelde omgeving (belangrijk)
-Elk bestand begint met `local _, ns = ...` en `setfenv(1, ns.Env("Naam1", ...))`.
-- Namen die een bestand **op het hoogste niveau** maakt, zet je in die `ns.Env(...)`-lijst. Ze zijn dan in alle bestanden bruikbaar.
-- Een niet-genoemde naam vullen geeft een fout ("is not declared"): zo vallen typfouten meteen op.
-- Echte WoW-globals schrijf je via `_G` (`_G.CarefreeBagDB`, `_G.SLASH_CAREFREEBAG1`).
-- Binnen functies gewoon `local` gebruiken.
+## Gedeelde namen via `ns` (belangrijk)
+Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-tabel die WoW aan alle bestanden geeft).
+- Alleen binnen één bestand nodig? Gewoon `local`.
+- Nodig in andere bestanden? Maak het als `ns.Naam` (`function ns.Scan()`, `ns.main = ...`).
+- Functies, constanten en tabellen die na het maken niet meer veranderen: in latere bestanden bovenaan `local Scan = ns.Scan` (staat onder "uit eerdere bestanden").
+- Waarden die later nog veranderen (`ns.DB`, `ns.main`, `ns.Refresh`, `ns.searchText`, ...) altijd als `ns.X` lezen, nooit in een local kopiëren.
+- Geen `setfenv`: Blizzard-templates met mixins (bijv. `Vector2DMixin`) werken dan niet meer. Dat ging mis in een eerdere opsplitsing.
+- `python3 tests/check_globals.py` controleert dat er geen globals worden geschreven en dat niemand een `ns`-naam als global leest.
 
 ## Opgeslagen gegevens (`CarefreeBagDB`, account-breed)
 - `chars[sleutel]`: **per karakter**. Sleutel = volledige naam + "-" + realm (Forever: "Thrall Frostwolf-Realm"; nooit alleen de voornaam, twee karakters kunnen dezelfde voornaam hebben).
@@ -44,7 +45,8 @@ Elk bestand begint met `local _, ns = ...` en `setfenv(1, ns.Env("Naam1", ...))`
 - Menu's hangen aan `UIParent` met de klikvanger (`NewMenu`/`ShowMenu`), anders vallen ze achter vensters met `SetToplevel`.
 
 ## Testen
-- `lua5.1 tests/run.lua`: alle scenario's in `tests/scenarios/`, elk in een schone omgeving met de nagebootste WoW-API (`tests/mock.lua`, `LoadAddon()` leest de `.toc`).
+- `lua5.1 tests/run.lua`, `python3 tests/check_locales.py` en `python3 tests/check_globals.py` (alle drie moeten slagen).
+- `tests/run.lua`: alle scenario's in `tests/scenarios/`, elk in een schone omgeving met de nagebootste WoW-API (`tests/mock.lua`, `LoadAddon()` leest de `.toc`).
 - Een scenario met `-- flavors: classic retail` als eerste regel draait per WoW-versie (`FLAVOR`).
 - GitHub Actions draait de tests bij elke push; de release-workflow test eerst en brengt alleen uit als alles slaagt.
 
@@ -52,6 +54,7 @@ Elk bestand begint met `local _, ns = ...` en `setfenv(1, ns.Env("Naam1", ...))`
 - Doel: `C:\Games\World of Warcraft Forever\World of Warcraft\_forever_\Interface\AddOns\CarefreeBag\`.
 - Kopieer naar een **nieuwe** map onder `/mnt/user-data/outputs/<uniek>/`, zet `## Version: x.y.z-dev` in de .toc, `device_commit_files` met `force`, en **controleer daarna met `md5sum`** (een oud pad gaf ooit een oude versie door).
 - Nieuwe bestanden in de .toc worden sinds patch 9.0.1 ook met `/reload` geladen.
+- De nagebootste WoW (`tests/mock.lua`) ziet niet alles (bijv. Blizzard-templates). Laat Johan na grote verbouwingen altijd eerst zelf in het spel testen vóór een release.
 - SavedVariables staan in `...\_forever_\WTF\Account\<id>\SavedVariables\CarefreeBag.lua` (wordt pas bij `/reload` of uitloggen geschreven).
 
 ## Uitbrengen

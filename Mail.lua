@@ -1,36 +1,35 @@
 -- CarefreeBag: Mail.lua
 -- Post naar je alts bij de mailbox (per groep, met of zonder vraag).
--- Alle bestanden delen één omgeving (zie Env.lua). De namen hieronder maakt dit bestand.
-local _, ns = ...
-setfenv(1, ns.Env(
-	"MailAuto", "BuildMailPlan", "MailStart", "MailAutoNext", "UpdateMailPanel", "MailStop",
-	"MailPack", "MailSend", "MailButtonClick", "MailSkip", "BuildMailPanel"
-))
+-- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
+local ADDON, ns = ...
+-- uit eerdere bestanden:
+local CatByKey, Log, MailTarget, MakeButton, NewWindow, Print = ns.CatByKey, ns.Log, ns.MailTarget, ns.MakeButton, ns.NewWindow, ns.Print
+local Scan, SectionList, T = ns.Scan, ns.SectionList, ns.T
 
 ---------------------------------------------------------------------------
 -- Post naar je alts
 ---------------------------------------------------------------------------
 
-mail = { busy = false, plan = nil, step = false, skipped = {} }
+ns.mail = { busy = false, plan = nil, step = false, skipped = {} }
 
 -- Per categorie: wat gaat waarheen. De volgorde is die van je groepen.
 -- Je krijgt per categorie de vraag of hij verstuurd moet worden.
 -- Mag deze groep zonder vraag verstuurd worden? (per groep in te stellen)
-function MailAuto(key)
-	if key == "boe" then return DB.boeMailAuto and true or false end
+function ns.MailAuto(key)
+	if key == "boe" then return ns.DB.boeMailAuto and true or false end
 	local c = CatByKey(key)
 	return c and c.mailAuto and true or false
 end
 
-function BuildMailPlan()
+local function BuildMailPlan()
 	local items = Scan()
 	local plan = {}
 	for _, e in ipairs(items) do
 		local to, sec = MailTarget(e)
-		if to and not mail.skipped[sec] then
+		if to and not ns.mail.skipped[sec] then
 			if not plan[sec] then
 				local c = CatByKey(sec)
-				plan[sec] = { key = sec, cat = c and c.name or "BoE", to = to, items = {}, auto = MailAuto(sec) }
+				plan[sec] = { key = sec, cat = c and c.name or "BoE", to = to, items = {}, auto = ns.MailAuto(sec) }
 			end
 			local p = plan[sec]
 			p.items[#p.items + 1] = { bag = e.bag, slot = e.slot, itemID = e.itemID, name = e.name, count = e.count }
@@ -47,10 +46,10 @@ function BuildMailPlan()
 	return list
 end
 
--- vooruit (MailStart)
+local MailStart -- vooruit
 -- Staat bovenaan een groep die zonder vraag mag? Dan meteen versturen.
-function MailAutoNext()
-	if mail.busy or mail.step or not mailPanel or not mailPanel:IsShown() then return end
+function ns.MailAutoNext()
+	if ns.mail.busy or ns.mail.step or not ns.mailPanel or not ns.mailPanel:IsShown() then return end
 	local plan = BuildMailPlan()
 	if plan[1] and plan[1].auto then
 		Log("mail: " .. plan[1].cat .. " sent without asking")
@@ -58,29 +57,28 @@ function MailAutoNext()
 	end
 end
 
--- vooruit (UpdateMailPanel)
 
-function MailStop(msg)
-	mail.busy = false
-	mail.current = nil
+function ns.MailStop(msg)
+	ns.mail.busy = false
+	ns.mail.current = nil
 	if msg then Print(msg); Log("mail: " .. msg) end
-	UpdateMailPanel()
+	ns.UpdateMailPanel()
 end
 
 -- Volgende mail inpakken (max 12 items).
-function MailPack()
-	local p = mail.queue and mail.queue[1]
+function ns.MailPack()
+	local p = ns.mail.queue and ns.mail.queue[1]
 	while p and #p.items == 0 do
-		table.remove(mail.queue, 1)
-		p = mail.queue[1]
+		table.remove(ns.mail.queue, 1)
+		p = ns.mail.queue[1]
 	end
 	if not p then
-		local done = mail.cat
-		mail.cat = nil
-		if #BuildMailPlan() == 0 then MailStop(T("all mail has been sent."))
+		local done = ns.mail.cat
+		ns.mail.cat = nil
+		if #BuildMailPlan() == 0 then ns.MailStop(T("all mail has been sent."))
 		else
-			MailStop(T("%s sent."):format(done or ""))
-			C_Timer.After(0.6, MailAutoNext) -- volgende groep zonder vraag?
+			ns.MailStop(T("%s sent."):format(done or ""))
+			C_Timer.After(0.6, ns.MailAutoNext) -- volgende groep zonder vraag?
 		end
 		return false
 	end
@@ -98,16 +96,16 @@ function MailPack()
 			n = n + 1
 		end
 	end
-	if n == 0 then return MailPack() end
-	mail.current = { to = p.to, n = n }
+	if n == 0 then return ns.MailPack() end
+	ns.mail.current = { to = p.to, n = n }
 	if SendMailNameEditBox then SendMailNameEditBox:SetText(p.to) end
 	return true
 end
 
-function MailSend()
-	local c = mail.current
+function ns.MailSend()
+	local c = ns.mail.current
 	if not c then return end
-	mail.waiting = true
+	ns.mail.waiting = true
 	Log("mail to '" .. c.to .. "': " .. c.n .. " item(s)")
 	-- Geen tekst in de mail: dan verdwijnt hij vanzelf zodra je de bijlagen eruit haalt
 	-- (een mail met tekst blijft staan als "brief").
@@ -116,44 +114,44 @@ end
 
 -- Verstuurt alleen de categorie waar nu de vraag over staat.
 MailStart = function()
-	if mail.busy then return end
+	if ns.mail.busy then return end
 	local plan = BuildMailPlan()
 	if #plan == 0 then Print(T("nothing to send.")); return end
-	mail.queue = { plan[1] }
-	mail.cat = plan[1].cat
-	mail.busy = true
-	if MailPack() then
-		if mail.step then
-			UpdateMailPanel()
+	ns.mail.queue = { plan[1] }
+	ns.mail.cat = plan[1].cat
+	ns.mail.busy = true
+	if ns.MailPack() then
+		if ns.mail.step then
+			ns.UpdateMailPanel()
 		else
-			C_Timer.After(0.4, function() if mail.busy then MailSend() end end)
+			C_Timer.After(0.4, function() if ns.mail.busy then ns.MailSend() end end)
 		end
 	end
-	UpdateMailPanel()
+	ns.UpdateMailPanel()
 end
 
-function MailButtonClick()
-	if mail.busy and mail.step then
+local function MailButtonClick()
+	if ns.mail.busy and ns.mail.step then
 		-- Stapmodus: elke klik doet één stap (inpakken of versturen).
-		if mail.current and not mail.waiting then MailSend()
-		elseif not mail.current then MailPack() end
-		UpdateMailPanel()
+		if ns.mail.current and not ns.mail.waiting then ns.MailSend()
+		elseif not ns.mail.current then ns.MailPack() end
+		ns.UpdateMailPanel()
 		return
 	end
-	if mail.busy then MailStop(T("stopped.")) return end
+	if ns.mail.busy then ns.MailStop(T("stopped.")) return end
 	MailStart()
 end
 
-function MailSkip()
-	if mail.busy then return end
+local function MailSkip()
+	if ns.mail.busy then return end
 	local plan = BuildMailPlan()
-	if plan[1] then mail.skipped[plan[1].key] = true end
-	UpdateMailPanel()
+	if plan[1] then ns.mail.skipped[plan[1].key] = true end
+	ns.UpdateMailPanel()
 end
 
-UpdateMailPanel = function()
-	if not mailPanel or not mailPanel:IsShown() then return end
-	local plan = mail.busy and mail.queue or BuildMailPlan()
+ns.UpdateMailPanel = function()
+	if not ns.mailPanel or not ns.mailPanel:IsShown() then return end
+	local plan = ns.mail.busy and ns.mail.queue or BuildMailPlan()
 	local lines = {}
 	local p = plan[1]
 	local any = p ~= nil and #p.items > 0
@@ -166,48 +164,48 @@ UpdateMailPanel = function()
 			lines[#lines + 1] = "  " .. it.name .. (it.count > 1 and (" x" .. it.count) or "")
 		end
 		if #p.items > 8 then lines[#lines + 1] = "  |cff888888+" .. (#p.items - 8) .. " " .. T("more") .. "|r" end
-		if not mail.busy and #plan > 1 then
+		if not ns.mail.busy and #plan > 1 then
 			local nxt = {}
 			for i = 2, #plan do nxt[#nxt + 1] = plan[i].cat end
 			lines[#lines + 1] = " "
 			lines[#lines + 1] = "|cff888888" .. T("After that: %s"):format(table.concat(nxt, ", ")) .. "|r"
 		end
 	end
-	if not any and not mail.busy then lines[1] = "|cff888888" .. T("Nothing to send.") .. "|r" end
-	if mail.busy then
+	if not any and not ns.mail.busy then lines[1] = "|cff888888" .. T("Nothing to send.") .. "|r" end
+	if ns.mail.busy then
 		lines[#lines + 1] = " "
-		lines[#lines + 1] = "|cff33ff99" .. (mail.current and T("Busy: mail to %s..."):format(mail.current.to) or T("Busy...")) .. "|r"
+		lines[#lines + 1] = "|cff33ff99" .. (ns.mail.current and T("Busy: mail to %s..."):format(ns.mail.current.to) or T("Busy...")) .. "|r"
 	end
-	mailPanel.text:SetText(table.concat(lines, "\n"))
-	if mail.busy and mail.step then
-		mailPanel.send:SetText(mail.current and T("Send this mail") or T("Pack next mail"))
-	elseif mail.busy then
-		mailPanel.send:SetText("Stop")
+	ns.mailPanel.text:SetText(table.concat(lines, "\n"))
+	if ns.mail.busy and ns.mail.step then
+		ns.mailPanel.send:SetText(ns.mail.current and T("Send this mail") or T("Pack next mail"))
+	elseif ns.mail.busy then
+		ns.mailPanel.send:SetText("Stop")
 	else
-		mailPanel.send:SetText(T("Yes, send"))
+		ns.mailPanel.send:SetText(T("Yes, send"))
 	end
-	mailPanel.send:SetEnabled(any or mail.busy)
-	mailPanel.skip:SetShown(any and not mail.busy)
-	mailPanel:SetHeight(math.max(120, mailPanel.text:GetStringHeight() + 80))
+	ns.mailPanel.send:SetEnabled(any or ns.mail.busy)
+	ns.mailPanel.skip:SetShown(any and not ns.mail.busy)
+	ns.mailPanel:SetHeight(math.max(120, ns.mailPanel.text:GetStringHeight() + 80))
 end
 
-function BuildMailPanel()
+function ns.BuildMailPanel()
 	if not MailFrame then return end
-	mailPanel = NewWindow("CarefreeBagMailPanel", T("CarefreeBag mail"), 260, 160)
-	mailPanel:SetParent(MailFrame)
-	mailPanel:ClearAllPoints()
-	mailPanel:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 4, 0)
-	mailPanel:SetMovable(false)
-	mailPanel.text = mailPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	mailPanel.text:SetPoint("TOPLEFT", mailPanel, "TOPLEFT", PAD, -30)
-	mailPanel.text:SetWidth(260 - 2 * PAD)
-	mailPanel.text:SetJustifyH("LEFT")
-	mailPanel.send = MakeButton(mailPanel, T("Yes, send"), 110)
-	mailPanel.send:SetPoint("BOTTOMLEFT", mailPanel, "BOTTOMLEFT", PAD, 16)
-	mailPanel.send:SetScript("OnClick", MailButtonClick)
-	mailPanel.skip = MakeButton(mailPanel, T("Skip"), 110)
-	mailPanel.skip:SetPoint("BOTTOMRIGHT", mailPanel, "BOTTOMRIGHT", -PAD, 16)
-	mailPanel.skip:SetScript("OnClick", MailSkip)
+	ns.mailPanel = NewWindow("CarefreeBagMailPanel", T("CarefreeBag mail"), 260, 160)
+	ns.mailPanel:SetParent(MailFrame)
+	ns.mailPanel:ClearAllPoints()
+	ns.mailPanel:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 4, 0)
+	ns.mailPanel:SetMovable(false)
+	ns.mailPanel.text = ns.mailPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	ns.mailPanel.text:SetPoint("TOPLEFT", ns.mailPanel, "TOPLEFT", ns.PAD, -30)
+	ns.mailPanel.text:SetWidth(260 - 2 * ns.PAD)
+	ns.mailPanel.text:SetJustifyH("LEFT")
+	ns.mailPanel.send = MakeButton(ns.mailPanel, T("Yes, send"), 110)
+	ns.mailPanel.send:SetPoint("BOTTOMLEFT", ns.mailPanel, "BOTTOMLEFT", ns.PAD, 16)
+	ns.mailPanel.send:SetScript("OnClick", MailButtonClick)
+	ns.mailPanel.skip = MakeButton(ns.mailPanel, T("Skip"), 110)
+	ns.mailPanel.skip:SetPoint("BOTTOMRIGHT", ns.mailPanel, "BOTTOMRIGHT", -ns.PAD, 16)
+	ns.mailPanel.skip:SetScript("OnClick", MailSkip)
 
-	mailPanel:SetScript("OnShow", function() UpdateMailPanel() end)
+	ns.mailPanel:SetScript("OnShow", function() ns.UpdateMailPanel() end)
 end
