@@ -10,7 +10,7 @@
 
 local ADDON, ns = ...
 ns = ns or {}
-local VERSION = "1.2.3"
+local VERSION = "1.3.0"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -315,6 +315,7 @@ end
 -- Wat jij versleept onthoudt CarefreeBag per karakter. Van voor 1.1.0 was dat
 -- één lijst voor het hele account (DB.assign); elk karakter begint met een kopie daarvan.
 local charKey
+local catsNamed
 local function CharEntry()
 	if not charKey then
 		local name = UnitName and UnitName("player")
@@ -333,8 +334,30 @@ local function CharEntry()
 	end
 	ch.seen = ch.seen or {}
 	ch.manual = ch.manual or {}
+	-- Groepen gelden per karakter (sinds 1.3.0). Elk karakter begint met een kopie
+	-- van de oude accountlijst; daarna past elk karakter zijn eigen lijst aan.
+	if not ch.cats then
+		ch.cats = {}
+		for i, c in ipairs(DB.cats or {}) do
+			local n = {}
+			for k, v in pairs(c) do n[k] = v end
+			ch.cats[i] = n
+		end
+		local function copy(t) local n = {}; for k, v in pairs(t or {}) do n[k] = v end; return n end
+		ch.order = ch.order or copy(DB.order)
+		ch.sort = ch.sort or copy(DB.sort)
+		ch.collapsed = ch.collapsed or copy(DB.collapsed)
+	end
+	if not catsNamed then -- kant-en-klare groepen krijgen hun vaste naam in jouw taal
+		catsNamed = true
+		for _, c in ipairs(ch.cats) do
+			if c.preset and PRESET[c.preset] then c.name = T(PRESET[c.preset].name) else c.preset = nil end
+		end
+	end
 	return ch
 end
+-- De instellingen van dit karakter (groepen, volgorde, sortering, ingeklapt).
+local function CS() return CharEntry() or DB end
 local function Assign()
 	local ch = CharEntry()
 	return ch and ch.assign or (DB.assign or {})
@@ -353,7 +376,7 @@ local function LearnedCount(key)
 end
 
 local function CatByKey(key)
-	for i, c in ipairs(DB.cats) do
+	for i, c in ipairs(CS().cats) do
 		if c.key == key then return c, i end
 	end
 end
@@ -511,7 +534,7 @@ local function SectionOf(e)
 	if On("grey") and DB.greyAuto and e.quality == 0 then return "grey" end
 	if On("boe") and IsBoE(e) then return "boe" end
 	local best, bestKey
-	for _, c in ipairs(DB.cats) do
+	for _, c in ipairs(CS().cats) do
 		local p = c.preset and PRESET[c.preset]
 		if p and (not best or p.rank < best.rank) and p.match(e) then best, bestKey = p, c.key end
 	end
@@ -628,8 +651,8 @@ local SORT_TIP = {
 	manual = "Your own order: drag items onto each other.",
 }
 local function SortMode(sec)
-	DB.sort = DB.sort or {}
-	local m = DB.sort[sec.key]
+	CS().sort = CS().sort or {}
+	local m = CS().sort[sec.key]
 	if m and SORT_NAME[m] then return m end
 	return sec.byValue and "value" or "newest"
 end
@@ -671,9 +694,9 @@ local function Reorder(b)
 		if from < to then to = to - 1 end
 		table.insert(list, to, id)
 	end
-	DB.sort = DB.sort or {}
-	if DB.sort[key] ~= "manual" then
-		DB.sort[key] = "manual"
+	CS().sort = CS().sort or {}
+	if CS().sort[key] ~= "manual" then
+		CS().sort[key] = "manual"
 		Print(T("Sorting set to manual for this group."))
 	end
 	CharData().manual[key] = list
@@ -870,8 +893,8 @@ local function OpenSortMenu(anchor, sec)
 			b:SetPoint("TOP", sortMenu, "TOP", 0, -4 - (i - 1) * 22)
 			b.mode = m
 			b:SetScript("OnClick", function(self)
-				DB.sort = DB.sort or {}
-				DB.sort[sortMenu.sec.key] = self.mode
+				CS().sort = CS().sort or {}
+				CS().sort[sortMenu.sec.key] = self.mode
 				Log("sort " .. sortMenu.sec.key .. ": " .. self.mode)
 				sortMenu:Hide()
 				ResetOrder(); Refresh()
@@ -910,8 +933,8 @@ local function GetHeader()
 		h.toggle:SetPoint("LEFT", h, "LEFT", 0, 0)
 		h.toggle:SetScript("OnClick", function()
 			if not h.key then return end
-			DB.collapsed = DB.collapsed or {}
-			DB.collapsed[h.key] = not DB.collapsed[h.key] or nil
+			CS().collapsed = CS().collapsed or {}
+			CS().collapsed[h.key] = not CS().collapsed[h.key] or nil
 			keepHeader = { key = h.key, top = h:GetTop() } -- het minnetje blijft onder je muis
 			Refresh()
 		end)
@@ -1090,13 +1113,13 @@ local BLUE = "|cff66ccff"
 local FIXED = { quest = true, keys = true, boe = true, grey = true, other = true }
 
 local function FixOrder()
-	DB.order = DB.order or {}
+	CS().order = CS().order or {}
 	local seen, clean = {}, {}
-	for _, k in ipairs(DB.order) do
+	for _, k in ipairs(CS().order) do
 		if not seen[k] and (FIXED[k] or CatByKey(k)) then clean[#clean + 1] = k; seen[k] = true end
 	end
 	-- Ontbrekende eigen categorieën: na de laatste eigen categorie (of bovenaan).
-	for _, c in ipairs(DB.cats) do
+	for _, c in ipairs(CS().cats) do
 		if not seen[c.key] then
 			local pos = 0
 			for idx, k in ipairs(clean) do if not FIXED[k] then pos = idx end end
@@ -1107,7 +1130,7 @@ local function FixOrder()
 	for _, k in ipairs({ "quest", "keys", "boe", "grey", "other" }) do
 		if not seen[k] then clean[#clean + 1] = k end
 	end
-	DB.order = clean
+	CS().order = clean
 	return clean
 end
 
@@ -1282,8 +1305,8 @@ local function Layout()
 			frozen[sec.key] = order
 		end
 		local title = sec.title
-		DB.collapsed = DB.collapsed or {}
-		if DB.collapsed[sec.key] then
+		CS().collapsed = CS().collapsed or {}
+		if CS().collapsed[sec.key] then
 			full[#full + 1] = { sec = sec, cells = {}, title = title, collapsed = true, n = #groups }
 		-- Ook een groep met alleen nog gaten blijft staan tot je de tassen sluit.
 		elseif #cells > 0 then
@@ -2230,7 +2253,7 @@ local function BuildConfig()
 	config.catTop = y
 
 	local function MoveKey(idx, dir)
-		local o = DB.order
+		local o = CS().order
 		local j2 = idx + dir
 		if j2 < 1 or j2 > #o then return end
 		o[idx], o[j2] = o[j2], o[idx]
@@ -2348,7 +2371,7 @@ local function BuildConfig()
 		r.del:SetScript("OnClick", function()
 			local c, idx = CatByKey(r.key)
 			if c then
-				table.remove(DB.cats, idx)
+				table.remove(CS().cats, idx)
 				for _, ch in pairs(DB.chars) do
 					for id, k in pairs(ch.assign) do if k == c.key then ch.assign[id] = nil end end
 				end
@@ -2371,7 +2394,7 @@ local function BuildConfig()
 		local list = {}
 		for _, p in ipairs(PRESETS) do
 			local used = false
-			for _, c in ipairs(DB.cats) do if c.preset == p.id then used = true end end
+			for _, c in ipairs(CS().cats) do if c.preset == p.id then used = true end end
 			if not used then list[#list + 1] = p end
 		end
 		return list
@@ -2385,18 +2408,18 @@ local function BuildConfig()
 	local function AddPreset(id)
 		local p = PRESET[id]
 		if not p then return end
-		if #DB.cats >= 12 then Print(T("at most 12 categories.")); return end
+		if #CS().cats >= 12 then Print(T("at most 12 categories.")); return end
 		local key = p.id
 		if CatByKey(key) then key = NewCatKey("p" .. p.id) end
-		DB.cats[#DB.cats + 1] = { key = key, preset = p.id, name = T(p.name) }
+		CS().cats[#CS().cats + 1] = { key = key, preset = p.id, name = T(p.name) }
 		Log("preset added: " .. p.id)
 		ResetOrder(); Refresh(); RefreshConfig()
 	end
 	local function add()
-		if #DB.cats >= 12 then Print(T("at most 12 categories.")); return end
+		if #CS().cats >= 12 then Print(T("at most 12 categories.")); return end
 		local name = Trim(config.newEdit:GetText())
 		if name == "" then config.newEdit:SetFocus(); return end
-		DB.cats[#DB.cats + 1] = { key = NewCatKey(name), name = name }
+		CS().cats[#CS().cats + 1] = { key = NewCatKey(name), name = name }
 		config.newEdit:SetText("")
 		config.newEdit:ClearFocus()
 		config.choice = nil

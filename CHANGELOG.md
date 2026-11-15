@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.3.0
+- Groups are now per character: each character has its own groups, order, sorting and mail settings. Existing characters start with the groups you had.
+
 ## 1.2.3
 - With Auctionator, the item tooltip keeps showing what the stack earns on the AH after the 5% cut, and whether the AH or the vendor pays more.
 - The version number in game is correct again (no more "vv1.2.2").
