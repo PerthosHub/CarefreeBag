@@ -529,7 +529,8 @@ ns.RefreshConfig = function()
 				r.mailAuto:SetChecked(MailAuto(key))
 				r.mailAuto:SetEnabled(not ns.DB.mailAlwaysAuto) -- staat "altijd" aan: vinkje per groep doet niets
 			end
-			r.keep:SetShown(key ~= "quest" and key ~= "keys") -- die worden toch nooit weggegooid
+			-- Quest/Keys worden toch nooit weggegooid; Auto Sell is er juist om weg te doen
+			r.keep:SetShown(key ~= "quest" and key ~= "keys" and key ~= "grey")
 			r.keep:SetChecked(ns.KeptGroups()[key] and true or false)
 			r.up:SetEnabled(i > 1)
 			r.down:SetEnabled(i < #order)

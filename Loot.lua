@@ -55,7 +55,7 @@ local function Cheapest(items)
 	for _, e in ipairs(items) do
 		local sec = SectionOf(e)
 		if not e.key and not e.info.isLocked and not e.info.hasNoValue and not NEVER[sec]
-			and not keep[e.itemID] and not keepGroups[sec] then
+			and not keep[e.itemID] and not (keepGroups[sec] and sec ~= "grey") then
 			local each, ah = Each(e.link, e.price)
 			if each > 0 then
 				local v = each * e.count
@@ -269,6 +269,7 @@ local function ShowOffer(lootItem, junk)
 	local e = junk.e
 	FillRow(panel.junkRow, e.link, e.info.iconFileID, e.count, junk.value, junk.ah, false)
 	panel.junkRow.label:SetText(T("Cheapest in your bags") .. " |cffaaaaaa(" .. GroupName(junk.sec) .. ")|r")
+	panel.keepGroup:SetShown(junk.sec ~= "grey") -- Auto Sell is er juist om weg te doen
 	if lootItem.quest then
 		panel.verdict:SetText("|cff40ff40" .. T("The loot is a quest item.") .. "|r")
 	elseif lootItem.value > junk.value then

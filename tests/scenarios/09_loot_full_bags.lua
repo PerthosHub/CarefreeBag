@@ -98,10 +98,12 @@ check(P:IsShown(), "foutmelding 'tassen vol' opent het paneel")
 
 -- 9. "Keep this item": Torn Wing nooit meer, meteen het volgende goedkoopste item
 check(P.offer.junk.e.itemID == 8001 and P.junkRow.label.text:find("Auto Sell"), "groepsnaam bij het goedkoopste item (Auto Sell)")
+check(not P.keepGroup:IsShown(), "Auto Sell: geen knop 'Keep this group'")
 P.keepItem:Fire("OnClick"); RunTimers()
 check(CFC().keep[8001] == true, "Torn Wing onthouden als 'houden' (per karakter)")
 check(P:IsShown() and P.offer.junk.e.itemID == 2589, "volgende goedkoopste: Linen Cloth")
 local linenSec = P.offer.junk.sec
+check(P.keepGroup:IsShown(), "andere groep: knop 'Keep this group' weer zichtbaar")
 -- 10. "Keep this group": niets uit de groep van het linnen, dan de ring
 P.keepGroup:Fire("OnClick"); RunTimers()
 check(CFC().keepGroups[linenSec] == true, "groep '" .. tostring(linenSec) .. "' onthouden als 'houden'")
