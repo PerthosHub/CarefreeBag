@@ -36,6 +36,7 @@ local NS = {}
 LoadAddon(NS)
 local function E(ev, ...) DRIVER:Fire("OnEvent", ev, ...) ; RunTimers() end
 E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); RunTimers()
+CFC().assign[2589] = CFC().cats[1].key -- linnen in een eigen groep (Consumables), niet in Other
 
 -- 1. Ring (500c) en 2 linnen passen niet: ring is het meest waard
 LOOT = { { id = 2589, qty = 2 }, { id = 9000, qty = 1 } }
@@ -104,6 +105,9 @@ check(CFC().keep[8001] == true, "Torn Wing onthouden als 'houden' (per karakter)
 check(P:IsShown() and P.offer.junk.e.itemID == 2589, "volgende goedkoopste: Linen Cloth")
 local linenSec = P.offer.junk.sec
 check(P.keepGroup:IsShown(), "andere groep: knop 'Keep this group' weer zichtbaar")
+CFC().assign[2589] = nil; E("BAG_UPDATE_DELAYED"); RunTimers()
+check(P.offer.junk.sec == "other" and not P.keepGroup:IsShown(), "Other: geen knop voor de hele groep")
+CFC().assign[2589] = CFC().cats[1].key; E("BAG_UPDATE_DELAYED"); RunTimers()
 -- 10. "Keep this group": niets uit de groep van het linnen, dan de ring
 P.keepGroup:Fire("OnClick"); RunTimers()
 check(CFC().keepGroups[linenSec] == true, "groep '" .. tostring(linenSec) .. "' onthouden als 'houden'")
