@@ -77,7 +77,9 @@ function ns.MailPack()
 	if not p then
 		local done = ns.mail.cat
 		ns.mail.cat = nil
-		if #BuildMailPlan() == 0 then ns.MailStop(T("all mail has been sent."))
+		if #BuildMailPlan() == 0 then
+			ns.MailStop(T("all mail has been sent."))
+			ns.MailFinish() -- verslag laten staan en de mailbox sluiten
 		else
 			ns.MailStop(T("%s sent."):format(done or ""))
 			C_Timer.After(0.6, ns.MailAutoNext) -- volgende groep zonder vraag?
@@ -88,6 +90,7 @@ function ns.MailPack()
 	ClearCursor()
 	local n = 0
 	local max = ATTACHMENTS_MAX_SEND or 12
+	local packed = {}
 	while #p.items > 0 and n < max do
 		local it = table.remove(p.items, 1)
 		local info = C_Container.GetContainerItemInfo(it.bag, it.slot)
@@ -96,10 +99,11 @@ function ns.MailPack()
 			ClickSendMailItemButton()
 			ClearCursor()
 			n = n + 1
+			packed[#packed + 1] = { name = it.name, count = it.count }
 		end
 	end
 	if n == 0 then return ns.MailPack() end
-	ns.mail.current = { to = p.to, n = n }
+	ns.mail.current = { to = p.to, n = n, cat = p.cat, items = packed }
 	if SendMailNameEditBox then SendMailNameEditBox:SetText(p.to) end
 	return true
 end
@@ -138,7 +142,126 @@ local function AskingFirstTime(plan)
 	return ns.DB.mailAlwaysAuto == nil and not ns.mail.busy and plan[1] ~= nil and not plan[1].auto
 end
 
+---------------------------------------------------------------------------
+-- Verslag na het versturen: de mailbox gaat dicht, het paneel blijft nog
+-- 5 seconden staan met wat er verstuurd is. De knop telt af en sluit het ook.
+---------------------------------------------------------------------------
+
+local REPORT_SECONDS = 5
+
+-- Na elke gelukte mail: onthouden wat er naar wie ging (dit mailboxbezoek).
+function ns.MailSent(c)
+	if not c then return end
+	ns.mail.report = ns.mail.report or {}
+	local r
+	for _, x in ipairs(ns.mail.report) do if x.cat == c.cat and x.to == c.to then r = x end end
+	if not r then
+		r = { cat = c.cat or "?", to = c.to, items = {} }
+		table.insert(ns.mail.report, r)
+	end
+	for _, it in ipairs(c.items or {}) do r.items[#r.items + 1] = it end
+end
+
+-- Paneel weer aan de mailbox vastmaken (voor het volgende bezoek).
+local function Reattach()
+	local p = ns.mailPanel
+	if not p or not MailFrame then return end
+	p:SetParent(MailFrame)
+	p:ClearAllPoints()
+	p:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 4, 0)
+end
+
+function ns.MailReportClose()
+	local p = ns.mailPanel
+	if not p or not p.reporting then return end
+	p.reporting, p.reportToken = false, nil
+	ns.mail.report = nil
+	if p.boxOpen and p:IsShown() and MailFrame and MailFrame:IsShown() then
+		-- Mailbox bleef open (post in de inbox): paneel blijft, gewoon weer de normale weergave.
+		p.boxOpen = nil
+		ns.UpdateMailPanel()
+		return
+	end
+	p.boxOpen = nil
+	p:Hide()
+	Reattach()
+end
+
+-- Is er post met iets erin (items of goud) om op te halen? Lege brieven tellen niet.
+local function InboxHasLoot()
+	if not GetInboxNumItems then return false end
+	local okN, n = pcall(GetInboxNumItems)
+	n = okN and tonumber(n) or 0
+	for i = 1, n do
+		local okH, _, _, _, _, money, _, _, hasItem = pcall(GetInboxHeaderInfo, i)
+		if not okH then return n > 0 end -- onbekend: voorzichtig, mailbox open laten
+		if (money or 0) > 0 or (hasItem and hasItem ~= 0) then return true end
+	end
+	return false
+end
+
+local function ReportTick(token, left)
+	local p = ns.mailPanel
+	if not p or p.reportToken ~= token then return end -- al gesloten of opnieuw begonnen
+	if left <= 0 then ns.MailReportClose(); return end
+	p.send:SetText(T("Close (%d)"):format(left))
+	C_Timer.After(1, function() ReportTick(token, left - 1) end)
+end
+
+-- Alles is verstuurd: verslag tonen, mailbox dicht, aftellen.
+function ns.MailFinish()
+	local p = ns.mailPanel
+	local report = ns.mail.report
+	if not p or not report or #report == 0 then return end
+	local lines = { "|cff33ff99" .. T("Sent:") .. "|r", " " }
+	local shown, more = 0, 0
+	for _, r in ipairs(report) do
+		lines[#lines + 1] = "|cffffd100" .. r.cat .. "|r > |cff66ccff" .. r.to .. "|r"
+		for _, it in ipairs(r.items) do
+			if shown < 10 then
+				lines[#lines + 1] = "  " .. (it.name or "?") .. ((it.count or 1) > 1 and (" x" .. it.count) or "")
+				shown = shown + 1
+			else
+				more = more + 1
+			end
+		end
+	end
+	if more > 0 then lines[#lines + 1] = "  |cff888888+" .. more .. " " .. T("more") .. "|r" end
+	-- Post met items of goud in je inbox (bijv. van het AH)? Dan blijft de mailbox open om die op te halen.
+	local closeBox = not InboxHasLoot()
+	if closeBox then
+		-- Los van de mailbox, op dezelfde plek op het scherm, zodat het blijft staan.
+		-- GetLeft/GetTop zijn in de schaal van het paneel: omrekenen naar die van UIParent.
+		local x, y = p:GetLeft(), p:GetTop()
+		local k = 1
+		local s1, s2 = p:GetEffectiveScale(), UIParent:GetEffectiveScale()
+		if s1 and s2 and s2 > 0 then k = s1 / s2 end
+		p:SetParent(UIParent)
+		p:ClearAllPoints()
+		if x and y then p:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x * k, y * k)
+		else p:SetPoint("CENTER", UIParent, "CENTER", 0, 0) end
+	end
+	p.boxOpen = not closeBox
+	p.reporting = true
+	p.reportToken = {}
+	p.text:SetText(table.concat(lines, "\n"))
+	p.skip:Hide()
+	p.send:SetEnabled(true)
+	p:SetHeight(math.max(120, p.text:GetStringHeight() + 80))
+	p:Show()
+	if closeBox then
+		Log("mail: report shown, mailbox closed")
+		-- Het venster sluiten (dat beëindigt ook het gesprek met de mailbox); lukt dat niet, dan CloseMail.
+		if HideUIPanel and MailFrame then pcall(HideUIPanel, MailFrame) end
+		if MailFrame and MailFrame:IsShown() and CloseMail then pcall(CloseMail) end
+	else
+		Log("mail: report shown, mailbox stays open (mail to pick up)")
+	end
+	ReportTick(p.reportToken, REPORT_SECONDS)
+end
+
 local function MailButtonClick()
+	if ns.mailPanel and ns.mailPanel.reporting then ns.MailReportClose(); return end
 	if AskingFirstTime(BuildMailPlan()) then
 		ns.DB.mailAlwaysAuto = true
 		Log("mail: always without asking (first mailbox)")
@@ -173,7 +296,7 @@ local function MailSkip()
 end
 
 ns.UpdateMailPanel = function()
-	if not ns.mailPanel or not ns.mailPanel:IsShown() then return end
+	if not ns.mailPanel or not ns.mailPanel:IsShown() or ns.mailPanel.reporting then return end
 	local plan = ns.mail.busy and ns.mail.queue or BuildMailPlan()
 	if AskingFirstTime(plan) then
 		local to = {}
@@ -244,4 +367,6 @@ function ns.BuildMailPanel()
 	ns.mailPanel.skip:SetScript("OnClick", MailSkip)
 
 	ns.mailPanel:SetScript("OnShow", function() ns.UpdateMailPanel() end)
+	-- Kruisje tijdens het verslag: netjes afsluiten en weer aan de mailbox vastmaken.
+	ns.mailPanel:HookScript("OnHide", function(self) if self.reporting then ns.MailReportClose() end end)
 end

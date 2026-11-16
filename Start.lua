@@ -85,6 +85,8 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 	elseif event == "MAIL_SHOW" then
 		ns.mail.step = false -- nieuw bezoek: eerst weer automatisch proberen
 		ns.mail.skipped = {}  -- en alle categorieën worden weer gevraagd
+		ns.MailReportClose()  -- oud verslag nog in beeld: weg, paneel weer aan de mailbox
+		ns.mail.report = nil
 		if not ns.DB.enabled then return end
 		if not ns.mailPanel then Try("mail", BuildMailPanel) end
 		if ns.mailPanel then ns.mailPanel:Show(); ns.UpdateMailPanel() end
@@ -92,11 +94,13 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		C_Timer.After(0.5, MailAutoNext)
 	elseif event == "MAIL_CLOSED" then
 		if ns.mail.busy then MailStop(T("mailbox closed, stopped.")) end
-		if ns.mailPanel then ns.mailPanel:Hide() end
+		-- Tijdens het verslag blijft het paneel staan (het telt zelf af).
+		if ns.mailPanel and not ns.mailPanel.reporting then ns.mailPanel:Hide() end
 		ns.Refresh()
 	elseif event == "MAIL_SEND_SUCCESS" then
 		if ns.mail.busy and ns.mail.waiting then
 			ns.mail.waiting = false
+			ns.MailSent(ns.mail.current)
 			ns.mail.current = nil
 			if ns.mail.step then
 				ns.UpdateMailPanel()
@@ -131,6 +135,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 	else
 		-- Tassen veranderd, vendor open/dicht, geld, iteminfo binnen.
 		ns.Refresh()
+		if event == "PLAYER_MONEY" then ScheduleSnap() end -- goud onthouden voor het bankpaneel
 		if event == "BAG_UPDATE_DELAYED" then
 			ScheduleRestack()
 			ScheduleSnap()

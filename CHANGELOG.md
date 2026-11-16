@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0 (not released yet)
+- Bank & alts panel: see the gold of the character you look at and of all your characters together (bottom of the panel). Hover a character's icon to see its gold. A character's gold shows up after you log in with it once.
+- Mail: when everything is sent (by itself or after you said yes), the mailbox closes (not when there is mail in your inbox to pick up). The CarefreeBag window stays for 5 seconds and shows what was sent to whom. The button counts down ("Close (5)"); click it to close the window right away.
+- Options and the Bank & alts panel can sit on the right of your bags too: click the arrow at the top, on the side of your bags. Each character remembers its own side.
+
 ## 1.6.1
 - Drag something you are wearing (or an item from the bank) to your bags: drop it on a group's "+", on an item, on the window or on the fill bar, and it goes into a free slot. On a "+" it also joins that group. Before, it went back to your character. Bags full: you get the usual "Inventory is full" message.
 

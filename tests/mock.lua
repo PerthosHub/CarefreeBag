@@ -36,6 +36,9 @@ function Methods:GetStringHeight() local n = 1; for _ in tostring(self.text):gma
 function Methods:SetChecked(v) self.checked = v end
 function Methods:GetChecked() return self.checked end
 function Methods:GetPoint() return "CENTER", nil, "CENTER", 0, 0 end
+-- ankerpunten onthouden, zodat tests kunnen zien waar een venster vastzit
+function Methods:SetPoint(...) self.points = self.points or {}; self.points[#self.points + 1] = { ... } end
+function Methods:ClearAllPoints() self.points = {} end
 function Methods:GetName() return self.name end
 function Methods:SetID(i) self.id = i end
 function Methods:GetID() return self.id end

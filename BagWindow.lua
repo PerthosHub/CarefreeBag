@@ -73,6 +73,65 @@ function ns.Tooltip(frame, title, ...)
 end
 
 ---------------------------------------------------------------------------
+-- Optievenster en bankpaneel zitten vast naast de tassen: links (standaard)
+-- of rechts, per karakter. Een pijltje aan de kant van de tassen wisselt.
+---------------------------------------------------------------------------
+
+local sidePanels = {}
+
+function ns.PanelSide()
+	local ch = CharEntry()
+	return (ch and ch.panelSide == "right") and "right" or "left"
+end
+
+local function PlaceSideArrow(f)
+	local a = f.sideArrow
+	if not a then return end
+	local right = ns.PanelSide() == "right"
+	a:ClearAllPoints()
+	-- Aan de kant van de tassen, wijzend naar de tassen (en eroverheen). Valt het venster
+	-- half buiten beeld, dan zit het pijltje nog aan de kant die wel te zien is.
+	if right then a:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -7)
+	else a:SetPoint("TOPRIGHT", f, "TOPRIGHT", -38, -7) end -- naast het kruisje
+	local tex = right and "Interface\\Buttons\\UI-SpellbookIcon-PrevPage-" or "Interface\\Buttons\\UI-SpellbookIcon-NextPage-"
+	a:SetNormalTexture(tex .. "Up")
+	a:SetPushedTexture(tex .. "Down")
+	a:SetShown(f.docked ~= false)
+end
+
+-- Venster naast de tassen zetten, aan de gekozen kant.
+function ns.DockPanel(f)
+	f:ClearAllPoints()
+	if ns.PanelSide() == "right" then f:SetPoint("TOPLEFT", ns.main, "TOPRIGHT", 4, 0)
+	else f:SetPoint("TOPRIGHT", ns.main, "TOPLEFT", -4, 0) end
+	PlaceSideArrow(f)
+end
+
+function ns.AddSideArrow(f)
+	sidePanels[#sidePanels + 1] = f
+	local a = CreateFrame("Button", nil, f)
+	a:SetSize(24, 24)
+	a:SetFrameLevel(f:GetFrameLevel() + 10)
+	a:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+	a:SetScript("OnClick", function()
+		local ch = CharEntry()
+		if not ch then return end
+		ch.panelSide = (ns.PanelSide() == "right") and "left" or "right"
+		Log("panels on the " .. ch.panelSide .. " of the bags")
+		for _, p in ipairs(sidePanels) do if p.docked ~= false then ns.DockPanel(p) end end
+		if PlaySound and SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_TAB then pcall(PlaySound, SOUNDKIT.IG_CHARACTER_INFO_TAB) end
+	end)
+	a:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		GameTooltip:AddLine(T("Move to the other side of your bags"))
+		GameTooltip:Show()
+	end)
+	a:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	f.sideArrow = a
+	PlaceSideArrow(f)
+end
+
+---------------------------------------------------------------------------
 -- Hoofdvenster
 ---------------------------------------------------------------------------
 

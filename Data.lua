@@ -212,6 +212,9 @@ local function MySnap()
 	ch.snap.name = MyFullName()
 	local _, class = UnitClass and UnitClass("player")
 	ch.snap.class = class
+	-- goud van dit karakter, voor het bankpaneel (per karakter en alles samen)
+	local okM, m = pcall(GetMoney)
+	if okM and type(m) == "number" then ch.snap.money = m end
 	return ch.snap
 end
 

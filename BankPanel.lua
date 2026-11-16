@@ -17,6 +17,30 @@ local Hits, UpdatePortraits, ViewLayout -- verderop
 local PORT = 36 -- grootte van een karakterportret (knop met ronde rand)
 local PORT_W = PORT + 8 -- breedte van de portrettenrij links (plus de gouden streep)
 
+-- Goud als tekst met munt-icoontjes.
+local function Money(m)
+	m = math.floor(m or 0)
+	if GetMoneyString then
+		local ok, s = pcall(GetMoneyString, m, true)
+		if ok and s then return s end
+	end
+	if GetCoinTextureString then
+		local ok, s = pcall(GetCoinTextureString, m)
+		if ok and s then return s end
+	end
+	return tostring(m)
+end
+
+-- Goud van een karakter: van jezelf wat je nu hebt, van de rest wat er onthouden is.
+local function CharMoney(key)
+	if key == ns.charKey then
+		local ok, m = pcall(GetMoney)
+		if ok and type(m) == "number" then return m end
+	end
+	local ch = ns.DB.chars[key]
+	return ch and ch.snap and ch.snap.money
+end
+
 -- Karakters om uit te kiezen: jijzelf eerst, daarna de rest op naam.
 local function ViewChars()
 	local list = {}
@@ -178,6 +202,8 @@ local function Portrait(i)
 		local col = self.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[self.class]
 		GameTooltip:AddLine(c.name .. (c.key == ns.charKey and (" |cff33ff99" .. T("(you)") .. "|r") or ""),
 			col and col.r or 1, col and col.g or 1, col and col.b or 1)
+		local m = CharMoney(c.key)
+		if m then GameTooltip:AddLine(Money(m), 1, 1, 1) end
 		GameTooltip:Show()
 	end)
 	p:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -347,12 +373,22 @@ function ViewLayout()
 			y = y + 20
 		end
 	end
-	local maxH = math.max(200, (UIParent:GetHeight() or 800) - 200)
+	-- Onderaan: goud van het gekozen karakter en van al je karakters samen.
+	local total, mine = 0, CharMoney(choice.key)
+	for _, c in ipairs(ViewChars()) do total = total + (CharMoney(c.key) or 0) end
+	-- Twee regels, zodat lange namen of veel goud niet over de rand lopen.
+	local goldText = "|cffffd100" .. T("All characters: %s"):format("|r" .. Money(total))
+	if mine and not me then goldText = "|cffffd100" .. who .. ":|r " .. Money(mine) .. "\n" .. goldText
+	elseif mine then goldText = "|cffffd100" .. T("You: %s"):format("|r" .. Money(mine)) .. "\n" .. goldText end
+	viewer.gold:SetText(goldText)
+	viewer.goldText = goldText -- voor de tests
+	local GOLD_H = 34
+	local maxH = math.max(200, (UIParent:GetHeight() or 800) - 200 - GOLD_H)
 	local h = math.min(y, maxH)
 	viewer.content:SetSize(width, math.max(y, 1))
 	viewer.scroll:SetSize(width, math.max(h, 40))
 	viewer.scrollMax = math.max(0, y - h)
-	viewer:SetSize(width + ns.PAD * 2 + PORT_W, math.max(math.max(h, 40) + 76 + ns.PAD, portH + ns.PAD))
+	viewer:SetSize(width + ns.PAD * 2 + PORT_W, math.max(math.max(h, 40) + 76 + ns.PAD + GOLD_H, portH + ns.PAD + GOLD_H))
 end
 
 local function BuildViewer()
@@ -390,6 +426,9 @@ local function BuildViewer()
 	end
 	viewer.note = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	viewer.note:SetPoint("TOPLEFT", viewer, "TOPLEFT", left + 2, -56)
+	viewer.gold = viewer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	viewer.gold:SetPoint("BOTTOMLEFT", viewer, "BOTTOMLEFT", ns.PAD + 4, ns.PAD + 2)
+	viewer.gold:SetJustifyH("LEFT")
 	viewer.scroll = CreateFrame("ScrollFrame", nil, viewer)
 	viewer.scroll:SetPoint("TOPLEFT", viewer, "TOPLEFT", left, -76)
 	viewer.content = CreateFrame("Frame", nil, viewer.scroll)
@@ -405,9 +444,9 @@ local function BuildViewer()
 		-- zelf dichtgedaan tijdens het zoeken: niet meteen weer openen
 		if ns.searchText ~= "" then viewer.noAuto = true end
 	end)
-	-- Vast naast je tassen (links ervan), en dicht als je tassen dichtgaan.
-	viewer:ClearAllPoints()
-	viewer:SetPoint("TOPRIGHT", ns.main, "TOPLEFT", -4, 0)
+	-- Vast naast je tassen (links of rechts, pijltje wisselt), en dicht als je tassen dichtgaan.
+	ns.AddSideArrow(viewer)
+	ns.DockPanel(viewer)
 	ns.main:HookScript("OnHide", function() viewer:Hide(); viewer.noAuto = nil end)
 end
 
@@ -418,6 +457,7 @@ local function OpenViewer(key, part)
 	-- Opties en bankpaneel zitten op dezelfde plek: één tegelijk.
 	if ns.HideConfig then ns.HideConfig() end
 	viewer.key, viewer.part = key, part
+	ns.DockPanel(viewer) -- kant kan per karakter verschillen
 	if viewer:IsShown() then ViewLayout() else viewer:Show() end
 end
 

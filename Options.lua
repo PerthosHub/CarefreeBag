@@ -642,12 +642,14 @@ end
 -- anders los in het midden van het scherm.
 ns.PlaceConfig = function()
 	config:ClearAllPoints()
+	if not config.sideArrow then ns.AddSideArrow(config) end
 	if ns.DB.enabled and ns.main and ns.main:IsShown() then
 		config.docked = true
-		config:SetPoint("TOPRIGHT", ns.main, "TOPLEFT", -4, 0)
+		ns.DockPanel(config) -- links of rechts van de tassen (pijltje wisselt)
 	else
 		config.docked = false
 		config:SetPoint("CENTER", UIParent, "CENTER", -200, 40)
+		config.sideArrow:Hide()
 	end
 end
 
