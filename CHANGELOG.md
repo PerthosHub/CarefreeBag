@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.7.2 (not released yet)
+## 1.7.2
 - Bags full window: the options under the item now look like a normal WoW menu, with the item name and its group as headings.
 - Bags full window: never offers to destroy an item that is also in the loot (that loot would stack onto it). Example: a clam in the loot and clams in your bags.
 - Bags full window: the "worth more/less" line no longer breaks over two lines.
