@@ -176,12 +176,7 @@ function ns.MailReportClose()
 	if not p or not p.reporting then return end
 	p.reporting, p.reportToken = false, nil
 	ns.mail.report = nil
-	if p.boxOpen and p:IsShown() and MailFrame and MailFrame:IsShown() then
-		-- Mailbox bleef open (post in de inbox): paneel blijft, gewoon weer de normale weergave.
-		p.boxOpen = nil
-		ns.UpdateMailPanel()
-		return
-	end
+	-- Ook als de mailbox open bleef (post in de inbox): er valt niets meer te versturen, dus weg.
 	p.boxOpen = nil
 	p:Hide()
 	Reattach()
@@ -255,7 +250,9 @@ function ns.MailFinish()
 		if HideUIPanel and MailFrame then pcall(HideUIPanel, MailFrame) end
 		if MailFrame and MailFrame:IsShown() and CloseMail then pcall(CloseMail) end
 	else
-		Log("mail: report shown, mailbox stays open (mail to pick up)")
+		-- Post om op te halen: mailbox blijft open, en meteen naar de inbox (niet op "Send Mail" blijven staan).
+		Log("mail: report shown, mailbox stays open on the inbox (mail to pick up)")
+		if MailFrameTab_OnClick then pcall(MailFrameTab_OnClick, nil, 1) end
 	end
 	ReportTick(p.reportToken, REPORT_SECONDS)
 end

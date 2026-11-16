@@ -135,6 +135,31 @@ local function BestLoot(items, free)
 	return best
 end
 
+-- Waar de prijzen vandaan komen (voor de hover): geen Auctionator, nog geen AH-prijs,
+-- of een AH-prijs met wanneer Auctionator die zag.
+local function Age(days)
+	if not days then return T("unknown") end
+	if days <= 0 then return T("today") end
+	if days == 1 then return T("yesterday") end
+	return T("%d days ago"):format(days)
+end
+
+function ns.PriceLines(...)
+	local lines = { "|cff66ccffCarefreeBag:|r" }
+	for _, link in ipairs({ ... }) do
+		local kind, age = ns.AHInfo(link)
+		if kind == "none" then
+			lines[#lines + 1] = T("Auctionator is not installed: vendor prices are used.")
+			break
+		elseif kind == "noprice" then
+			lines[#lines + 1] = T("%s: no AH price in Auctionator yet, vendor price is used."):format(link)
+		else
+			lines[#lines + 1] = T("%s: AH price, last seen %s."):format(link, Age(age))
+		end
+	end
+	return lines
+end
+
 ---------------------------------------------------------------------------
 -- Het paneel naast het lootvenster
 ---------------------------------------------------------------------------
@@ -323,6 +348,11 @@ local function BuildPanel()
 		GameTooltip:ClearAllPoints()
 		GameTooltip:SetPoint("TOPLEFT", panel, "BOTTOMLEFT", 0, -2)
 		GameTooltip:SetHyperlink(self.link)
+		local o = panel.offer
+		if o then
+			GameTooltip:AddLine(" ")
+			for _, l in ipairs(ns.PriceLines(o.junk.e.link, o.loot.link)) do GameTooltip:AddLine(l, 0.8, 0.8, 0.8, true) end
+		end
 		GameTooltip:Show()
 	end)
 	r:SetScript("OnLeave", function() GameTooltip:Hide() end)

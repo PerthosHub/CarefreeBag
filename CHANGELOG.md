@@ -6,6 +6,8 @@
 - Hover the item in that window (arrow on the right) for the options: never destroy this item, skip it this time, never destroy anything from its group, or skip the group this time. "This time" lasts until you close the loot window.
 - The window moves to the left of the loot window when there is no room on the right.
 - Gold under your bags shows the silver again when it is 0 (1g 0s instead of 1g).
+- Hover the item in the Bags full window to see where the prices come from: Auctionator not installed, no AH price yet (vendor price used), or the AH price and when Auctionator last saw it.
+- Mail: when the mailbox stays open because there is mail to pick up, it switches to the inbox after sending, and the CarefreeBag window goes away after the countdown.
 
 ## 1.7.0
 - Bank & alts panel: see the gold of the character you look at and of all your characters together (bottom of the panel). Hover a character's icon to see its gold. A character's gold shows up after you log in with it once.

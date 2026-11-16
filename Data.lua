@@ -43,6 +43,20 @@ function ns.AHPrice(link)
 	return nil
 end
 
+-- Waar komt de prijs vandaan? "none" = geen Auctionator, "noprice" = Auctionator kent het
+-- item (nog) niet, "price" = wel een prijs; age = dagen sinds Auctionator het zag (of nil).
+function ns.AHInfo(link)
+	local api = Auctionator and Auctionator.API and Auctionator.API.v1
+	if not (api and api.GetAuctionPriceByItemLink) then return "none" end
+	if not ns.AHPrice(link) then return "noprice" end
+	local age
+	if api.GetAuctionAgeByItemLink then
+		local ok, a = pcall(api.GetAuctionAgeByItemLink, "CarefreeBag", link)
+		if ok and type(a) == "number" then age = a end
+	end
+	return "price", age
+end
+
 local AH_CUT = 0.05
 
 -- Onze regels onder de item-tooltip: wat de stack op het AH oplevert na kosten,

@@ -95,7 +95,8 @@ E("MAIL_SEND_SUCCESS"); RunTimers()
 check(p.reporting and closed == 2 and MailFrame.shown, "goud van het AH in de inbox: verslag, maar mailbox blijft open")
 check(p.parent == MailFrame, "paneel blijft dan aan de mailbox")
 for _ = 1, 5 do local t = table.remove(slow, 1); if t then t() end end
-check(p:IsShown() and not p.reporting and p.send.text ~= "Close (1)", "na het aftellen: paneel blijft, weer de gewone weergave")
+check(not SendMailFrame.shown, "mailbox staat op de inbox (niet meer op Send Mail)")
+check(not p:IsShown() and not p.reporting and MailFrame.shown, "na het aftellen: CarefreeBag-venster weg, mailbox blijft open")
 E("MAIL_CLOSED")
 -- alleen een oude brief zonder iets erin: telt niet, mailbox gaat wel dicht
 function GetInboxHeaderInfo(i) return nil, nil, "Bob", "Hi", 0, 0, 3, nil end

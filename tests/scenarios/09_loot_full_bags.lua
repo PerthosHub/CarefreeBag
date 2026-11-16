@@ -156,3 +156,16 @@ mrow.mail:SetText("Jaina Frostwolf"); mrow.mail:Fire("OnEnterPressed"); RunTimer
 check(CarefreeBagDB.boeMail == "Jaina Frostwolf" and mrow.mailInfo.text:find("Jaina") and mrow.mailAuto:IsShown(), "adres ingevuld: naam in de rij, vinkje zonder vragen zichtbaar")
 mrow.mailOk:Fire("OnClick")
 check(not mrow.mailPop:IsShown(), "OK sluit het venstertje")
+
+-- 15. Hover-info over de prijzen: zonder Auctionator, zonder AH-prijs, met AH-prijs en leeftijd
+local wing = "|cff|Hitem:8001|h[Torn Wing]|h|r"
+local fang = "|cff|Hitem:8000|h[Broken Fang]|h|r"
+local L = NS.PriceLines(wing)
+check(L[2]:find("not installed"), "zonder Auctionator: dat staat erbij: " .. tostring(L[2]))
+Auctionator = { API = { v1 = {
+  GetAuctionPriceByItemLink = function(_, l) if l:find("Torn Wing", 1, true) then return 100 end end,
+  GetAuctionAgeByItemLink = function(_, l) return 2 end } } }
+L = NS.PriceLines(wing, fang)
+check(L[2]:find("Torn Wing", 1, true) and L[2]:find("2 days ago"), "met prijs: wanneer gezien: " .. tostring(L[2]))
+check(L[3]:find("Broken Fang", 1, true) and L[3]:find("no AH price"), "zonder prijs in Auctionator: vendorprijs: " .. tostring(L[3]))
+Auctionator = nil
