@@ -14,7 +14,7 @@ local AH_CUT = 0.05
 local QUEST_VALUE = 2 ^ 50                                -- questloot is altijd "meer waard"
 local NEVER = { quest = true, keys = true, hidden = true } -- deze groepen stellen we nooit voor
 local W, H = 300, 150
-local MENU_W = 230
+local MENU_W = 250
 
 -- Naam van een groep zoals in de tas.
 local function GroupName(key)
@@ -55,15 +55,18 @@ end
 local CanHold -- vooruit (hieronder)
 -- Alleen items uit een tas waar de loot daarna ook in past: een vak in een
 -- beroepstas (bijv. mijnbouw) vrijmaken helpt niets voor een gewoon item.
-local function Cheapest(items, lootItem)
+local function Cheapest(items, lootItem, lootIDs)
 	local best
+	lootIDs = lootIDs or {}
 	local keep, keepGroups = Kept(), KeptGroups()
 	for _, e in ipairs(items) do
 		local sec = SectionOf(e)
 		if not e.key and not e.info.isLocked and not e.info.hasNoValue and not NEVER[sec]
 			and CanHold(e.bag, lootItem.id, lootItem.reagent)
 			and not keep[e.itemID] and not (keepGroups[sec] and sec ~= "grey" and sec ~= "other")
-			and not state.skipItems[e.itemID] and not state.skipGroups[sec] then
+			and not state.skipItems[e.itemID] and not state.skipGroups[sec]
+			-- ligt hetzelfde item ook in de loot? Dan die stapel houden: daar past die loot op
+			and not lootIDs[e.itemID] then
 			local each, ah = Each(e.link, e.price)
 			if each > 0 then
 				local v = each * e.count
@@ -253,33 +256,44 @@ end
 local function BuildMenu()
 	local okB, m = pcall(CreateFrame, "Frame", "CarefreeBagLootMenu", panel, "BackdropTemplate")
 	if not okB then m = CreateFrame("Frame", "CarefreeBagLootMenu", panel) end
-	m:SetSize(MENU_W, 4 * 22 + 16)
+	m:SetWidth(MENU_W)
 	m:SetFrameStrata("DIALOG")
+	-- Zelfde uiterlijk als een Blizzard-keuzemenu (rechtsklik op een speler): donkere
+	-- dialoogrand, goudkleurige kopjes, witte keuzes met een lichte balk bij hover.
 	if m.SetBackdrop then
-		m:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
-			insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-		m:SetBackdropColor(0, 0, 0, 0.92)
+		m:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+			edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 32, edgeSize = 32,
+			insets = { left = 11, right = 12, top = 12, bottom = 11 } })
 	end
 	m:EnableMouse(true)
-	local list = {
-		{ "keepItem", T("Never destroy this item") },
-		{ "skipItem", T("Skip this item this time") },
-		{ "keepGroup", T("Never destroy anything from this group") },
-		{ "skipGroup", T("Skip this group this time") },
-	}
-	for i, it in ipairs(list) do
+	local function Head()
+		local h = m:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		h:SetJustifyH("LEFT")
+		h:SetWidth(MENU_W - 32)
+		h:SetWordWrap(false)
+		return h
+	end
+	local function Choice(key, text)
 		local b = CreateFrame("Button", nil, m)
-		b:SetSize(MENU_W - 16, 20)
-		b:SetPoint("TOPLEFT", m, "TOPLEFT", 8, -8 - (i - 1) * 22)
+		b:SetSize(MENU_W - 28, 16)
 		b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
 		b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		b.label:SetPoint("LEFT", b, "LEFT", 4, 0)
-		b.label:SetText(it[2])
-		b.text = it[2]
-		b:SetScript("OnClick", function() MenuChoice(it[1]) end)
-		m[it[1]] = b
+		b.label:SetPoint("LEFT", b, "LEFT", 12, 0)
+		b.label:SetText(text)
+		b.text = text
+		b:SetScript("OnClick", function() MenuChoice(key) end)
+		m[key] = b
+		return b
 	end
+	m.itemHead = Head()
+	Choice("keepItem", T("Never destroy this item"))
+	Choice("skipItem", T("Skip this item this time"))
+	m.divider = m:CreateTexture(nil, "ARTWORK")
+	m.divider:SetTexture("Interface\\Common\\UI-TooltipDivider-Transparent")
+	m.divider:SetSize(MENU_W - 32, 8)
+	m.groupHead = Head()
+	Choice("keepGroup", T("Never destroy anything from this group"))
+	Choice("skipGroup", T("Skip this group this time"))
 	-- Weg zodra de muis niet meer op het item of het menu staat (even wachten om over te steken).
 	m.away = 0
 	m:SetScript("OnUpdate", function(self, dt)
@@ -297,10 +311,24 @@ local function ShowMenu()
 	local m = panel.menu
 	-- Auto Sell en Other zijn er juist voor spullen die weg mogen: geen "hele groep nooit".
 	local groupOk = o.junk.sec ~= "grey" and o.junk.sec ~= "other"
+	-- Van boven naar beneden: kopje item, 2 keuzes, streep, kopje groep, 1 of 2 keuzes.
+	local y = -14
+	local function Put(f, h, x)
+		f:ClearAllPoints()
+		f:SetPoint("TOPLEFT", m, "TOPLEFT", x or 14, y)
+		y = y - h
+	end
+	m.itemHead:SetText(o.junk.e.name or "?")
+	Put(m.itemHead, 16, 16)
+	Put(m.keepItem, 16)
+	Put(m.skipItem, 16)
+	Put(m.divider, 10, 16)
+	m.groupHead:SetText(T("Group: %s"):format(GroupName(o.junk.sec)))
+	Put(m.groupHead, 16, 16)
 	m.keepGroup:SetShown(groupOk)
-	m.skipGroup:ClearAllPoints()
-	m.skipGroup:SetPoint("TOPLEFT", m, "TOPLEFT", 8, -8 - (groupOk and 3 or 2) * 22)
-	m:SetHeight((groupOk and 4 or 3) * 22 + 16)
+	if groupOk then Put(m.keepGroup, 16) end
+	Put(m.skipGroup, 16)
+	m:SetHeight(-y + 12)
 	m:ClearAllPoints()
 	if panel.menuLeft then m:SetPoint("TOPRIGHT", panel, "TOPLEFT", -2, -44)
 	else m:SetPoint("TOPLEFT", panel, "TOPRIGHT", 2, -44) end
@@ -374,8 +402,8 @@ local function BuildPanel()
 	panel.leave = panel.skip
 	-- Het advies staat boven de knop die we aanraden.
 	panel.verdict = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	panel.verdict:SetWidth(bw + 20)
-	panel.verdict:SetJustifyH("CENTER")
+	panel.verdict:SetWidth(inner) -- hele breedte: "1s 34c more" niet over twee regels
+	panel.verdict:SetWordWrap(false)
 	panel:HookScript("OnHide", function() panel.menu:Hide() end)
 	ns.lootPanel = panel
 end
@@ -426,8 +454,15 @@ local function ShowOffer(lootItem, junk)
 		panel.verdict:SetText(T("The loot is worth %s less."):format(Money(junk.value - lootItem.value)))
 	end
 	local good = pickUp and panel.swap or panel.skip
+	-- Boven de aanbevolen knop, uitgelijnd aan de kant van die knop.
 	panel.verdict:ClearAllPoints()
-	panel.verdict:SetPoint("BOTTOM", good, "TOP", 0, 5)
+	if pickUp then
+		panel.verdict:SetPoint("BOTTOMLEFT", good, "TOPLEFT", 2, 5)
+		panel.verdict:SetJustifyH("LEFT")
+	else
+		panel.verdict:SetPoint("BOTTOMRIGHT", good, "TOPRIGHT", -2, 5)
+		panel.verdict:SetJustifyH("RIGHT")
+	end
 	Tint(panel.swap, pickUp)
 	Tint(panel.skip, not pickUp)
 	-- Zelfde item als net (bijv. tassen veranderden tijdens het looten): menu laten staan.
@@ -441,7 +476,14 @@ Evaluate = function()
 	if not (GetNumLootItems and (GetNumLootItems() or 0) > 0) then HidePanel(); return end
 	local items, free = Scan()
 	local lootItem = BestLoot(items, free)
-	local junk = lootItem and Cheapest(items, lootItem)
+	-- Items die ook in de loot liggen (bijv. een schelp die op je stapel past) niet weggooien.
+	local lootIDs = {}
+	for i = 1, (GetNumLootItems() or 0) do
+		local link = GetLootSlotLink and GetLootSlotLink(i)
+		local id = link and tonumber(link:match("item:(%d+)"))
+		if id then lootIDs[id] = true end
+	end
+	local junk = lootItem and Cheapest(items, lootItem, lootIDs)
 	if not junk then HidePanel(); return end
 	ShowOffer(lootItem, junk)
 end

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.2 (not released yet)
+- Bags full window: the options under the item now look like a normal WoW menu, with the item name and its group as headings.
+- Bags full window: never offers to destroy an item that is also in the loot (that loot would stack onto it). Example: a clam in the loot and clams in your bags.
+- Bags full window: the "worth more/less" line no longer breaks over two lines.
+
 ## 1.7.1
 - Reagent bag: its own small fill bar next to the big one (green, orange, red, just like the big bar), sized in proportion. Hover it for the details.
 - Bags full window is cleaner: one question ("To pick up X, destroy:") with the cheapest item from your bags. The advised button is green: "Destroy & pick up" when the loot is worth more, "Leave it" when it is worth less, with the difference right above it. Without Auctionator the vendor price is used.

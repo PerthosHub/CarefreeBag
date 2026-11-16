@@ -6,6 +6,7 @@ ITEMS = {
   [2589] = { name = "Linen Cloth", quality = 1, stack = 20, bind = 0, icon = 4, price = 10 },
   [6948] = { name = "Hearthstone", quality = 1, stack = 1, bind = 1, icon = 1 },
   [9000] = { name = "Shiny Ring", quality = 2, stack = 1, bind = 2, icon = 5, price = 500, class = 4 },
+  [9200] = { name = "Silk Cloth", quality = 1, stack = 20, bind = 0, icon = 7, price = 40 },
   [9100] = { name = "Wolf Pelt", quality = 1, stack = 10, bind = 1, icon = 6, quest = true, class = 12 },
 }
 BAGS[0] = { n = 5,
@@ -97,7 +98,7 @@ E("LOOT_CLOSED")
 
 -- 8. Melding "Inventory is full" opent het paneel ook (autoloot)
 BAGS[0][3].count = 20
-LOOT = { { id = 2589, qty = 2 } }
+LOOT = { { id = 9200, qty = 1 } }
 E("UI_ERROR_MESSAGE", 3, "Inventory is full.")
 check(P:IsShown(), "foutmelding 'tassen vol' opent het paneel")
 
@@ -129,7 +130,7 @@ check(CarefreeBagConfig:IsShown() and CarefreeBagConfig.keptLabel.text:find("2")
 CarefreeBagConfig.keptClear:Fire("OnClick"); RunTimers()
 check(next(CFC().keep) == nil, "Wissen: geen items meer bewaard")
 check(CFC().keepGroups[linenSec] == true, "Wissen laat de groepen staan")
-E("LOOT_CLOSED"); LOOT = { { id = 2589, qty = 2 } }; E("LOOT_OPENED")
+E("LOOT_CLOSED"); LOOT = { { id = 9200, qty = 1 } }; E("LOOT_OPENED")
 check(P:IsShown() and P.offer.junk.e.itemID == 8001, "na Wissen: Torn Wing weer voorgesteld")
 -- eenmalig overslaan: item en groep, tot het lootvenster dichtgaat
 P.skipItem:Fire("OnClick"); RunTimers()
@@ -138,7 +139,7 @@ local nowSec = P.offer.junk.sec
 P.skipGroup:Fire("OnClick"); RunTimers()
 check(not P:IsShown() or P.offer.junk.sec ~= nowSec, "groep nu overslaan: niets meer uit die groep")
 check(CFC().keepGroups[nowSec] == nil, "groep nu overslaan wordt niet onthouden")
-E("LOOT_CLOSED"); LOOT = { { id = 2589, qty = 2 } }; E("LOOT_OPENED")
+E("LOOT_CLOSED"); LOOT = { { id = 9200, qty = 1 } }; E("LOOT_OPENED")
 check(P:IsShown() and P.offer.junk.e.itemID == 8001, "loot opnieuw open: overslaan is voorbij, Torn Wing weer")
 
 -- 13. Geavanceerd: ingeklapt tot je erop klikt
@@ -169,3 +170,10 @@ L = NS.PriceLines(wing, fang)
 check(L[2]:find("Torn Wing", 1, true) and L[2]:find("2 days ago"), "met prijs: wanneer gezien: " .. tostring(L[2]))
 check(L[3]:find("Broken Fang", 1, true) and L[3]:find("no AH price"), "zonder prijs in Auctionator: vendorprijs: " .. tostring(L[3]))
 Auctionator = nil
+
+-- 16. Item dat ook in de loot ligt: die stapel niet weggooien (daar past de loot op)
+E("LOOT_CLOSED"); LOOT = { { id = 8001, qty = 1 }, { id = 9200, qty = 1 } }; E("LOOT_OPENED")
+check(P:IsShown() and P.offer.loot.id == 9200 and P.offer.junk.e.itemID ~= 8001, "Torn Wing ligt ook in de loot: die stapel wordt niet voorgesteld")
+P.junkRow:Fire("OnEnter")
+check(P.menu.itemHead.text == P.offer.junk.e.name and P.menu.groupHead.text:find("Group:"), "menu: kopje met itemnaam en groep")
+E("LOOT_CLOSED")
