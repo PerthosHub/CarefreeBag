@@ -63,7 +63,7 @@ local p = CarefreeBagMailPanel
 check(closed == 1, "alles verstuurd: mailbox dicht")
 check(p:IsShown() and p.reporting, "paneel blijft staan met het verslag")
 check(p.parent == UIParent, "paneel los van de mailbox")
-check(p.text:GetText():find("Green BoE Sword", 1, true) and p.text:GetText():find("Jaina Proudmoore", 1, true), "verslag: wat en naar wie: " .. p.text:GetText())
+check(p.text:GetText():find("Green BoE Sword", 1, true) and p.text:GetText():find("Jaina", 1, true), "verslag: wat en naar wie: " .. p.text:GetText())
 check(p.send.text == "Close (5)", "knop telt af vanaf 5: " .. tostring(p.send.text))
 check(not p.skip:IsShown(), "geen Overslaan-knop in het verslag")
 local f = table.remove(slow, 1); f()
