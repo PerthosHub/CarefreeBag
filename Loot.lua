@@ -339,6 +339,12 @@ end
 local function BuildPanel()
 	panel = NewWindow("CarefreeBagLootPanel", T("Bags full"), W, H)
 	panel:SetFrameStrata("HIGH")
+	-- Dichte achtergrond: de standaard dialoogachtergrond is half doorzichtig, en dit
+	-- venster ligt vaak boven je tassen (clam openen) en dan wordt het een rommeltje.
+	panel.solid = panel:CreateTexture(nil, "BACKGROUND", nil, -8)
+	panel.solid:SetColorTexture(0.05, 0.05, 0.05, 0.95)
+	panel.solid:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -10)
+	panel.solid:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 10)
 	local inner = W - 2 * ns.PAD
 	-- De vraag: om de loot op te pakken, dit weggooien?
 	panel.question = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -409,23 +415,46 @@ local function BuildPanel()
 end
 
 -- Naast het lootvenster; past het rechts niet meer op het scherm, dan links ervan.
+-- Plek van een venster in de maat van UIParent: links, onder, rechts, boven.
+local function Rect(f)
+	local l, b, w, h = f:GetRect()
+	if not (l and b and w and h) then return nil end
+	local k = (f:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+	return { l * k, b * k, (l + w) * k, (b + h) * k }
+end
+
+local function Overlap(a, b) return a[1] < b[3] and b[1] < a[3] and a[2] < b[4] and b[2] < a[4] end
+
+-- Naast het lootvenster, op de eerste plek die op het scherm past en je tassen niet
+-- bedekt: rechts, links, eronder, erboven. Lukt dat nergens: rechts of links, wat past.
 local function Place()
 	panel:ClearAllPoints()
 	panel.menuLeft = false
-	if not (LootFrame and LootFrame:IsShown()) then
-		panel:SetPoint("TOP", UIParent, "TOP", 0, -140)
+	local L = LootFrame and LootFrame:IsShown() and Rect(LootFrame)
+	if not L then
+		if LootFrame and LootFrame:IsShown() then panel:SetPoint("TOPLEFT", LootFrame, "TOPRIGHT", 4, 0)
+		else panel:SetPoint("TOP", UIParent, "TOP", 0, -140) end
 		return
 	end
-	local right = LootFrame:GetRight()
-	local screen = UIParent:GetRight()
-	local ls, ps = LootFrame:GetEffectiveScale() or 1, UIParent:GetEffectiveScale() or 1
-	local need = (W + 4 + MENU_W) * ((panel:GetEffectiveScale() or ps) / ps)
-	if right and screen and right * ls / ps + need > screen then
-		panel:SetPoint("TOPRIGHT", LootFrame, "TOPLEFT", -4, 0)
-		panel.menuLeft = true -- menu aan de buitenkant, niet over het lootvenster
-	else
-		panel:SetPoint("TOPLEFT", LootFrame, "TOPRIGHT", 4, 0)
+	local k = (panel:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
+	local pw, ph, mw = W * k, (panel:GetHeight() or H) * k, MENU_W * k
+	local sw, sh = UIParent:GetWidth() or 1920, UIParent:GetHeight() or 1080
+	local bags = ns.main and ns.main:IsShown() and Rect(ns.main)
+	local spots = {
+		{ r = { L[3] + 4, L[4] - ph, L[3] + 4 + pw, L[4] }, p = { "TOPLEFT", "TOPRIGHT", 4, 0 } },
+		{ r = { L[1] - 4 - pw, L[4] - ph, L[1] - 4, L[4] }, p = { "TOPRIGHT", "TOPLEFT", -4, 0 }, menuLeft = true },
+		{ r = { L[1], L[2] - 4 - ph, L[1] + pw, L[2] - 4 }, p = { "TOPLEFT", "BOTTOMLEFT", 0, -4 } },
+		{ r = { L[1], L[4] + 4, L[1] + pw, L[4] + 4 + ph }, p = { "BOTTOMLEFT", "TOPLEFT", 0, 4 } },
+	}
+	local function OnScreen(r) return r[1] >= 0 and r[2] >= 0 and r[3] <= sw and r[4] <= sh end
+	local pick
+	for _, s in ipairs(spots) do
+		if OnScreen(s.r) and not (bags and Overlap(s.r, bags)) then pick = s; break end
 	end
+	if not pick then pick = OnScreen(spots[1].r) and spots[1] or spots[2] end
+	panel:SetPoint(pick.p[1], LootFrame, pick.p[2], pick.p[3], pick.p[4])
+	-- menu aan de kant waar plek is (niet over het lootvenster of buiten beeld)
+	panel.menuLeft = pick.menuLeft or (pick.r[3] + mw > sw) or false
 end
 
 local function ShowOffer(lootItem, junk)
