@@ -114,6 +114,7 @@ function C_Container.GetContainerItemInfo(b, s)
   local d = ITEMS[it.itemID]
   return { itemID = it.itemID, stackCount = it.count, hasNoValue = (d.price or 0) == 0, quality = d.quality, iconFileID = d.icon, isBound = it.bound,
     hyperlink = "|cff|Hitem:" .. it.itemID .. "|h[" .. d.name .. "]|h|r",
+    hasLoot = d.openable or false, -- te openen (clam, zakje)
     -- opgepakt uit de tas = vakje op slot; CURSOR.outside = van buiten de tassen (bijv. wat je aan hebt)
     isLocked = (CURSOR ~= nil and CURSOR.itemID == it.itemID and not CURSOR.outside) or false }
 end

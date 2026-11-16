@@ -132,3 +132,47 @@ ns.SellStart = function(confirmed)
 	sell.busy, sell.queue, sell.n, sell.value = true, q, 0, 0
 	C_Timer.After(0.2, SellNext)
 end
+
+---------------------------------------------------------------------------
+-- Clams automatisch openen (na het looten)
+---------------------------------------------------------------------------
+
+-- Bekende clams (Classic t/m Cataclysm); daarnaast elk item met "Clam" in de naam dat
+-- je kunt openen (hasLoot). Clam meat is niet te openen en valt daar dus buiten.
+local CLAMS = { [5523] = true, [5524] = true, [7973] = true, [24476] = true, [36781] = true,
+	[44700] = true, [45909] = true, [52340] = true }
+
+local function IsClam(e)
+	if not (e.info and e.info.hasLoot) then return false end
+	return CLAMS[e.itemID] or ((e.name or ""):find("Clam") ~= nil)
+end
+
+-- "Gebruiken" verkoopt bij een vendor en verplaatst bij bank/mail/handel: dan niet.
+local function SomethingOpen()
+	for _, f in ipairs({ MerchantFrame, MailFrame, BankFrame, TradeFrame, AuctionFrame, AuctionHouseFrame, GuildBankFrame }) do
+		if f and f.IsShown and f:IsShown() then return true end
+	end
+	return ns.bankOpen or (ns.mail and ns.mail.busy) or false
+end
+
+local openPending = false
+function ns.OpenClams()
+	if not ns.DB.enabled or not ns.DB.autoOpenClams or ns.clamBlocked or openPending then return end
+	if InCombatLockdown() or CursorHasItem() or SomethingOpen() then return end
+	if GetNumLootItems and (GetNumLootItems() or 0) > 0 then return end
+	for _, e in ipairs(Scan()) do
+		if IsClam(e) and not e.info.isLocked then
+			openPending = true
+			-- even wachten: net geloot, de tas moet eerst bijgewerkt zijn
+			C_Timer.After(0.3, function()
+				openPending = false
+				if InCombatLockdown() or CursorHasItem() or SomethingOpen() then return end
+				local info = C_Container.GetContainerItemInfo(e.bag, e.slot)
+				if not info or info.itemID ~= e.itemID or info.isLocked then return end
+				Log("open clam " .. tostring(e.itemID))
+				pcall(C_Container.UseContainerItem, e.bag, e.slot)
+			end)
+			return -- één tegelijk; de volgende na het looten van deze
+		end
+	end
+end

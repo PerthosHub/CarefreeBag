@@ -79,6 +79,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		if not ns.binding then C_Timer.After(0.1, ns.BindKeys) end
 	elseif event == "LOOT_OPENED" or event == "LOOT_SLOT_CLEARED" or event == "LOOT_CLOSED" then
 		Try("loot", ns.LootEvent, event)
+		if event == "LOOT_CLOSED" then C_Timer.After(0.5, function() Try("clams", ns.OpenClams) end) end
 	elseif event == "UI_ERROR_MESSAGE" then
 		if ns.mail.busy then Log("game message during mail: " .. tostring(a2)) end
 		if ERR_INV_FULL and a2 == ERR_INV_FULL then Try("loot", ns.LootEvent, "FULL") end
@@ -124,6 +125,11 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		if a1 == ADDON then
 			ns.DB.lastError = event .. ": " .. tostring(a2)
 			Log("blocked by WoW: " .. tostring(a2))
+			if tostring(a2):find("UseContainerItem") and not ns.clamBlocked then
+				-- WoW staat automatisch openen hier niet toe: stoppen (tot /reload) en één keer melden.
+				ns.clamBlocked = true
+				Print(T("WoW does not allow opening clams automatically here. Open them yourself with a right-click."))
+			end
 			if ns.mail.busy and not ns.mail.step then
 				-- WoW staat automatisch versturen niet toe: vanaf nu één klik per stap.
 				ns.mail.step = true
@@ -140,6 +146,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 			ScheduleRestack()
 			ScheduleSnap()
 			ns.LootEvent("BAG")
+			Try("clams", ns.OpenClams)
 			if ns.mailPanel and ns.mailPanel:IsShown() and not ns.mail.busy then ns.UpdateMailPanel() end
 		end
 	end

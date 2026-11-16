@@ -135,6 +135,7 @@ function ns.Defaults()
 	ns.DB.questAuto = true -- quest-items gaan altijd naar Quest (groep uit = naar Overig)
 	ns.DB.greyAuto = true -- grijze items gaan altijd naar Auto Sell
 	if ns.DB.autoSell == nil then ns.DB.autoSell = false end
+	if ns.DB.autoOpenClams == nil then ns.DB.autoOpenClams = true end -- clams na het looten openen
 	ns.DB.conflictOK = ns.DB.conflictOK or {}
 	ns.DB.maxCols = ns.DB.maxCols or 14  -- breder dan dit wordt het venster niet; daarna scrollen
 	ns.DB.cols = nil

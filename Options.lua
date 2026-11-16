@@ -128,6 +128,18 @@ function ns.BuildConfig()
 	config.checks[#config.checks + 1] = mailCb
 	y = y - 28
 
+	-- Clams na het looten meteen openen
+	local clamCb = NewCheck(config, T("Open clams automatically"), T("Clams you loot are opened right away (not in combat, and not while a vendor, bank or mailbox is open)."),
+		function() return ns.DB.autoOpenClams end, function(v)
+			ns.DB.autoOpenClams = v
+			Log("open clams automatically: " .. tostring(v))
+			if v and ns.OpenClams then ns.OpenClams() end
+		end)
+	clamCb:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 4, y)
+	config.checks[#config.checks + 1] = clamCb
+	config.clamCb = clamCb
+	y = y - 28
+
 	y = y - 10
 
 	-- Geavanceerd (onderaan, pas zichtbaar na uitklappen; plaats wordt in RefreshConfig gezet)
