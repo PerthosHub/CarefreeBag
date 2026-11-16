@@ -159,15 +159,15 @@ function ns.BuildConfig()
 	plus:SetPoint("LEFT", minus, "RIGHT", 2, 0)
 	plus:SetScript("OnClick", function() ns.DB.maxCols = math.min(30, ns.DB.maxCols + 1); ResetOrder(); ns.Refresh(); ns.RefreshConfig() end)
 
-	-- Items die je bij volle tassen altijd houdt ("Always keep item" in het venster Bags full)
+	-- Items die je bij volle tassen altijd houdt ("Never destroy this item" in het venster Bags full)
 	local keptHover = CreateFrame("Frame", nil, config.adv)
 	keptHover:SetSize(300, 24)
 	keptHover:SetPoint("TOPLEFT", config.adv, "TOPLEFT", 6, -30)
 	keptHover:EnableMouse(true)
 	config.keptLabel = keptHover:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	config.keptLabel:SetPoint("LEFT", keptHover, "LEFT", 4, 0)
-	Tooltip(keptHover, T("Always keep item"),
-		T("When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Always keep item' are never offered."),
+	Tooltip(keptHover, T("Never destroy this item"),
+		T("When your bags are full and loot does not fit, CarefreeBag offers to destroy your cheapest item. Items you marked with 'Never destroy this item' are never offered."),
 		T("Clear: all these items can be offered again. Whole groups are set with the 'Always keep' tick per group. Only for this character."))
 	config.keptClear = MakeButton(config.adv, T("Clear"), 80)
 	config.keptClear:SetPoint("TOPRIGHT", config.adv, "TOPRIGHT", 0, -30)

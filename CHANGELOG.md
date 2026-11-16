@@ -2,6 +2,10 @@
 
 ## 1.7.1 (not released yet)
 - Reagent bag: its own small fill bar next to the big one (green, orange, red, just like the big bar), sized in proportion. Hover it for the details.
+- Bags full window is cleaner: one question ("To pick up X, destroy:") with the cheapest item from your bags. The advised button is green: "Destroy & pick up" when the loot is worth more, "Leave it" when it is worth less, with the difference right above it. Without Auctionator the vendor price is used.
+- Hover the item in that window (arrow on the right) for the options: never destroy this item, skip it this time, never destroy anything from its group, or skip the group this time. "This time" lasts until you close the loot window.
+- The window moves to the left of the loot window when there is no room on the right.
+- Gold under your bags shows the silver again when it is 0 (1g 0s instead of 1g).
 
 ## 1.7.0
 - Bank & alts panel: see the gold of the character you look at and of all your characters together (bottom of the panel). Hover a character's icon to see its gold. A character's gold shows up after you log in with it once.

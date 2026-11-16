@@ -44,9 +44,12 @@ E("LOOT_OPENED")
 local P = NS.lootPanel
 check(P and P:IsShown(), "tassen vol + loot past niet: paneel open")
 check(P.offer.loot.slot == 2 and P.offer.junk.e.itemID == 8000, "biedt ring aan tegen goedkoopste stapel (Broken Fang)")
-check(P.lootRow.value.text == "500c" and P.junkRow.value.text == "15c", "prijzen naast elkaar: 500c vs 15c")
+check(P.offer.loot.value == 500 and P.junkRow.value.text == "15c", "waarde: loot 500c, in de tas 15c")
+check(P.question.text:find("Shiny Ring", 1, true), "vraag noemt de loot: " .. tostring(P.question.text))
 check(P.junkRow.name.text:find("Broken Fang") and P.junkRow.name.text:find("x3"), "stapel met aantal: Broken Fang x3")
 check(P.verdict.text:find("485c") and P.verdict.text:find("more"), "loot is 485c meer waard")
+check(P.advice == "pickup" and P.swap.green and not P.skip.green, "advies oppakken: Destroy & pick up groen, Leave it niet")
+check(P.swap.text == "Destroy & pick up" and P.skip.text == "Leave it", "knoppen heten Destroy & pick up en Leave it")
 
 -- 2. Klik: weggooien en looten
 P.swap:Fire("OnClick"); RunTimers()
@@ -58,7 +61,8 @@ check(said, "melding in de chat")
 
 -- 3. Linnen past nog steeds niet; nu is Torn Wing (50c) de goedkoopste en de loot minder waard
 check(P:IsShown() and P.offer.loot.slot == 1 and P.offer.junk.e.itemID == 8001, "volgende: linnen tegen Torn Wing")
-check(P.verdict.text:find("30c") and P.verdict.text:find("less"), "loot is 30c minder waard (rood)")
+check(P.verdict.text:find("30c") and P.verdict.text:find("less"), "loot is 30c minder waard")
+check(P.advice == "leave" and P.skip.green and not P.swap.green, "advies laten liggen: Leave it groen")
 check(P.offer.junk.e.itemID ~= 6948, "hearthstone (geen waarde) nooit voorgesteld")
 
 -- 4. Overslaan: blijft dicht tot de loot dicht is
@@ -72,7 +76,7 @@ check(#DELETED == 1, "na overslaan niets weggegooid")
 -- 5. Questloot: altijd de moeite waard
 LOOT = { { id = 9100, qty = 1 } }
 E("LOOT_OPENED")
-check(P:IsShown() and P.lootRow.value.text:find("Quest item") and P.verdict.text:find("quest item"), "questloot: 'Quest item'")
+check(P:IsShown() and P.advice == "pickup" and P.verdict.text:find("quest item"), "questloot: altijd oppakken")
 E("LOOT_CLOSED")
 check(not P:IsShown(), "loot dicht: paneel dicht")
 
@@ -99,14 +103,18 @@ check(P:IsShown(), "foutmelding 'tassen vol' opent het paneel")
 
 -- 9. "Keep this item": Torn Wing nooit meer, meteen het volgende goedkoopste item
 check(P.offer.junk.e.itemID == 8001 and P.junkRow.label.text:find("Auto Sell"), "groepsnaam bij het goedkoopste item (Auto Sell)")
-check(not P.keepGroup:IsShown(), "Auto Sell: geen knop 'Keep this group'")
+check(not P.menu:IsShown(), "opties pas zichtbaar bij hover")
+P.junkRow:Fire("OnEnter")
+check(P.menu:IsShown() and not P.keepGroup:IsShown() and P.skipGroup:IsShown(), "hover: opties; Auto Sell: geen 'nooit uit deze groep'")
 P.keepItem:Fire("OnClick"); RunTimers()
 check(CFC().keep[8001] == true, "Torn Wing onthouden als 'houden' (per karakter)")
 check(P:IsShown() and P.offer.junk.e.itemID == 2589, "volgende goedkoopste: Linen Cloth")
 local linenSec = P.offer.junk.sec
-check(P.keepGroup:IsShown(), "andere groep: knop 'Keep this group' weer zichtbaar")
+P.junkRow:Fire("OnEnter")
+check(P.keepGroup:IsShown(), "andere groep: 'nooit uit deze groep' weer zichtbaar")
 CFC().assign[2589] = nil; E("BAG_UPDATE_DELAYED"); RunTimers()
-check(P.offer.junk.sec == "other" and not P.keepGroup:IsShown(), "Other: geen knop voor de hele groep")
+P.junkRow:Fire("OnEnter")
+check(P.offer.junk.sec == "other" and not P.keepGroup:IsShown(), "Other: geen optie voor de hele groep")
 CFC().assign[2589] = CFC().cats[1].key; E("BAG_UPDATE_DELAYED"); RunTimers()
 -- 10. "Keep this group": niets uit de groep van het linnen, dan de ring
 P.keepGroup:Fire("OnClick"); RunTimers()
@@ -123,6 +131,15 @@ check(next(CFC().keep) == nil, "Wissen: geen items meer bewaard")
 check(CFC().keepGroups[linenSec] == true, "Wissen laat de groepen staan")
 E("LOOT_CLOSED"); LOOT = { { id = 2589, qty = 2 } }; E("LOOT_OPENED")
 check(P:IsShown() and P.offer.junk.e.itemID == 8001, "na Wissen: Torn Wing weer voorgesteld")
+-- eenmalig overslaan: item en groep, tot het lootvenster dichtgaat
+P.skipItem:Fire("OnClick"); RunTimers()
+check(P:IsShown() and P.offer.junk.e.itemID ~= 8001 and CFC().keep[8001] == nil, "item nu overslaan: volgende, niet onthouden")
+local nowSec = P.offer.junk.sec
+P.skipGroup:Fire("OnClick"); RunTimers()
+check(not P:IsShown() or P.offer.junk.sec ~= nowSec, "groep nu overslaan: niets meer uit die groep")
+check(CFC().keepGroups[nowSec] == nil, "groep nu overslaan wordt niet onthouden")
+E("LOOT_CLOSED"); LOOT = { { id = 2589, qty = 2 } }; E("LOOT_OPENED")
+check(P:IsShown() and P.offer.junk.e.itemID == 8001, "loot opnieuw open: overslaan is voorbij, Torn Wing weer")
 
 -- 13. Geavanceerd: ingeklapt tot je erop klikt
 check(not CarefreeBagConfig.adv:IsShown(), "geavanceerde instellingen standaard ingeklapt")

@@ -72,6 +72,21 @@ function ns.Tooltip(frame, title, ...)
 	frame:HookScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
+-- Goud onderaan de tassen. Met goud: geen koper, maar het zilver altijd (ook "0"),
+-- want GetMoneyString laat een 0 weg (1g 0s werd "1g").
+function ns.FooterMoney(m)
+	m = math.floor(m or 0)
+	local function MS(x) return GetMoneyString and GetMoneyString(x, true) or tostring(x) end
+	if m < 10000 then return MS(m) end
+	local s = math.floor(m / 100) % 100
+	local silver
+	if SILVER_AMOUNT_TEXTURE then
+		local ok, t = pcall(string.format, SILVER_AMOUNT_TEXTURE, s, 0, 0)
+		if ok then silver = t end
+	end
+	return MS(m - m % 10000) .. " " .. (silver or (s .. "s"))
+end
+
 ---------------------------------------------------------------------------
 -- Optievenster en bankpaneel zitten vast naast de tassen: links (standaard)
 -- of rechts, per karakter. Een pijltje aan de kant van de tassen wisselt.
@@ -1057,9 +1072,7 @@ local function Layout()
 			rb:Hide()
 		end
 	end
-	local money = GetMoney()
-	if money >= 10000 then money = money - money % 100 end -- met goud: geen koper meer tonen
-	ns.main.money:SetText(GetMoneyString and GetMoneyString(money, true) or tostring(money))
+	ns.main.money:SetText(ns.FooterMoney(GetMoney()))
 
 	ns.main.hiddenBtn.count:SetText(hiddenCount > 0 and hiddenCount or "")
 	SetRedKit(ns.main.hiddenBtn, showHidden and "128-redbutton-visibilityon" or "128-redbutton-visibilityoff", "Interface\\Icons\\Spell_Shadow_EvilEye")
