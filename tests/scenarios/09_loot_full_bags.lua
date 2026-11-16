@@ -177,3 +177,14 @@ check(P:IsShown() and P.offer.loot.id == 9200 and P.offer.junk.e.itemID ~= 8001,
 P.junkRow:Fire("OnEnter")
 check(P.menu.itemHead.text == P.offer.junk.e.name and P.menu.groupHead.text:find("Group:"), "menu: kopje met itemnaam en groep")
 E("LOOT_CLOSED")
+
+-- 17. Twee items die niet passen: Leave it bij het eerste, dan meteen het tweede
+LOOT = { { id = 9000, qty = 1 }, { id = 9200, qty = 1 } }; E("LOOT_OPENED")
+check(P:IsShown() and P.offer.loot.id == 9000, "eerst het meest waardevolle: de ring")
+P.skip:Fire("OnClick"); RunTimers()
+check(P:IsShown() and P.offer.loot.id == 9200, "Leave it: door naar het tweede item (zijde)")
+P.skip:Fire("OnClick"); RunTimers()
+check(not P:IsShown(), "ook die laten liggen: paneel dicht")
+E("LOOT_CLOSED"); E("LOOT_OPENED")
+check(P:IsShown() and P.offer.loot.id == 9000, "lootvenster opnieuw open: weer vragen")
+E("LOOT_CLOSED")

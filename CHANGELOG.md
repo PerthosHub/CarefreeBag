@@ -4,6 +4,7 @@
 - Bags full window: the options under the item now look like a normal WoW menu, with the item name and its group as headings.
 - Bags full window: never offers to destroy an item that is also in the loot (that loot would stack onto it). Example: a clam in the loot and clams in your bags.
 - Bags full window: the "worth more/less" line no longer breaks over two lines.
+- Bags full window: "Leave it" only leaves that one item; if more loot does not fit, the next one is shown right away.
 - Bags full window: solid background, and it picks a spot next to the loot window that does not cover your bags (right, left, below or above). Handy when you open a clam on top of your bags.
 
 ## 1.7.1

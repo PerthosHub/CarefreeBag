@@ -26,7 +26,7 @@ local function GroupName(key)
 end
 
 -- skipItems/skipGroups: "eenmalig overslaan", geldt tot het lootvenster dichtgaat.
-local state = { pending = nil, dismissed = false, scheduled = false, skipItems = {}, skipGroups = {} }
+local state = { pending = nil, dismissed = false, scheduled = false, skipItems = {}, skipGroups = {}, left = {} }
 local panel
 
 local function Money(m)
@@ -125,7 +125,7 @@ local function BestLoot(items, free)
 			local id = tonumber(link:match("item:(%d+)"))
 			local r = id and Info(id)
 			qty = (qty and qty > 0) and qty or 1
-			if id and not locked and not Fits(items, free, id, qty, r and r[18]) then
+			if id and not locked and not state.left[i .. link] and not Fits(items, free, id, qty, r and r[18]) then
 				local each, ah = Each(link, r and r[12])
 				local v = isQuest and QUEST_VALUE or each * qty
 				if not best or v > best.value then
@@ -403,7 +403,13 @@ local function BuildPanel()
 	ns.Tooltip(panel.swap, T("Destroy & pick up"), T("Destroys the cheapest item for good (it cannot be bought back) and picks up the loot."))
 	panel.skip = MakeButton(panel, T("Leave it"), bw)
 	panel.skip:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -ns.PAD, 14)
-	panel.skip:SetScript("OnClick", function() state.dismissed = true; HidePanel() end)
+	-- Leave it: alleen dit loot-item laten liggen; ligt er nog meer dat niet past, dan meteen dat.
+	panel.skip:SetScript("OnClick", function()
+		local o = panel.offer
+		if o then state.left[o.loot.slot .. o.loot.link] = true; Log("loot: leave " .. (o.loot.link:match("%[(.-)%]") or "?")) end
+		HidePanel()
+		Evaluate()
+	end)
 	ns.Tooltip(panel.skip, T("Leave it"), T("Leave the loot where it is. CarefreeBag asks again the next time you loot."))
 	panel.leave = panel.skip
 	-- Het advies staat boven de knop die we aanraden.
@@ -532,7 +538,7 @@ end
 function ns.LootEvent(event)
 	if event == "LOOT_CLOSED" then
 		state.pending, state.dismissed = nil, false
-		state.skipItems, state.skipGroups = {}, {} -- "eenmalig overslaan" is voorbij
+		state.skipItems, state.skipGroups, state.left = {}, {}, {} -- "eenmalig overslaan" is voorbij
 		HidePanel()
 	elseif event == "BAG" then
 		if panel and panel:IsShown() then Schedule() end
