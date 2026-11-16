@@ -178,8 +178,9 @@ local function Tint(btn, green)
 	btn.green = green and true or false
 end
 
+-- Dicht vanuit de code (na weggooien, loot dicht, niets meer te doen): niet als "laten liggen" tellen.
 local function HidePanel()
-	if panel and panel:IsShown() then panel:Hide() end
+	if panel and panel:IsShown() then panel.quiet = true; panel:Hide(); panel.quiet = nil end
 	if panel then panel.offer = nil end
 end
 
@@ -416,7 +417,16 @@ local function BuildPanel()
 	panel.verdict = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	panel.verdict:SetWidth(inner) -- hele breedte: "1s 34c more" niet over twee regels
 	panel.verdict:SetWordWrap(false)
-	panel:HookScript("OnHide", function() panel.menu:Hide() end)
+	panel:HookScript("OnHide", function()
+		panel.menu:Hide()
+		-- Zelf dichtgedaan (kruisje of Escape): niet meer vragen tot het lootvenster dichtgaat.
+		-- Anders komt hij bij de volgende tas-update of "Inventory is full" meteen terug.
+		if not panel.quiet and panel.offer then
+			state.dismissed = true
+			panel.offer = nil
+			Log("loot: window closed by the player, no more questions for this loot")
+		end
+	end)
 	ns.lootPanel = panel
 end
 
