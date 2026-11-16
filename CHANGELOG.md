@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.7.1 (not released yet)
+- Reagent bag: its own small fill bar next to the big one (green, orange, red, just like the big bar), sized in proportion. Hover it for the details.
+
 ## 1.7.0
 - Bank & alts panel: see the gold of the character you look at and of all your characters together (bottom of the panel). Hover a character's icon to see its gold. A character's gold shows up after you log in with it once.
 - Mail: when everything is sent (by itself or after you said yes), the mailbox closes (not when there is mail in your inbox to pick up). The CarefreeBag window stays for 5 seconds and shows what was sent to whom. The button counts down ("Close (5)"); click it to close the window right away.

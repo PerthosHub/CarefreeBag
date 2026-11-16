@@ -1031,18 +1031,32 @@ local function Layout()
 	total = total - rTotal
 	local nFree = #free - rFree
 	local used = math.max(0, total - nFree)
-	local frac = total > 0 and used / total or 0
-	ns.main.freeBar:SetValue(frac)
 	-- vloeiend van groen naar oranje naar rood
-	local r, g, bl
-	if frac < 0.6 then r, g, bl = 0.30, 0.80, 0.40
-	elseif frac < 0.85 then local t = (frac - 0.6) / 0.25; r, g, bl = 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t
-	else local t = math.min(1, (frac - 0.85) / 0.15); r, g, bl = 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t end
-	ns.main.freeBar:SetStatusBarColor(r, g, bl)
-	ns.main.freeBar.text:SetText(used .. "/" .. total .. (rTotal > 0
-		and ("  |cff9d9d9d" .. T("Reagents") .. " " .. (rTotal - rFree) .. "/" .. rTotal .. "|r") or ""))
+	local function Fill(b, usedN, totalN)
+		local frac = totalN > 0 and usedN / totalN or 0
+		b:SetValue(frac)
+		local r, g, bl
+		if frac < 0.6 then r, g, bl = 0.30, 0.80, 0.40
+		elseif frac < 0.85 then local t = (frac - 0.6) / 0.25; r, g, bl = 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t
+		else local t = math.min(1, (frac - 0.85) / 0.15); r, g, bl = 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t end
+		b:SetStatusBarColor(r, g, bl)
+		b.text:SetText(usedN .. "/" .. totalN)
+	end
+	Fill(ns.main.freeBar, used, total)
 	ns.main.freeBar.free, ns.main.freeBar.total = nFree, total
 	ns.main.freeBar.rFree, ns.main.freeBar.rTotal = rFree, rTotal
+	-- Reagent-tas: kleine balk, breedte in verhouding tot de grote (tussen 20 en 60 pixels).
+	local rb = ns.main.reagentBar
+	if rb then
+		if rTotal > 0 then
+			local w = 150 * rTotal / math.max(1, total)
+			rb:SetWidth(math.max(20, math.min(60, math.floor(w + 0.5))))
+			Fill(rb, rTotal - rFree, rTotal)
+			rb:Show()
+		else
+			rb:Hide()
+		end
+	end
 	local money = GetMoney()
 	if money >= 10000 then money = money - money % 100 end -- met goud: geen koper meer tonen
 	ns.main.money:SetText(GetMoneyString and GetMoneyString(money, true) or tostring(money))
@@ -1181,20 +1195,25 @@ function ns.BuildMain()
 
 	-- Balk die laat zien hoe vol je tassen zitten (groen, oranje, rood).
 	-- Balk in Blizzard-stijl, zoals de levensbalk in een tooltip.
-	local bar = CreateFrame("StatusBar", "CarefreeBagFreeBar", ns.main)
-	bar:SetSize(150, 10)
+	local function NewBar(name, w, h)
+		local b = CreateFrame("StatusBar", name, ns.main)
+		b:SetSize(w, h)
+		b:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+		b:SetMinMaxValues(0, 1)
+		b.bg = b:CreateTexture(nil, "BACKGROUND")
+		b.bg:SetAllPoints(b)
+		b.bg:SetColorTexture(0, 0, 0, 0.6)
+		b.border = b:CreateTexture(nil, "OVERLAY")
+		b.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+		b.border:SetPoint("TOPLEFT", b, "TOPLEFT", -2, 2)
+		b.border:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", 2, -2)
+		b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		b.text:SetPoint("LEFT", b, "RIGHT", 6, 0)
+		b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		return b
+	end
+	local bar = NewBar("CarefreeBagFreeBar", 150, 10)
 	bar:SetPoint("LEFT", ns.main, "BOTTOMLEFT", ns.PAD + 4, ns.PAD - 2 + ns.TILE / 2)
-	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-	bar:SetMinMaxValues(0, 1)
-	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-	bar.bg:SetAllPoints(bar)
-	bar.bg:SetColorTexture(0, 0, 0, 0.6)
-	bar.border = bar:CreateTexture(nil, "OVERLAY")
-	bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
-	bar.border:SetPoint("TOPLEFT", bar, "TOPLEFT", -2, 2)
-	bar.border:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 2, -2)
-	bar.text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	bar.text:SetPoint("LEFT", bar, "RIGHT", 6, 0)
 	bar:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		GameTooltip:AddLine(T("Free slots: %s of %s"):format(tostring(self.free or "?"), tostring(self.total or "?")))
@@ -1203,8 +1222,20 @@ function ns.BuildMain()
 		end
 		GameTooltip:Show()
 	end)
-	bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	ns.main.freeBar = bar
+	-- Kleinere balk voor de reagent-tas (retail/Forever), rechts naast de grote; breedte in verhouding.
+	local rbar = NewBar("CarefreeBagReagentBar", 40, 6)
+	rbar:SetPoint("LEFT", bar.text, "RIGHT", 12, 0)
+	rbar.text:SetFontObject("GameFontDisableSmall")
+	rbar:EnableMouse(true) -- voor de tooltip
+	rbar:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:AddLine(T("Reagents"))
+		GameTooltip:AddLine(T("Reagent bag: %d of %d free (only crafting reagents fit there)"):format(bar.rFree or 0, bar.rTotal or 0), 0.8, 0.8, 0.8, true)
+		GameTooltip:Show()
+	end)
+	rbar:Hide()
+	ns.main.reagentBar = rbar
 	-- Item van buiten je tassen op het venster of de vulbalk laten vallen = in een vrij vakje.
 	for _, fr in ipairs({ ns.main, bar }) do
 		fr:EnableMouse(true)
