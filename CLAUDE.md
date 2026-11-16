@@ -74,6 +74,7 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 - API-sleutels staan alleen in GitHub secrets (`CF_API_KEY`, `WAGO_API_TOKEN`); vraag Johan nooit om ze.
 
 ## Einde van elke sessie (Johans afspraak)
+- Volg de skill `rond-af` (`.claude/skills/rond-af/SKILL.md`): review, docs, checks, commit, push, overdracht.
 - "Stand van zaken" hieronder bijwerken, committen op de sessie-branch én naar `main` pushen (`git push origin HEAD:main`, fast-forward). Een nieuwe chat begint vanaf `main`.
 - Pushen naar `main` brengt niets uit: dat gebeurt pas met een release-tag.
 
