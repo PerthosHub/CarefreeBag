@@ -30,7 +30,8 @@ check(t == "2/2", "grote balk: gewone tassen 2/2 vol: " .. t)
 local rb = CarefreeBagReagentBar
 check(rb and rb:IsShown() and rb.text.text == "0/2", "kleine reagent-balk: 0/2 gebruikt: " .. tostring(rb and rb.text.text))
 check(rb.w >= 20 and rb.w <= 60, "kleine balk tussen 20 en 60 breed: " .. tostring(rb.w))
-BAGS[5][1] = { itemID = 8000, count = 1 }; E("BAG_UPDATE_DELAYED"); RunTimers()
+ITEMS[9999] = { name = "Test Reagent", quality = 1, stack = 20, bind = 0, icon = 9, price = 1 } -- nergens anders: niets om samen te voegen
+BAGS[5][1] = { itemID = 9999, count = 1 }; E("BAG_UPDATE_DELAYED"); RunTimers()
 check(rb.text.text == "1/2", "reagent in de reagent-tas: kleine balk 1/2")
 BAGS[5][1] = nil; E("BAG_UPDATE_DELAYED"); RunTimers()
 check(CarefreeBagFreeBar.free == 0 and CarefreeBagFreeBar.rFree == 2, "tooltip: 0 gewone vakjes vrij, 2 in de reagent-tas")
