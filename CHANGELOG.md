@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.0
+### ✨ New
+- 📜 **See which quest an item is for.** Hover a quest item: the tooltip shows the quest, its level (in the difficulty color) and your progress, like 3/8. No database needed, CarefreeBag reads your quest log.
+- ❓ **Leftover quest items get a ?.** Is a quest item not in your quest log any more? It gets a small ? in your bags. The tooltip says it can probably go, and why you may still need it (next step of a chain, reputation, a quest you have not picked up yet). You decide.
+- ❗ **Loot that starts a quest.** A small window pops up with **Start quest**: one click opens the quest and you accept it yourself. Not now? Click **Later**: the item keeps a blue glow in your bags until the quest is in your log. During a fight the window waits until the fight is over.
+
 ## 1.8.1
 ### ✨ New
 - 📬 **Mail a whole pile with one right-click.** CarefreeBag shows 3 stacks of 20 cloth as one slot of 60. Right-click it at the mailbox and **all 60 go into the mail** (3 × 20).
