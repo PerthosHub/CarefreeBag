@@ -61,7 +61,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 	elseif event == "BANKFRAME_CLOSED" then
 		-- Niet meer uitlezen: tijdens het sluiten is de bank al (deels) leeg.
 		ns.bankOpen = false
-		ns.ScheduleBagCheck(1)
+		ns.ScheduleBagCheck(1.5)
 	elseif event == "PLAYERBANKSLOTS_CHANGED" or event == "PLAYERBANKBAGSLOTS_CHANGED" then
 		if ns.bankOpen then
 			Try("bank", SnapBank)
@@ -74,19 +74,19 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 	elseif event == "MERCHANT_CLOSED" then
 		SellStop("vendor closed")
 		ns.Refresh()
-		ns.ScheduleBagCheck(1)
+		ns.ScheduleBagCheck(1.5)
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		if ns.layoutPending then ns.layoutPending = false; ns.Refresh() end
 		ScheduleRestack()
 		if ns.bindPending then ns.bindPending = false; ns.BindKeys() end
-		ns.ScheduleBagCheck(1)
+		ns.ScheduleBagCheck(1.5)
 	elseif event == "UPDATE_BINDINGS" then
 		if not ns.binding then C_Timer.After(0.1, ns.BindKeys) end
 	elseif event == "LOOT_OPENED" or event == "LOOT_SLOT_CLEARED" or event == "LOOT_CLOSED" then
 		Try("loot", ns.LootEvent, event)
 		if event == "LOOT_CLOSED" then
 			C_Timer.After(0.5, function() Try("clams", ns.OpenClams) end)
-			ns.ScheduleBagCheck(1)
+			ns.ScheduleBagCheck(1.5)
 		end
 	elseif event == "UI_ERROR_MESSAGE" then
 		if ns.mail.busy then Log("game message during mail: " .. tostring(a2)) end
@@ -106,7 +106,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		-- Tijdens het verslag blijft het paneel staan (het telt zelf af).
 		if ns.mailPanel and not ns.mailPanel.reporting then ns.mailPanel:Hide() end
 		ns.Refresh()
-		ns.ScheduleBagCheck(1)
+		ns.ScheduleBagCheck(1.5)
 	elseif event == "MAIL_SEND_SUCCESS" then
 		if ns.mail.busy and ns.mail.waiting then
 			ns.mail.waiting = false
