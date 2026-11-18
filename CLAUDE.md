@@ -120,6 +120,12 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 - Idee (niet gebouwd): loot die minder waard is dan alles in je tassen kan niet weggegooid worden vanuit het lootvenster (geen API); het moet eerst in je tassen.
 - Opgelost (2026-11-16): een nieuwe tas op een tasvak slepen werkt weer met de addon aan (gemeld door Johan na 1.7.2). Oorzaak nooit vastgesteld; waarschijnlijk meegenomen met de sleep-fix van 1.6.1 (drops van buiten de tassen). Komt het terug: tijdelijke logregels op `PutItemInBag`, `ClearCursor`, `CURSOR_CHANGED` en `CharacterBagNSlot` OnReceiveDrag.
 - Nog niet gedaan: Warband-bank (retail), een verwijderd karakter uit de lijst halen.
-- Projectpagina's CurseForge en Wago bijgewerkt (2026-11-15) met Bank & alts, zoeken op bank/alts en "Bags full". CurseForge: authors.curseforge.com → project → Description (TinyMCE, `tinymce.activeEditor`). Wago: addons.wago.io/developers/projects/carefreebag/settings (markdown-textarea, "Save changes").
+- Rewards (2026-11-18): Johan is aangemeld bij CurseForge (Author Rewards Program, authors-old.curseforge.com/account/rewards-program) en Wago (addons.wago.io/account/rewards, land NL). Toen: CurseForge 199 downloads in 4 dagen, Wago 0. Niets aan te doen; over een maand de dashboards bekijken.
+- Backlog promotie (advies 2026-11-18, later oppakken):
+  1. **Reddit-post** in r/wowaddons (en r/classicwow als het Classic-relevant is): screenshots of een GIF van "tassen vol → één klik", korte Engelse tekst. Grootste effect.
+  2. **WoW Forever-community** (Discord/forum): daar zitten precies de spelers waarvoor CFB gebouwd is.
+  3. **WoWInterface**: de release-workflow (BigWigs packager) kan er automatisch naar uploaden. Nodig: WoWInterface-account en project, `## X-WoWI-ID` in de .toc, secret `WOWI_API_TOKEN` (Johan zet die zelf in GitHub secrets).
+  4. Andere sites: niet de moeite.
+- Projectpagina's CurseForge en Wago bijgewerkt (2026-11-15) met Bank & alts, zoeken op bank/alts en "Bags full"; (2026-11-18) met quest-items, beste tassen vanzelf, goud van alle karakters en clams. CurseForge: authors.curseforge.com → project → Description (TinyMCE, `tinymce.activeEditor`). Wago: addons.wago.io/developers/projects/carefreebag/settings (markdown-textarea, "Save changes").
 - Let op: de Bash-tool halveert backslashes in heredocs/scripts (`\\` wordt `\`), waardoor texturepaden kapotgaan. Lua-bestanden alleen met Write/Edit aanpassen.
 - Johans karakters (Forever): main en bank alt hebben dezelfde voornaam. Echte namen staan niet in de repo.
