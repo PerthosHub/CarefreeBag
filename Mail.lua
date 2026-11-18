@@ -122,7 +122,7 @@ end
 MailStart = function()
 	if ns.mail.busy then return end
 	local plan = BuildMailPlan()
-	if #plan == 0 then Print(T("nothing to send.")); return end
+	if #plan == 0 then Log("mail: nothing to send"); return end
 	ns.mail.queue = { plan[1] }
 	ns.mail.cat = plan[1].cat
 	ns.mail.busy = true
@@ -292,8 +292,48 @@ local function MailSkip()
 	ns.UpdateMailPanel()
 end
 
+-- Rechtsklik op een item bij de mailbox (tabblad Versturen): WoW voegt één stapel toe.
+-- CarefreeBag toont alle stapels van een item als één vakje, dus voegen wij de rest erbij
+-- (zolang er vakjes in de mail vrij zijn). Bijv. 60 cloth = 3 x 20 in de mail.
+local function FreeAttachments()
+	local max, used = ATTACHMENTS_MAX_SEND or 12, 0
+	if not GetSendMailItem then return max end
+	for i = 1, max do
+		local ok, name = pcall(GetSendMailItem, i)
+		if ok and name then used = used + 1 end
+	end
+	return max - used
+end
+
+function ns.MailAttachRest(g, bag, slot)
+	if not (SendMailFrame and SendMailFrame:IsShown()) or ns.mail.busy then return end
+	if (IsShiftKeyDown and IsShiftKeyDown()) or (IsControlKeyDown and IsControlKeyDown()) or (IsAltKeyDown and IsAltKeyDown()) then return end
+	if not g or not g.slots or #g.slots < 2 then return end
+	local rest = {}
+	for _, e in ipairs(g.slots) do
+		if not (e.bag == bag and e.slot == slot) then rest[#rest + 1] = { bag = e.bag, slot = e.slot, itemID = e.itemID } end
+	end
+	-- Even wachten tot WoW zijn eigen stapel heeft toegevoegd.
+	C_Timer.After(0.2, function()
+		if not (SendMailFrame and SendMailFrame:IsShown()) or CursorHasItem() then return end
+		local n = 0
+		for _, it in ipairs(rest) do
+			if FreeAttachments() <= 0 then break end
+			local info = C_Container.GetContainerItemInfo(it.bag, it.slot)
+			if info and info.itemID == it.itemID and not info.isLocked then
+				C_Container.PickupContainerItem(it.bag, it.slot)
+				ClickSendMailItemButton()
+				if CursorHasItem() then ClearCursor() end
+				n = n + 1
+			end
+		end
+		if n > 0 then Log("mail: right-click added " .. n .. " more stack(s) of " .. tostring(rest[1] and rest[1].itemID)) end
+	end)
+end
+
 ns.UpdateMailPanel = function()
 	if not ns.mailPanel or not ns.mailPanel:IsShown() or ns.mailPanel.reporting then return end
+	ns.mailPanel.emptyHidden = nil
 	local plan = ns.mail.busy and ns.mail.queue or BuildMailPlan()
 	if AskingFirstTime(plan) then
 		local to = {}
@@ -327,7 +367,14 @@ ns.UpdateMailPanel = function()
 			lines[#lines + 1] = "|cff888888" .. T("After that: %s"):format(table.concat(nxt, ", ")) .. "|r"
 		end
 	end
-	if not any and not ns.mail.busy then lines[1] = "|cff888888" .. T("Nothing to send.") .. "|r" end
+	-- Niets te versturen: paneel weg (komt terug zodra er iets te versturen is, zie Start.lua).
+	if not any and not ns.mail.busy then
+		ns.mailPanel.text:SetText("")
+		ns.mailPanel.send:SetText(T("Yes, send")) -- klaar voor de volgende keer
+		ns.mailPanel.emptyHidden = true -- door ons weggehaald (niet door jou met het kruisje)
+		ns.mailPanel:Hide()
+		return
+	end
 	if ns.mail.busy then
 		lines[#lines + 1] = " "
 		lines[#lines + 1] = "|cff33ff99" .. (ns.mail.current and T("Busy: mail to %s..."):format(ns.mail.current.to) or T("Busy...")) .. "|r"

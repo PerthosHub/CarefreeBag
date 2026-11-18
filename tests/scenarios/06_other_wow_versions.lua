@@ -49,11 +49,12 @@ if FLAVOR == "retail" then
   -- rugzak vol, alleen de reagent-tas heeft plek
   for s = 4, 6 do BAGS[0][s] = { itemID = 2589, count = 1 } end
   SlashCmdList.CAREFREEBAG("show"); E("BAG_UPDATE_DELAYED"); RunTimers()
-  BAGS[0][1] = nil; E("BAG_UPDATE_DELAYED"); RunTimers() -- ham is op: er komt een gat
-  local gap; for _, f in ipairs(ALLFRAMES) do if f.bg and f:IsShown() and f.scripts and f.scripts.OnReceiveDrag and not f.section then gap = f end end
-  CURSOR = { itemID = 4599, count = 1 }
+  BAGS[0][1] = nil; E("BAG_UPDATE_DELAYED"); RunTimers() -- ham is op
+  -- ham van buiten de tassen op het venster laten vallen
+  CURSOR = { itemID = 4599, count = 1, outside = true }
   -- het enige vrije vakje is in de reagent-tas: daar mag ham niet in
   local before = BAGS[5][1]
-  if gap then gap:Fire("OnReceiveDrag"); RunTimers() end
-  check(BAGS[5][1] == before, "geen gewoon item in de reagent-tas" .. (gap and "" or " (geen gat gevonden)"))
+  CarefreeBagFrame:Fire("OnReceiveDrag"); RunTimers()
+  check(BAGS[5][1] == before, "geen gewoon item in de reagent-tas")
+  CURSOR = nil
 end

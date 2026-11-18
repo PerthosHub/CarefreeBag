@@ -55,7 +55,9 @@ local function sectionOfTile(name) local b = find(name); return b end
 print("tegels:", #shownItems())
 local ham = find("Cured Ham Steak")
 check(ham and ham.count == 27 and ham.multi:GetText() == "2x", "ham 20+7 blijft 2 vakjes (20 is vol)")
-check(ham:GetID() == 4, "klik pakt kleinste stapel (vakje 4)")
+check(ham:GetID() == 3, "klik pakt de grootste stapel (vakje 3), zodat splitsen altijd kan")
+ham:Fire("PreClick", "LeftButton")
+check(ham.count == 20, "splitsvenster krijgt het echte aantal van die stapel (20), niet 27")
 local linen = find("Linen Cloth"); check(linen and linen.count == 33, "linen over 2 tassen = 33")
 local fang = find("Broken Fang"); check(fang and fang.count == 7 and not fang.multi:IsShown(), "broken fang 3+4 echt samengevoegd tot 1 vakje")
 check(BAGS[1][4] == nil or BAGS[1][6] == nil, "een vakje is vrijgekomen")
@@ -221,7 +223,8 @@ GameTooltip.AddLine = function(self, t) TT[#TT+1] = t end
 GameTooltip.GetOwner = function() return CarefreeBagItem1 end
 POSTCALL(GameTooltip)
 local ttl = table.concat(TT, " | ")
-check(ttl:find("CarefreeBag:|r |cff40ff40Verkoop op het AH: |r|cffffffff%d+c|r|cff40ff40 meer dan bij de vendor"), "tooltip: één regel met advies en verschil: " .. ttl)
+check(ttl:find("CarefreeBag:|r |cff40ff40Verkoop op het |r", 1, true) and ttl:find("Auctioneer", 1, true)
+  and ttl:find("AH|r|cff40ff40: |r|cffffffff%d+c|r|cff40ff40 meer dan bij de vendor"), "tooltip: één regel met advies, AH-icoon en verschil: " .. ttl)
 -- ===== 0.5.0 =====
 local function visibleItems() local r = {}; for i = 1, 200 do local b = _G["CarefreeBagItem" .. i]; if b and b:IsShown() then r[#r+1] = b end end return r end
 local function chipFor(key) for _, f in ipairs(ALLFRAMES) do if f.section == key and f.shown and f.text and tostring(f.text):find("^%+ ") then return f end end end
@@ -233,13 +236,13 @@ local lin, other
 for _, b in ipairs(visibleItems()) do if b.group.name == "Linen Cloth" then lin = b elseif not other then other = b end end
 check(lin.matchesSearch == true and other.matchesSearch == false, "zoeken: linen helder, rest grijs")
 CarefreeBagSearch:SetText(""); CarefreeBagSearch:Fire("OnTextChanged"); RunTimers()
--- gat laten staan als iets op is, zolang open
+-- item op: geen gat, de rest schuift op
 local firstName = CarefreeBagItem1.group.name
 local e = CarefreeBagItem1.group.rep
 BAGS[e.bag][e.slot] = nil; for _, s2 in ipairs(CarefreeBagItem1.group.slots) do BAGS[s2.bag][s2.slot] = nil end
 E("BAG_UPDATE_DELAYED"); RunTimers()
 local gapShown = false; for _, f in ipairs(ALLFRAMES) do if f.shown and f.bg and not f.section and type(f.text) == "table" and f.text.text == "" and f ~= CarefreeBagFrame.free then gapShown = true end end
-check(CarefreeBagItem1.group.name ~= firstName and gapShown, "item op: gat blijft staan, rest schuift niet")
+check(CarefreeBagItem1.group.name ~= firstName and not gapShown, "item op: geen gat, de rest schuift op (#6)")
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
 local gap2 = false; for _, f in ipairs(ALLFRAMES) do if f.shown and f.bg and not f.section and type(f.text) == "table" and f.text.text == "" and f ~= CarefreeBagFrame.free then gap2 = true end end
 check(not gap2, "na sluiten en openen: gat weg, netjes gesorteerd")

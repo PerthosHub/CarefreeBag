@@ -20,6 +20,17 @@ local function RestackStep()
 	if ns.mail and ns.mail.busy then return false end
 	if sell and sell.busy then return false end
 	if ns.BagSwapBusy and ns.BagSwapBusy() then return false end -- tassen worden gewisseld
+	-- Mailbox, handel, bank of AH open: niet samenvoegen, anders gaat een stapel die je net
+	-- met Shift hebt gesplitst meteen weer terug. Na het sluiten voegen we weer samen.
+	-- (op naam: een frame dat in deze WoW-versie niet bestaat, is nil en zou ipairs stoppen)
+	for _, name in ipairs({ "TradeFrame", "AuctionFrame", "AuctionHouseFrame", "GuildBankFrame" }) do
+		local f = _G[name]
+		if f and f.IsShown and f:IsShown() then
+			C_Timer.After(2, ns.ScheduleRestack) -- geen sluit-event voor allemaal: straks opnieuw kijken
+			return false
+		end
+	end
+	if ns.bankOpen or ns.mailOpen then return false end -- MAIL_CLOSED/BANKFRAME_CLOSED starten het weer
 	if stack.burst >= 40 then return false end -- veiligheidsrem
 	local items = Scan()
 	local by = {}
@@ -152,7 +163,8 @@ end
 
 -- "Gebruiken" verkoopt bij een vendor en verplaatst bij bank/mail/handel: dan niet.
 local function SomethingOpen()
-	for _, f in ipairs({ MerchantFrame, MailFrame, BankFrame, TradeFrame, AuctionFrame, AuctionHouseFrame, GuildBankFrame }) do
+	for _, name in ipairs({ "MerchantFrame", "MailFrame", "BankFrame", "TradeFrame", "AuctionFrame", "AuctionHouseFrame", "GuildBankFrame" }) do
+		local f = _G[name]
 		if f and f.IsShown and f:IsShown() then return true end
 	end
 	return ns.bankOpen or (ns.mail and ns.mail.busy) or false

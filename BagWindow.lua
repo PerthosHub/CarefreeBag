@@ -325,8 +325,15 @@ local function NewItemButton(i)
 	end)
 	b:HookScript("OnLeave", function(self) self.insertMark:Hide(); self.swapMark:Hide(); self.watch:Hide() end)
 	-- Rechtsklik op een tas: slim wisselen als alle tasvakken vol zijn (BagSwap.lua).
+	-- Rechtsklik bij de mailbox: alle stapels van dit vakje in de mail (Mail.lua).
 	b:HookScript("PreClick", function(self, button)
-		if button == "RightButton" and ns.BagRightClick then pcall(ns.BagRightClick, self:GetBagID(), self:GetID()) end
+		-- Het getal op het vakje is alles bij elkaar (bijv. 60), maar splitsen kan alleen binnen
+		-- één stapel: WoW's splitsvenster krijgt daarom het echte aantal van de stapel.
+		-- (Niet afhankelijk van IsShiftKeyDown: die mist de eerste klik vanuit een ander venster.)
+		if self.group and self.group.rep then self.count = self.group.rep.count end
+		if button ~= "RightButton" then return end
+		if ns.BagRightClick then pcall(ns.BagRightClick, self:GetBagID(), self:GetID()) end
+		if ns.MailAttachRest then pcall(ns.MailAttachRest, self.group, self:GetBagID(), self:GetID()) end
 	end)
 	local origDrag = b:GetScript("OnReceiveDrag")
 	b:SetScript("OnReceiveDrag", function(self, ...)
@@ -793,7 +800,10 @@ local function GetGap()
 	local t = gapPool[usedGaps]
 	if not t then
 		t = NewSlotTile(ns.main.content)
-		t.bg:SetVertexColor(0.5, 0.5, 0.5, 0.5)
+		-- Onzichtbaar: alleen de plek blijft vrij, zodat niets verspringt tot je de tas sluit.
+		t.bg:Hide()
+		local hl = t.GetHighlightTexture and t:GetHighlightTexture()
+		if hl then hl:SetAlpha(0) end
 		local function drop() StoreCursorItem() end
 		t:SetScript("OnReceiveDrag", drop)
 		t:SetScript("OnClick", drop)
@@ -839,8 +849,9 @@ local function Layout()
 			-- AH-waarde van de hele stapel; geen AH-prijs bekend = vendorprijs.
 			g.ahValue = g.ahValue + (AHPrice(e.link) or e.price or 0) * e.count
 		end
-		-- Klik gebruikt de kleinste stapel, zo raakt hij het eerst leeg.
-		if not g.rep or e.count < g.rep.count then g.rep = e end
+		-- Het vakje wijst naar de grootste stapel: dan werkt Shift-klik (splitsen) altijd zoals in
+		-- WoW zelf, ook als WoW de Shift bij de eerste klik vanuit een ander venster niet doorgeeft.
+		if not g.rep or e.count > g.rep.count then g.rep = e end
 	end
 
 	-- Nieuwste als laatst: onthoud wanneer een item voor het eerst in je tassen kwam.
@@ -908,8 +919,8 @@ local function Layout()
 			local byKey = s and s.byKey or {}
 			local used = {}
 			for _, k in ipairs(order) do
-				if byKey[k] then cells[#cells + 1] = byKey[k]; used[k] = true
-				else cells[#cells + 1] = { gap = true } end
+				-- Item op (weggegooid, gemaild, gebruikt): geen gat, de rest schuift op (issue #6).
+				if byKey[k] then cells[#cells + 1] = byKey[k]; used[k] = true end
 			end
 			for _, g in ipairs(groups) do
 				if not used[g.key] then cells[#cells + 1] = g; order[#order + 1] = g.key end
@@ -923,7 +934,6 @@ local function Layout()
 		CS().collapsed = CS().collapsed or {}
 		if CS().collapsed[sec.key] then
 			full[#full + 1] = { sec = sec, cells = {}, title = title, collapsed = true, n = #groups }
-		-- Ook een groep met alleen nog gaten blijft staan tot je de tassen sluit.
 		elseif #cells > 0 then
 			full[#full + 1] = { sec = sec, cells = cells, title = title }
 		elseif sec.plus or (sec.fixed and sec.key ~= "hidden" and (sec.key ~= "keys" or KeyringBag())) then

@@ -1,12 +1,30 @@
 # Changelog
 
+## 1.8.1
+### ✨ New
+- 📬 **Mail a whole pile with one right-click.** CarefreeBag shows 3 stacks of 20 cloth as one slot of 60. Right-click it at the mailbox and **all 60 go into the mail** (3 × 20).
+- 💰 **Icons in the price tip.** The word **vendor** gets a vendor icon, **AH** an auction icon, each in its own color. You see where it should go without reading.
+
+### 🔧 Fixes
+- ✂️ **Shift-click splits a stack again**, also on a slot that holds several stacks (it splits the biggest one). At the mailbox, bank, trade or auction house, CarefreeBag no longer merges the stack you just split. It tidies up after you close the window.
+- 🔑 **Keys group off = keys out of sight.** Your keys stay in the keyring, they just don't show up in CarefreeBag (before, they ended up in Other).
+- ⬛ **No more dark empty slot** when you use, destroy or mail an item. The other items move up right away.
+- 🤫 **No "Nothing to send" window.** The mail window only shows up when there is something to send.
+- 🧮 **Bank & alts counts are more up to date** after you send mail and switch characters right away.
+
 ## 1.8.0
-- Better bags go on by themselves: get a bag that gives you more slots (loot, mail, vendor) and CarefreeBag equips it right away, also with the mailbox, vendor or bank open (not in combat). A bag goes into an empty bag slot first, otherwise it replaces your smallest bag; what was in that bag stays in your bags. New option "Equip better bags automatically" under Advanced settings (on by default).
-- Same number of slots: soulbound bags go on first, BoE bags last (equipping binds them, so they stay tradeable). A soulbound bag replaces an equipped bag of the same size that is still tradeable.
-- A normal bag replaces a profession bag (Herb Bag and the like) right away; a profession bag only goes into an empty slot. Quivers, ammo pouches and soul bags are left alone. The reagent bag slot only takes reagent bags.
-- Right-click a bag in CarefreeBag when all bag slots are full: it swaps it for the best spot (a tradeable bag of the same size, otherwise your smallest bag). Fewer slots? You are asked first ("You lose 4 bag slots").
-- Swapping now also works when the new bag sits inside the bag it replaces (WoW refuses that on its own).
-- Bags in a group that is mailed to an alt, or in Auto Sell, are never equipped by themselves. Empty a bag slot yourself and CarefreeBag leaves it empty.
+### ✨ New
+- 🎒 **Better bags go on by themselves.** Get a bag with more slots (loot, mail, vendor) and CarefreeBag **equips it right away**. Empty bag slot first, otherwise it replaces your **smallest bag**. What was in that bag stays in your bags. Not in combat.
+- 🖱️ **Right-click a bag to swap it**, also when all bag slots are full. Fewer slots? You are **asked first** ("You lose 4 bag slots").
+- ⚙️ New option **"Equip better bags automatically"** under Advanced settings (on by default).
+
+### 📏 How CarefreeBag picks
+- **More slots wins.** Same number of slots: **soulbound bags first**, **BoE bags last** (equipping binds them, so they stay tradeable).
+- A **normal bag replaces a profession bag** (Herb Bag and the like). A profession bag only goes into an empty slot.
+- **Left alone:** quivers, ammo pouches, soul bags, bags in a group you mail to an alt, bags in Auto Sell, and a bag slot you emptied yourself.
+
+### 🔧 Fixes
+- 🔁 Swapping also works when the new bag **sits inside the bag it replaces** (WoW refuses that on its own).
 
 ## 1.7.2
 - Bags full window: the options under the item now look like a normal WoW menu, with the item name and its group as headings.

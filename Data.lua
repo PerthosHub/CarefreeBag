@@ -61,6 +61,12 @@ local AH_CUT = 0.05
 
 -- Onze regels onder de item-tooltip: wat de stack op het AH oplevert na kosten,
 -- en of het AH of de vendor meer geeft.
+-- Icoontjes voor het advies, zodat je niet hoeft te lezen waar het heen moet.
+local AH_ICON = "|TInterface\\Minimap\\Tracking\\Auctioneer:14:14|t"
+local VENDOR_ICON = "|TInterface\\GossipFrame\\VendorGossipIcon:14:14|t"
+-- Het woord ernaast in de kleur van het icoon (bruine geldbuidel, gouden AH-hamer).
+local AH_COLOR, VENDOR_COLOR = "|cffffcc33", "|cffd9a066"
+
 local function AddAHLines(tt, g)
 	if not g then return end
 	local each = ns.AHPrice(g.link)
@@ -75,9 +81,11 @@ local function AddAHLines(tt, g)
 	if diff > 0 then
 		-- het bedrag zelf in gewoon wit, zoals WoW geld altijd toont
 		local amount = "|r|cffffffff" .. money(diff) .. "|r|cff40ff40"
-		tt:AddLine("|cff66ccffCarefreeBag:|r |cff40ff40" .. T("Sell on the AH to earn %s more than at a vendor"):format(amount) .. "|r")
+		local ah = "|r" .. AH_ICON .. " " .. AH_COLOR .. T("AH") .. "|r|cff40ff40"
+		tt:AddLine("|cff66ccffCarefreeBag:|r |cff40ff40" .. T("Sell on the %s to earn %s more than at a vendor"):format(ah, amount) .. "|r")
 	else
-		tt:AddLine("|cff66ccffCarefreeBag:|r |cffffd100" .. T("Sell to a vendor for the best price") .. "|r")
+		local vendorWord = "|r" .. VENDOR_ICON .. " " .. VENDOR_COLOR .. T("vendor") .. "|r|cffffd100"
+		tt:AddLine("|cff66ccffCarefreeBag:|r |cffffd100" .. T("Sell to a %s for the best price"):format(vendorWord) .. "|r")
 	end
 end
 local AddOwnerLines -- vooruit: "waar heb je dit nog meer" (zie Overzicht van je karakters)
@@ -329,7 +337,8 @@ function ns.On(k) return not (ns.DB.fixedOn and ns.DB.fixedOn[k] == false) end
 
 function ns.SectionOf(e)
 	if Hidden()[e.itemID] then return "hidden" end
-	if e.key then return ns.On("keys") and "keys" or "other" end
+	-- Sleutels uit de keyring: groep Keys uit = niet in het venster (ze blijven gewoon in de keyring).
+	if e.key then return "keys" end
 	local key = Assign()[e.itemID]
 	if key == "grey" and ns.On("grey") then return "grey" end    -- zelf naar Auto Sell gesleept
 	if key == "other" then return "other" end                 -- zelf naar Overig gesleept: nooit automatisch

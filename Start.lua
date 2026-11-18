@@ -61,6 +61,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 	elseif event == "BANKFRAME_CLOSED" then
 		-- Niet meer uitlezen: tijdens het sluiten is de bank al (deels) leeg.
 		ns.bankOpen = false
+		ScheduleRestack() -- tijdens de bank niet samengevoegd: nu wel
 		ns.ScheduleBagCheck(1.5)
 	elseif event == "PLAYERBANKSLOTS_CHANGED" or event == "PLAYERBANKBAGSLOTS_CHANGED" then
 		if ns.bankOpen then
@@ -92,6 +93,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		if ns.mail.busy then Log("game message during mail: " .. tostring(a2)) end
 		if ERR_INV_FULL and a2 == ERR_INV_FULL then Try("loot", ns.LootEvent, "FULL") end
 	elseif event == "MAIL_SHOW" then
+		ns.mailOpen = true -- geen stapels samenvoegen zolang de mailbox open is (Chores.lua)
 		ns.mail.step = false -- nieuw bezoek: eerst weer automatisch proberen
 		ns.mail.skipped = {}  -- en alle categorieën worden weer gevraagd
 		ns.MailReportClose()  -- oud verslag nog in beeld: weg, paneel weer aan de mailbox
@@ -102,12 +104,17 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		ns.Refresh()
 		C_Timer.After(0.5, MailAutoNext)
 	elseif event == "MAIL_CLOSED" then
+		ns.mailOpen = false
+		ScheduleRestack() -- tijdens de mailbox niet samengevoegd: nu wel
 		if ns.mail.busy then MailStop(T("mailbox closed, stopped.")) end
 		-- Tijdens het verslag blijft het paneel staan (het telt zelf af).
 		if ns.mailPanel and not ns.mailPanel.reporting then ns.mailPanel:Hide() end
 		ns.Refresh()
 		ns.ScheduleBagCheck(1.5)
 	elseif event == "MAIL_SEND_SUCCESS" then
+		-- Meteen onthouden wat er nog in je tassen zit (anders mist het bankpaneel/de tooltip
+		-- het als je vlak na het versturen van karakter wisselt).
+		C_Timer.After(0.5, function() Try("snapshot", SnapBags) end)
 		if ns.mail.busy and ns.mail.waiting then
 			ns.mail.waiting = false
 			ns.MailSent(ns.mail.current)
@@ -158,7 +165,11 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 			ns.LootEvent("BAG")
 			Try("clams", ns.OpenClams)
 			ns.ScheduleBagCheck()
-			if ns.mailPanel and ns.mailPanel:IsShown() and not ns.mail.busy then ns.UpdateMailPanel() end
+			if ns.mailPanel and not ns.mail.busy then
+				if ns.mailPanel:IsShown() then ns.UpdateMailPanel()
+				-- paneel was weg omdat er niets te versturen was: misschien nu wel (post opgehaald)
+				elseif ns.mailPanel.emptyHidden and MailFrame and MailFrame:IsShown() then ns.mailPanel:Show() end
+			end
 		end
 	end
 end)

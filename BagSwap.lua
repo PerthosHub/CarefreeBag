@@ -368,7 +368,9 @@ end
 
 -- Vendor, bank, post, handel, AH: daar doet een rechtsklik iets anders (verkopen, verplaatsen).
 local function SomethingOpen()
-	for _, f in ipairs({ MerchantFrame, MailFrame, BankFrame, TradeFrame, AuctionFrame, AuctionHouseFrame, GuildBankFrame }) do
+	-- op naam: een frame dat in deze WoW-versie niet bestaat, is nil en zou ipairs stoppen
+	for _, name in ipairs({ "MerchantFrame", "MailFrame", "BankFrame", "TradeFrame", "AuctionFrame", "AuctionHouseFrame", "GuildBankFrame" }) do
+		local f = _G[name]
 		if f and f.IsShown and f:IsShown() then return true end
 	end
 	return ns.bankOpen or (ns.mail and ns.mail.busy) or false
