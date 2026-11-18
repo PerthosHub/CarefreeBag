@@ -3,7 +3,8 @@
 ## 1.9.0
 ### ✨ New
 - 📜 **See which quest an item is for.** Hover a quest item: the tooltip shows the quest, its level (in the difficulty color) and your progress, like 3/8. No database needed, CarefreeBag reads your quest log.
-- ❓ **Leftover quest items get a ?.** Is a quest item not in your quest log any more? It gets a small ? in your bags. The tooltip says it can probably go, and why you may still need it (next step of a chain, reputation, a quest you have not picked up yet). You decide.
+- 🟧 **Leftover quest items stand out.** Is a quest item not in your quest log any more? It gets an orange border, a ? and a grey icon. The tooltip says it can probably go, and why you may still need it (next step of a chain, reputation, a quest you have not picked up yet). You decide.
+- 🔔 **Reminder when you log in.** A short list of quest items you may not need. Per item: **Always keep** (no more reminders), or **Remind me later** for the whole list. In your bags, **Alt-click** a leftover to always keep it (Alt-click again to undo).
 - ❗ **Loot that starts a quest.** A small window pops up with **Start quest**: one click opens the quest and you accept it yourself. Not now? Click **Later**: the item keeps a blue glow in your bags until the quest is in your log. During a fight the window waits until the fight is over.
 
 ## 1.8.1
