@@ -695,6 +695,8 @@ local function SetupItemButton(b, g)
 			if b.newPulse and not (b.newPulse.IsPlaying and b.newPulse:IsPlaying()) then b.newPulse:Play() end
 		elseif b.newPulse then b.newPulse:Stop() end
 	end
+	-- quest-items: "!" + blauwe gloed (start een quest), "?" (niet in je questlog). QuestItems.lua.
+	if ns.QuestMark then pcall(ns.QuestMark, b, g) end
 	pcall(b.UpdateJunkItem, b, info.quality, info.hasNoValue)
 	pcall(b.UpdateCooldown, b, info.iconFileID)
 	local match = ns.searchText == "" or (g.name or ""):lower():find(ns.searchText, 1, true) ~= nil

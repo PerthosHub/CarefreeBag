@@ -27,5 +27,7 @@ Chores.lua
 Mail.lua
 Loot.lua
 BagSwap.lua
+QuestItems.lua
+QuestStart.lua
 Options.lua
 Start.lua
