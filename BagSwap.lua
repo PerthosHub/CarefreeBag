@@ -243,7 +243,8 @@ Step = function()
 	local j = job
 	if not j then return end
 	j.steps = j.steps + 1
-	if j.steps > 200 then -- grote volle tas = veel verplaatsingen; dit is alleen een noodrem return Finish(false, T("Not enough room to swap bags.")) end
+	-- noodrem; een grote volle tas leeghalen kost veel stappen
+	if j.steps > 200 then return Finish(false, T("Not enough room to swap bags.")) end
 	if InCombatLockdown() then return Finish(false, T("Bag swap stopped: you entered combat.")) end
 	if CursorHasItem() then return Again() end -- jij hebt iets vast: even wachten
 	local s = SlotInfo(j.c)
