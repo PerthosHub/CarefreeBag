@@ -3,7 +3,7 @@
 -- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
 local ADDON, ns = ...
 
-ns.VERSION = "1.7.2"
+ns.VERSION = "1.8.0"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -136,6 +136,7 @@ function ns.Defaults()
 	ns.DB.greyAuto = true -- grijze items gaan altijd naar Auto Sell
 	if ns.DB.autoSell == nil then ns.DB.autoSell = false end
 	if ns.DB.autoOpenClams == nil then ns.DB.autoOpenClams = true end -- clams na het looten openen
+	if ns.DB.autoBags == nil then ns.DB.autoBags = true end -- betere tassen vanzelf aandoen (BagSwap.lua)
 	ns.DB.conflictOK = ns.DB.conflictOK or {}
 	ns.DB.maxCols = ns.DB.maxCols or 14  -- breder dan dit wordt het venster niet; daarna scrollen
 	ns.DB.cols = nil

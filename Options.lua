@@ -154,7 +154,7 @@ function ns.BuildConfig()
 	config.advBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
 	config.advBtn:SetScript("OnClick", function() config.advOpen = not config.advOpen; ns.RefreshConfig() end)
 	config.adv = CreateFrame("Frame", nil, config)
-	config.adv:SetSize(CW - 2 * ns.PAD, 60)
+	config.adv:SetSize(CW - 2 * ns.PAD, 90)
 
 	-- Breedte van de tas
 	local colsHover = CreateFrame("Frame", nil, config.adv)
@@ -190,6 +190,18 @@ function ns.BuildConfig()
 		ns.RefreshConfig()
 	end)
 	Tooltip(config.keptClear, T("Clear"), T("These items may be destroyed again when your bags are full. Only for this character."))
+
+	-- Betere tassen vanzelf aandoen (BagSwap.lua)
+	local bagsCb = NewCheck(config.adv, T("Equip better bags automatically"),
+		T("A bag with more slots goes on right away (not in combat). Same number of slots: soulbound bags first, BoE bags last, because equipping binds them. Right-click a bag to swap it yourself."),
+		function() return ns.DB.autoBags end, function(v)
+			ns.DB.autoBags = v
+			Log("equip better bags automatically: " .. tostring(v))
+			if v and ns.ScheduleBagCheck then ns.ScheduleBagCheck() end
+		end)
+	bagsCb:SetPoint("TOPLEFT", config.adv, "TOPLEFT", 4, -60)
+	config.checks[#config.checks + 1] = bagsCb
+	config.bagsCb = bagsCb
 
 	-- 1. Groepen: eigen categorieën en vaste groepen in één lijst ---------------
 	Heading(config, T("Groups"), y)
@@ -646,7 +658,7 @@ ns.RefreshConfig = function()
 	config.adv:ClearAllPoints()
 	config.adv:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD, y)
 	config.adv:SetShown(config.advOpen and true or false)
-	if config.advOpen then y = y - 60 end
+	if config.advOpen then y = y - 90 end
 	config:SetHeight(-y + 30)
 end
 

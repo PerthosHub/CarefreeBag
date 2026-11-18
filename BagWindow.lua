@@ -324,6 +324,10 @@ local function NewItemButton(i)
 		if ReorderTarget(self) then self.watch:Show() end
 	end)
 	b:HookScript("OnLeave", function(self) self.insertMark:Hide(); self.swapMark:Hide(); self.watch:Hide() end)
+	-- Rechtsklik op een tas: slim wisselen als alle tasvakken vol zijn (BagSwap.lua).
+	b:HookScript("PreClick", function(self, button)
+		if button == "RightButton" and ns.BagRightClick then pcall(ns.BagRightClick, self:GetBagID(), self:GetID()) end
+	end)
 	local origDrag = b:GetScript("OnReceiveDrag")
 	b:SetScript("OnReceiveDrag", function(self, ...)
 		if Reorder(self) then return end

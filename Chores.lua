@@ -19,6 +19,7 @@ local function RestackStep()
 	if not ns.DB.enabled or InCombatLockdown() or CursorHasItem() then return false end
 	if ns.mail and ns.mail.busy then return false end
 	if sell and sell.busy then return false end
+	if ns.BagSwapBusy and ns.BagSwapBusy() then return false end -- tassen worden gewisseld
 	if stack.burst >= 40 then return false end -- veiligheidsrem
 	local items = Scan()
 	local by = {}
@@ -115,6 +116,8 @@ local function AskAutoSell()
 	StaticPopup_Show("CAREFREEBAG_AUTOSELL")
 end
 
+function ns.SellBusy() return sell.busy end
+
 ns.SellStart = function(confirmed)
 	if sell.busy or not ns.DB.enabled then return end
 	if not confirmed and ns.DB.autoSellAsked and not ns.DB.autoSell then return end
@@ -159,6 +162,7 @@ local openPending = false
 function ns.OpenClams()
 	if not ns.DB.enabled or not ns.DB.autoOpenClams or ns.clamBlocked or openPending then return end
 	if InCombatLockdown() or CursorHasItem() or SomethingOpen() then return end
+	if ns.BagSwapBusy and ns.BagSwapBusy() then return end
 	if GetNumLootItems and (GetNumLootItems() or 0) > 0 then return end
 	for _, e in ipairs(Scan()) do
 		if IsClam(e) and not e.info.isLocked then

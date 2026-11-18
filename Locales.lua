@@ -4,6 +4,15 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["Equip better bags automatically"] = "Betere tassen automatisch aandoen",
+	["A bag with more slots goes on right away (not in combat). Same number of slots: soulbound bags first, BoE bags last, because equipping binds them. Right-click a bag to swap it yourself."] = "Een tas met meer vakjes gaat meteen aan (niet in gevecht). Evenveel vakjes: eerst soulbound tassen, BoE-tassen als laatste, want aandoen bindt ze. Rechtsklik op een tas om zelf te wisselen.",
+	["Equipped %s."] = "%s aangedaan.",
+	["Swapped %s for %s."] = "%s aangedaan in plaats van %s.",
+	["Not enough room to swap bags."] = "Niet genoeg plek om tassen te wisselen.",
+	["Bag swap stopped: you entered combat."] = "Tassen wisselen gestopt: je bent in gevecht.",
+	["Replace %s with the profession bag %s? Only items for that profession fit in it."] = "%s vervangen door de beroepstas %s? Daar passen alleen items voor dat beroep in.",
+	["Replace %s (%d slots) with %s (%d slots)? You lose %d bag slots."] = "%s (%d vakjes) vervangen door %s (%d vakjes)? Je verliest %d vakjes.",
+	["Swap"] = "Wisselen",
 	["Reagents"] = "Reagents",
 	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Reagent-tas: %d van %d vrij (daar passen alleen crafting reagents in)",
 	["Mail %s to:"] = "%s mailen naar:",
@@ -209,6 +218,15 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["Equip better bags automatically"] = "Bessere Taschen automatisch anlegen",
+	["A bag with more slots goes on right away (not in combat). Same number of slots: soulbound bags first, BoE bags last, because equipping binds them. Right-click a bag to swap it yourself."] = "Eine Tasche mit mehr Plätzen wird sofort angelegt (nicht im Kampf). Gleich viele Plätze: zuerst seelengebundene Taschen, BoE-Taschen zuletzt, weil Anlegen sie bindet. Rechtsklick auf eine Tasche, um selbst zu tauschen.",
+	["Equipped %s."] = "%s angelegt.",
+	["Swapped %s for %s."] = "%s statt %s angelegt.",
+	["Not enough room to swap bags."] = "Nicht genug Platz, um Taschen zu tauschen.",
+	["Bag swap stopped: you entered combat."] = "Taschentausch gestoppt: du bist im Kampf.",
+	["Replace %s with the profession bag %s? Only items for that profession fit in it."] = "%s durch die Berufstasche %s ersetzen? Dort passen nur Gegenstände für diesen Beruf hinein.",
+	["Replace %s (%d slots) with %s (%d slots)? You lose %d bag slots."] = "%s (%d Plätze) durch %s (%d Plätze) ersetzen? Du verlierst %d Plätze.",
+	["Swap"] = "Tauschen",
 	["Reagents"] = "Reagenzien",
 	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Reagenzientasche: %d von %d frei (nur Handwerksreagenzien passen hinein)",
 	["Mail %s to:"] = "%s senden an:",
@@ -415,6 +433,15 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Equip better bags automatically"] = "Équiper automatiquement de meilleurs sacs",
+	["A bag with more slots goes on right away (not in combat). Same number of slots: soulbound bags first, BoE bags last, because equipping binds them. Right-click a bag to swap it yourself."] = "Un sac avec plus d'emplacements est équipé tout de suite (pas en combat). Même nombre d'emplacements : d'abord les sacs liés, les sacs LQE en dernier, car les équiper les lie. Clic droit sur un sac pour l'échanger toi-même.",
+	["Equipped %s."] = "%s équipé.",
+	["Swapped %s for %s."] = "%s équipé à la place de %s.",
+	["Not enough room to swap bags."] = "Pas assez de place pour échanger les sacs.",
+	["Bag swap stopped: you entered combat."] = "Échange de sacs arrêté : tu es en combat.",
+	["Replace %s with the profession bag %s? Only items for that profession fit in it."] = "Remplacer %s par le sac de métier %s ? Seuls les objets de ce métier y rentrent.",
+	["Replace %s (%d slots) with %s (%d slots)? You lose %d bag slots."] = "Remplacer %s (%d emplacements) par %s (%d emplacements) ? Tu perds %d emplacements.",
+	["Swap"] = "Échanger",
 	["Reagents"] = "Composants",
 	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Sac de composants : %d sur %d libres (seuls les composants d'artisanat y vont)",
 	["Mail %s to:"] = "Envoyer %s à :",
@@ -621,6 +648,15 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Equip better bags automatically"] = "Equipar bolsas mejores automáticamente",
+	["A bag with more slots goes on right away (not in combat). Same number of slots: soulbound bags first, BoE bags last, because equipping binds them. Right-click a bag to swap it yourself."] = "Una bolsa con más casillas se equipa enseguida (no en combate). Mismo número de casillas: primero las bolsas ligadas, las BoE al final, porque equiparlas las liga. Clic derecho en una bolsa para cambiarla tú.",
+	["Equipped %s."] = "%s equipada.",
+	["Swapped %s for %s."] = "%s equipada en lugar de %s.",
+	["Not enough room to swap bags."] = "No hay sitio suficiente para cambiar las bolsas.",
+	["Bag swap stopped: you entered combat."] = "Cambio de bolsas detenido: estás en combate.",
+	["Replace %s with the profession bag %s? Only items for that profession fit in it."] = "¿Sustituir %s por la bolsa de profesión %s? Solo caben objetos de esa profesión.",
+	["Replace %s (%d slots) with %s (%d slots)? You lose %d bag slots."] = "¿Sustituir %s (%d casillas) por %s (%d casillas)? Pierdes %d casillas.",
+	["Swap"] = "Cambiar",
 	["Reagents"] = "Componentes",
 	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Bolsa de componentes: %d de %d libres (solo caben componentes de artesanía)",
 	["Mail %s to:"] = "Enviar %s a:",
@@ -827,6 +863,15 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Equip better bags automatically"] = "Equipar bolsas melhores automaticamente",
+	["A bag with more slots goes on right away (not in combat). Same number of slots: soulbound bags first, BoE bags last, because equipping binds them. Right-click a bag to swap it yourself."] = "Uma bolsa com mais espaços é equipada na hora (fora de combate). Mesmo número de espaços: primeiro as bolsas vinculadas, as BoE por último, porque equipar as vincula. Clique direito numa bolsa para trocá-la você mesmo.",
+	["Equipped %s."] = "%s equipada.",
+	["Swapped %s for %s."] = "%s equipada no lugar de %s.",
+	["Not enough room to swap bags."] = "Não há espaço suficiente para trocar as bolsas.",
+	["Bag swap stopped: you entered combat."] = "Troca de bolsas interrompida: você entrou em combate.",
+	["Replace %s with the profession bag %s? Only items for that profession fit in it."] = "Substituir %s pela bolsa de profissão %s? Só cabem itens dessa profissão.",
+	["Replace %s (%d slots) with %s (%d slots)? You lose %d bag slots."] = "Substituir %s (%d espaços) por %s (%d espaços)? Você perde %d espaços.",
+	["Swap"] = "Trocar",
 	["Reagents"] = "Reagentes",
 	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Bolsa de reagentes: %d de %d livres (só cabem reagentes de criação)",
 	["Mail %s to:"] = "Enviar %s para:",
@@ -1033,6 +1078,15 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Equip better bags automatically"] = "Equipaggia automaticamente borse migliori",
+	["A bag with more slots goes on right away (not in combat). Same number of slots: soulbound bags first, BoE bags last, because equipping binds them. Right-click a bag to swap it yourself."] = "Una borsa con più spazi viene equipaggiata subito (non in combattimento). Stesso numero di spazi: prima le borse vincolate, le BoE per ultime, perché equipaggiarle le vincola. Clic destro su una borsa per scambiarla tu.",
+	["Equipped %s."] = "%s equipaggiata.",
+	["Swapped %s for %s."] = "%s equipaggiata al posto di %s.",
+	["Not enough room to swap bags."] = "Spazio insufficiente per scambiare le borse.",
+	["Bag swap stopped: you entered combat."] = "Scambio borse interrotto: sei in combattimento.",
+	["Replace %s with the profession bag %s? Only items for that profession fit in it."] = "Sostituire %s con la borsa da professione %s? Ci stanno solo oggetti di quella professione.",
+	["Replace %s (%d slots) with %s (%d slots)? You lose %d bag slots."] = "Sostituire %s (%d spazi) con %s (%d spazi)? Perdi %d spazi.",
+	["Swap"] = "Scambia",
 	["Reagents"] = "Reagenti",
 	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Borsa dei reagenti: %d di %d liberi (ci stanno solo reagenti di creazione)",
 	["Mail %s to:"] = "Invia %s a:",
@@ -1239,6 +1293,15 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Equip better bags automatically"] = "Автоматически надевать лучшие сумки",
+	["A bag with more slots goes on right away (not in combat). Same number of slots: soulbound bags first, BoE bags last, because equipping binds them. Right-click a bag to swap it yourself."] = "Сумка с большим числом ячеек надевается сразу (не в бою). Ячеек поровну: сначала персональные сумки, сумки BoE в последнюю очередь, ведь при надевании они становятся персональными. ПКМ по сумке, чтобы поменять её самому.",
+	["Equipped %s."] = "Надета сумка %s.",
+	["Swapped %s for %s."] = "%s надета вместо %s.",
+	["Not enough room to swap bags."] = "Недостаточно места, чтобы поменять сумки.",
+	["Bag swap stopped: you entered combat."] = "Замена сумок остановлена: вы в бою.",
+	["Replace %s with the profession bag %s? Only items for that profession fit in it."] = "Заменить %s профессиональной сумкой %s? В неё помещаются только предметы этой профессии.",
+	["Replace %s (%d slots) with %s (%d slots)? You lose %d bag slots."] = "Заменить %s (%d ячеек) на %s (%d ячеек)? Вы потеряете %d ячеек.",
+	["Swap"] = "Поменять",
 	["Reagents"] = "Реагенты",
 	["Reagent bag: %d of %d free (only crafting reagents fit there)"] = "Сумка для реагентов: свободно %d из %d (туда помещаются только реагенты)",
 	["Mail %s to:"] = "Отправлять %s:",

@@ -26,5 +26,6 @@ Blizzard.lua
 Chores.lua
 Mail.lua
 Loot.lua
+BagSwap.lua
 Options.lua
 Start.lua
