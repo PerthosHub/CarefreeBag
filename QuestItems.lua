@@ -1,7 +1,7 @@
 -- CarefreeBag: QuestItems.lua
 -- Bij welke quest hoort een quest-item? We lezen je questlog uit (naam, level, doelen)
 -- en koppelen de items in je tassen daaraan. Geen database: wat niet in je questlog
--- staat, krijgt een "?" en in de tooltip de redenen waarom je het misschien nog nodig hebt.
+-- staat, krijgt een oranje rand + grijs icoon en in de tooltip de redenen waarom je het misschien nog nodig hebt.
 -- Items die een quest starten krijgen een "!", een eigen gloed en een venstertje (QuestStart.lua).
 -- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
 local ADDON, ns = ...
@@ -356,8 +356,7 @@ end
 -- Markering op de vakjes in het tassenvenster
 ---------------------------------------------------------------------------
 
-local START_ICON = "Interface\\GossipFrame\\AvailableQuestIcon"   -- geel "!"
-local ORPHAN_ICON = "Interface\\GossipFrame\\IncompleteQuestIcon" -- grijs "?"
+local START_ICON = "Interface\\GossipFrame\\AvailableQuestIcon" -- geel "!"
 
 local function Parts(b)
 	if b.cfbQuest then return b.cfbQuest end
@@ -367,13 +366,19 @@ local function Parts(b)
 	p.icon:SetPoint("TOPLEFT", b, "TOPLEFT", 1, -1)
 	p.icon:Hide()
 	-- Kan waarschijnlijk weg: vaste oranje rand (knippert niet, anders dan "nieuw" en "quest start").
-	p.border = b:CreateTexture(nil, "OVERLAY", nil, 5)
-	p.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-	p.border:SetBlendMode("ADD")
-	p.border:SetVertexColor(1, 0.4, 0)
-	p.border:SetPoint("CENTER")
-	p.border:SetSize(ns.TILE * 1.8, ns.TILE * 1.8)
-	p.border:Hide()
+	-- Twee lagen over elkaar: één laag was in het spel te zwak.
+	local function Ring(sub)
+		local t = b:CreateTexture(nil, "OVERLAY", nil, sub)
+		t:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+		t:SetBlendMode("ADD")
+		t:SetVertexColor(1, 0.45, 0)
+		t:SetPoint("CENTER")
+		t:SetSize(ns.TILE * 1.85, ns.TILE * 1.85)
+		t:Hide()
+		return t
+	end
+	p.border = Ring(4)
+	p.border2 = Ring(5)
 	-- Quest-start: lichtblauwe, rustig pulserende rand. Anders dan de gouden "nieuw"-rand,
 	-- en hij blijft tot de quest in je log staat (niet weg bij hover).
 	p.glow = b:CreateTexture(nil, "OVERLAY", nil, 6)
@@ -405,13 +410,12 @@ function ns.QuestMark(b, g)
 	local leftover = ns.QuestLeftover(s)
 	if kind == "start" then
 		p.icon:SetTexture(START_ICON); p.icon:SetVertexColor(1, 1, 1); p.icon:SetSize(14, 14); p.icon:Show()
-	elseif leftover then
-		-- groot oranje "?" + oranje rand + grijs icoon: in één oogopslag "kan waarschijnlijk weg"
-		p.icon:SetTexture(ORPHAN_ICON); p.icon:SetVertexColor(1, 0.55, 0.1); p.icon:SetSize(18, 18); p.icon:Show()
 	else
+		-- restjes: geen icoon (Johan: vraagteken weg), alleen oranje rand + grijs icoon
 		p.icon:Hide()
 	end
 	p.border:SetShown(leftover)
+	p.border2:SetShown(leftover)
 	local info = e and e.info
 	SetItemButtonDesaturated(b, leftover or (info and info.isLocked) or false)
 	local glow = kind == "start" and ns.searchText == ""

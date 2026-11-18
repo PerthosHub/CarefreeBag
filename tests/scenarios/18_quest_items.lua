@@ -80,7 +80,7 @@ check(t:find("For the quest", 1, true) and t:find("[12] Candles for Bob", 1, tru
 check(t:find("Progress: 3/8", 1, true), "tooltip: voortgang 3/8")
 check(Btn(5001).questKind == "active" and Tip(5001):find("Burn the Nest", 1, true), "Scorched Torch: gevonden via de questtekst")
 check(Btn(5002).questKind == "orphan", "Old Scrap of Paper: niet in je questlog")
-check(Btn(5002).cfbQuest.icon:IsShown(), "  ... met een ?-icoontje")
+check(not Btn(5002).cfbQuest.icon:IsShown() and Btn(5002).cfbQuest.border2:IsShown(), "  ... met dubbele oranje rand, zonder vraagteken")
 t = Tip(5002)
 check(t:find("Not in your quest log", 1, true) and t:find("quest chain", 1, true) and t:find("reputation", 1, true), "tooltip: kan waarschijnlijk weg + redenen")
 check(t:find("Alt-click: always keep", 1, true), "tooltip: Alt-klik = altijd houden")
