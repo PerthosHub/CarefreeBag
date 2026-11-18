@@ -331,6 +331,8 @@ local function NewItemButton(i)
 		-- één stapel: WoW's splitsvenster krijgt daarom het echte aantal van de stapel.
 		-- (Niet afhankelijk van IsShiftKeyDown: die mist de eerste klik vanuit een ander venster.)
 		if self.group and self.group.rep then self.count = self.group.rep.count end
+		-- Alt-klik op een quest-restje: altijd houden / weer herinneren (QuestItems.lua).
+		if ns.QuestClick and ns.QuestClick(self, button) then return end
 		if button ~= "RightButton" then return end
 		if ns.BagRightClick then pcall(ns.BagRightClick, self:GetBagID(), self:GetID()) end
 		if ns.MailAttachRest then pcall(ns.MailAttachRest, self.group, self:GetBagID(), self:GetID()) end

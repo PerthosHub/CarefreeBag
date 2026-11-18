@@ -196,6 +196,14 @@ local function Completed(questID)
 	return Try(IsQuestFlaggedCompleted, questID) and true or false
 end
 
+-- Quest-restjes die je altijd wilt houden (geen markering, geen herinnering). Per karakter.
+function ns.QuestKeep()
+	local ch = ns.CharEntry and ns.CharEntry()
+	if not ch then return {} end
+	ch.questKeep = ch.questKeep or {}
+	return ch.questKeep
+end
+
 local function ItemName(itemID, link)
 	local n = link and link:match("%[(.-)%]")
 	if n then return n end
@@ -204,8 +212,23 @@ end
 
 -- Wat weten we van het item in dit tasvak?
 -- kind: "active" (hoort bij een quest in je log), "start" (start een quest die je nog niet hebt),
--- "done" (start een quest die je al gedaan hebt), "orphan" (quest-item, niet in je log), of nil.
+-- "done" (start een quest die je al gedaan hebt), "orphan" (quest-item, niet in je log),
+-- "kept" (orphan/done, maar je houdt het altijd), of nil.
+local RawState
 function ns.QuestState(bag, slot, itemID, link, isQuest)
+	local s = RawState(bag, slot, itemID, link, isQuest)
+	if s and (s.kind == "orphan" or s.kind == "done") and ns.QuestKeep()[itemID] then
+		return { kind = "kept", was = s.kind }
+	end
+	return s
+end
+
+-- "Kan waarschijnlijk weg": quest-item dat niet in je log staat (en dat je niet altijd houdt).
+function ns.QuestLeftover(s)
+	return s and (s.kind == "orphan" or s.kind == "done") or false
+end
+
+RawState = function(bag, slot, itemID, link, isQuest)
 	if not (bag and slot and itemID) then return nil end
 	local q = C_Container and C_Container.GetContainerItemQuestInfo and Try(C_Container.GetContainerItemQuestInfo, bag, slot)
 	q = type(q) == "table" and q or {}
@@ -234,6 +257,7 @@ end
 ---------------------------------------------------------------------------
 
 local BLUE = "|cff66ccff"
+local ALT_HINT = "|cff40ff40" -- groen, zoals WoW "Right Click to Read" toont
 
 local function QuestLabel(q)
 	local name = q.title or "?"
@@ -283,8 +307,12 @@ function ns.QuestTooltip(tt, owner)
 		end
 	elseif s.kind == "start" then
 		tt:AddLine(BLUE .. "CarefreeBag:|r |cffffd100" .. T("Starts a quest. Right-click to read it and accept.") .. "|r", 1, 1, 1, true)
+	elseif s.kind == "kept" then
+		tt:AddLine(BLUE .. "CarefreeBag:|r " .. T("You always keep this item."), 1, 1, 1, true)
+		tt:AddLine(ALT_HINT .. T("Alt-click: remind me again") .. "|r", 1, 1, 1, true)
 	elseif s.kind == "done" then
 		tt:AddLine(BLUE .. "CarefreeBag:|r " .. T("You already did the quest this item starts. It can probably go."), 1, 0.6, 0.2, true)
+		tt:AddLine(ALT_HINT .. T("Alt-click: always keep (no more reminders)") .. "|r", 1, 1, 1, true)
 	else
 		tt:AddLine(BLUE .. "CarefreeBag:|r |cffff9933" .. T("Not in your quest log: it can probably go.") .. "|r", 1, 1, 1, true)
 		tt:AddLine(T("Check first, it may still be needed for:"), 0.8, 0.8, 0.8, true)
@@ -292,8 +320,36 @@ function ns.QuestTooltip(tt, owner)
 			T("a quest you have not picked up yet"), T("a class or dungeon quest") }) do
 			tt:AddLine("  - " .. r, 0.8, 0.8, 0.8, true)
 		end
+		tt:AddLine(ALT_HINT .. T("Alt-click: always keep (no more reminders)") .. "|r", 1, 1, 1, true)
 	end
 	tt:Show()
+end
+
+-- Alt-klik op een quest-restje: altijd houden, of weer herinneren. true = afgehandeld.
+function ns.QuestClick(b, button)
+	if button ~= "LeftButton" or not (IsAltKeyDown and IsAltKeyDown()) then return false end
+	local e = b and b.group and b.group.rep
+	if not e then return false end
+	local s = ns.QuestState(e.bag, e.slot, e.itemID, e.link, e.quest)
+	if not s or not (s.kind == "kept" or ns.QuestLeftover(s)) then return false end
+	ns.QuestSetKeep(e.itemID, s.kind ~= "kept", e.link)
+	if GameTooltip.IsOwned and GameTooltip:IsOwned(b) then
+		local enter = b:GetScript("OnEnter")
+		if enter then pcall(enter, b) end
+	end
+	return true
+end
+
+function ns.QuestSetKeep(itemID, keep, link)
+	ns.QuestKeep()[itemID] = keep or nil
+	local name = link or tostring(itemID)
+	if keep then
+		ns.Print(T("%s is kept. No more reminders."):format(name))
+	else
+		ns.Print(T("%s: you get reminders again."):format(name))
+	end
+	Log("quest keep " .. tostring(itemID) .. " = " .. tostring(keep))
+	if ns.Refresh then pcall(ns.Refresh) end
 end
 
 ---------------------------------------------------------------------------
@@ -310,6 +366,14 @@ local function Parts(b)
 	p.icon:SetSize(14, 14)
 	p.icon:SetPoint("TOPLEFT", b, "TOPLEFT", 1, -1)
 	p.icon:Hide()
+	-- Kan waarschijnlijk weg: vaste oranje rand (knippert niet, anders dan "nieuw" en "quest start").
+	p.border = b:CreateTexture(nil, "OVERLAY", nil, 5)
+	p.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+	p.border:SetBlendMode("ADD")
+	p.border:SetVertexColor(1, 0.4, 0)
+	p.border:SetPoint("CENTER")
+	p.border:SetSize(ns.TILE * 1.8, ns.TILE * 1.8)
+	p.border:Hide()
 	-- Quest-start: lichtblauwe, rustig pulserende rand. Anders dan de gouden "nieuw"-rand,
 	-- en hij blijft tot de quest in je log staat (niet weg bij hover).
 	p.glow = b:CreateTexture(nil, "OVERLAY", nil, 6)
@@ -338,13 +402,18 @@ function ns.QuestMark(b, g)
 	if not kind and not b.cfbQuest then return end
 	local p = Parts(b)
 	b.questKind = kind
+	local leftover = ns.QuestLeftover(s)
 	if kind == "start" then
-		p.icon:SetTexture(START_ICON); p.icon:Show()
-	elseif kind == "orphan" or kind == "done" then
-		p.icon:SetTexture(ORPHAN_ICON); p.icon:Show()
+		p.icon:SetTexture(START_ICON); p.icon:SetVertexColor(1, 1, 1); p.icon:SetSize(14, 14); p.icon:Show()
+	elseif leftover then
+		-- groot oranje "?" + oranje rand + grijs icoon: in één oogopslag "kan waarschijnlijk weg"
+		p.icon:SetTexture(ORPHAN_ICON); p.icon:SetVertexColor(1, 0.55, 0.1); p.icon:SetSize(18, 18); p.icon:Show()
 	else
 		p.icon:Hide()
 	end
+	p.border:SetShown(leftover)
+	local info = e and e.info
+	SetItemButtonDesaturated(b, leftover or (info and info.isLocked) or false)
 	local glow = kind == "start" and ns.searchText == ""
 	p.glow:SetShown(glow)
 	if glow then
@@ -384,6 +453,8 @@ function ns.QuestEvent(event, a1)
 		ScheduleRefresh()
 	elseif event == "BAG_UPDATE_DELAYED" or event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_ENTERING_WORLD" then
 		if ns.QuestStartCheck then pcall(ns.QuestStartCheck) end
+		-- a1 = isInitialLogin: alleen bij echt inloggen het lijstje met restjes (QuestReminder.lua)
+		if event == "PLAYER_ENTERING_WORLD" and a1 and ns.QuestReminderLogin then pcall(ns.QuestReminderLogin) end
 	elseif event == "PLAYER_REGEN_DISABLED" then
 		if ns.QuestStartCombat then pcall(ns.QuestStartCombat) end
 	end

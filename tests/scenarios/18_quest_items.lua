@@ -83,6 +83,21 @@ check(Btn(5002).questKind == "orphan", "Old Scrap of Paper: niet in je questlog"
 check(Btn(5002).cfbQuest.icon:IsShown(), "  ... met een ?-icoontje")
 t = Tip(5002)
 check(t:find("Not in your quest log", 1, true) and t:find("quest chain", 1, true) and t:find("reputation", 1, true), "tooltip: kan waarschijnlijk weg + redenen")
+check(t:find("Alt-click: always keep", 1, true), "tooltip: Alt-klik = altijd houden")
+check(Btn(5002).cfbQuest.border:IsShown() and Btn(5002).desat == true, "restje: oranje rand en grijs icoon")
+check(not Btn(5000).cfbQuest.border:IsShown() and not Btn(5000).desat, "lopende quest: geen oranje rand")
+-- Alt-klik: altijd houden, en weer terug
+function IsAltKeyDown() return ALT end
+ALT = true
+Btn(5002):Fire("PreClick", "LeftButton"); RunTimers()
+check(CFC().questKeep and CFC().questKeep[5002], "Alt-klik: onthouden (per karakter)")
+check(Btn(5002).questKind == "kept" and not Btn(5002).cfbQuest.border:IsShown() and not Btn(5002).desat, "gehouden: geen markering meer")
+check(Tip(5002):find("You always keep this item", 1, true) and Tip(5002):find("remind me again", 1, true), "tooltip: je houdt dit altijd + Alt-klik terug")
+Btn(5002):Fire("PreClick", "LeftButton"); RunTimers()
+check(not CFC().questKeep[5002] and Btn(5002).questKind == "orphan", "nog een Alt-klik: weer herinneren")
+Btn(5000):Fire("PreClick", "LeftButton"); RunTimers()
+check(not CFC().questKeep[5000], "Alt-klik op een item van een lopende quest: niets")
+ALT = nil
 check(Btn(5004).questKind == "done" and Tip(5004):find("already did", 1, true), "Faded Letter: quest al gedaan")
 check(not Btn(2589).questKind and Tip(2589) == "", "Linen Cloth: geen quest-regels")
 check(not (CarefreeBagQuestPopup and CarefreeBagQuestPopup:IsShown()), "geen venstertje bij inloggen")
@@ -124,4 +139,20 @@ check(CarefreeBagQuestPopup:IsShown(), "gevecht voorbij: venster terug")
 -- Start quest geklikt: venster weg
 start:Fire("PostClick"); RunTimers()
 check(not CarefreeBagQuestPopup:IsShown(), "Start quest: venster weg")
+
+-- Bij inloggen: lijstje met restjes (Old Scrap of Paper en Faded Letter)
+check(not CarefreeBagQuestReminder, "geen lijstje bij laadscherm/reload")
+QE("PLAYER_ENTERING_WORLD", true)
+check(CarefreeBagQuestReminder and CarefreeBagQuestReminder:IsShown(), "inloggen: lijstje met restjes")
+local rows = NS.QuestReminderRows()
+local ids = {}
+for _, r in ipairs(rows) do if r.shown and r.item then ids[r.item.itemID] = r end end
+check(ids[5002] and ids[5004] and not ids[5000] and not ids[5005], "lijstje: alleen de restjes")
+ids[5004].keep:Fire("OnClick"); RunTimers()
+check(CFC().questKeep[5004], "Always keep in het lijstje: onthouden")
+local left = 0
+for _, r in ipairs(rows) do if r.shown and r.item then left = left + 1 end end
+check(left == 1 and CarefreeBagQuestReminder:IsShown(), "lijstje: nog 1 over")
+CarefreeBagQuestReminder.later:Fire("OnClick")
+check(not CarefreeBagQuestReminder:IsShown() and not CFC().questKeep[5002], "Remind me later: dicht, niets onthouden")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))

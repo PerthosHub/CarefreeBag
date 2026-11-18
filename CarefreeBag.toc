@@ -29,5 +29,6 @@ Loot.lua
 BagSwap.lua
 QuestItems.lua
 QuestStart.lua
+QuestReminder.lua
 Options.lua
 Start.lua

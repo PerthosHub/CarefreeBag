@@ -4,6 +4,16 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["You always keep this item."] = "Dit item houd je altijd.",
+	["Alt-click: remind me again"] = "Alt-klik: herinner me weer",
+	["Alt-click: always keep (no more reminders)"] = "Alt-klik: altijd houden (geen herinneringen meer)",
+	["%s is kept. No more reminders."] = "%s houd je. Geen herinneringen meer.",
+	["%s: you get reminders again."] = "%s: je krijgt weer herinneringen.",
+	["Quest items you may not need"] = "Quest-items die je misschien niet nodig hebt",
+	["These quest items are not in your quest log. Check them and throw away what you don't need. Hover an item to see why you may still need it."] = "Deze quest-items staan niet in je questlog. Check ze en gooi weg wat je niet nodig hebt. Ga met je muis over een item om te zien waarom je het misschien nog nodig hebt.",
+	["Remind me later"] = "Later herinneren",
+	["You see this list again the next time you log in."] = "Je ziet dit lijstje weer als je de volgende keer inlogt.",
+	["and %d more in your bags (orange border)"] = "en nog %d in je tassen (oranje rand)",
 	["For the quest %s"] = "Voor de quest %s",
 	["Quest ready to turn in."] = "Quest klaar om in te leveren.",
 	["Progress: %d/%d"] = "Voortgang: %d/%d",
@@ -237,6 +247,16 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["You always keep this item."] = "Diesen Gegenstand behältst du immer.",
+	["Alt-click: remind me again"] = "Alt-Klick: wieder erinnern",
+	["Alt-click: always keep (no more reminders)"] = "Alt-Klick: immer behalten (keine Erinnerungen mehr)",
+	["%s is kept. No more reminders."] = "%s wird behalten. Keine Erinnerungen mehr.",
+	["%s: you get reminders again."] = "%s: du wirst wieder erinnert.",
+	["Quest items you may not need"] = "Questgegenstände, die du vielleicht nicht brauchst",
+	["These quest items are not in your quest log. Check them and throw away what you don't need. Hover an item to see why you may still need it."] = "Diese Questgegenstände sind nicht in deinem Questlog. Prüfe sie und wirf weg, was du nicht brauchst. Fahre mit der Maus über einen Gegenstand, um zu sehen, warum du ihn vielleicht noch brauchst.",
+	["Remind me later"] = "Später erinnern",
+	["You see this list again the next time you log in."] = "Du siehst diese Liste beim nächsten Einloggen wieder.",
+	["and %d more in your bags (orange border)"] = "und %d weitere in deinen Taschen (oranger Rand)",
 	["For the quest %s"] = "Für die Quest %s",
 	["Quest ready to turn in."] = "Quest bereit zum Abgeben.",
 	["Progress: %d/%d"] = "Fortschritt: %d/%d",
@@ -471,6 +491,16 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["You always keep this item."] = "Tu gardes toujours cet objet.",
+	["Alt-click: remind me again"] = "Alt-clic : me le rappeler à nouveau",
+	["Alt-click: always keep (no more reminders)"] = "Alt-clic : toujours garder (plus de rappels)",
+	["%s is kept. No more reminders."] = "%s est gardé. Plus de rappels.",
+	["%s: you get reminders again."] = "%s : tu recevras à nouveau des rappels.",
+	["Quest items you may not need"] = "Objets de quête dont tu n'as peut-être plus besoin",
+	["These quest items are not in your quest log. Check them and throw away what you don't need. Hover an item to see why you may still need it."] = "Ces objets de quête ne sont pas dans ton journal. Vérifie-les et jette ce dont tu n'as pas besoin. Survole un objet pour voir pourquoi il peut encore servir.",
+	["Remind me later"] = "Me le rappeler plus tard",
+	["You see this list again the next time you log in."] = "Tu reverras cette liste à ta prochaine connexion.",
+	["and %d more in your bags (orange border)"] = "et %d de plus dans tes sacs (bord orange)",
 	["For the quest %s"] = "Pour la quête %s",
 	["Quest ready to turn in."] = "Quête prête à être rendue.",
 	["Progress: %d/%d"] = "Progression : %d/%d",
@@ -705,6 +735,16 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["You always keep this item."] = "Este objeto lo guardas siempre.",
+	["Alt-click: remind me again"] = "Alt-clic: volver a recordármelo",
+	["Alt-click: always keep (no more reminders)"] = "Alt-clic: guardar siempre (sin más recordatorios)",
+	["%s is kept. No more reminders."] = "%s se guarda. Sin más recordatorios.",
+	["%s: you get reminders again."] = "%s: vuelves a recibir recordatorios.",
+	["Quest items you may not need"] = "Objetos de misión que quizá no necesitas",
+	["These quest items are not in your quest log. Check them and throw away what you don't need. Hover an item to see why you may still need it."] = "Estos objetos de misión no están en tu registro. Revísalos y tira lo que no necesites. Pasa el ratón sobre un objeto para ver por qué quizá aún lo necesites.",
+	["Remind me later"] = "Recordármelo más tarde",
+	["You see this list again the next time you log in."] = "Verás esta lista otra vez la próxima vez que entres.",
+	["and %d more in your bags (orange border)"] = "y %d más en tus bolsas (borde naranja)",
 	["For the quest %s"] = "Para la misión %s",
 	["Quest ready to turn in."] = "Misión lista para entregar.",
 	["Progress: %d/%d"] = "Progreso: %d/%d",
@@ -939,6 +979,16 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["You always keep this item."] = "Você sempre guarda este item.",
+	["Alt-click: remind me again"] = "Alt-clique: lembrar de novo",
+	["Alt-click: always keep (no more reminders)"] = "Alt-clique: manter sempre (sem lembretes)",
+	["%s is kept. No more reminders."] = "%s fica guardado. Sem mais lembretes.",
+	["%s: you get reminders again."] = "%s: você volta a receber lembretes.",
+	["Quest items you may not need"] = "Itens de missão que talvez você não precise",
+	["These quest items are not in your quest log. Check them and throw away what you don't need. Hover an item to see why you may still need it."] = "Estes itens de missão não estão no seu registro. Confira e jogue fora o que não precisa. Passe o mouse sobre um item para ver por que ainda pode precisar dele.",
+	["Remind me later"] = "Lembrar mais tarde",
+	["You see this list again the next time you log in."] = "Você verá esta lista de novo no próximo login.",
+	["and %d more in your bags (orange border)"] = "e mais %d nas suas bolsas (borda laranja)",
 	["For the quest %s"] = "Para a missão %s",
 	["Quest ready to turn in."] = "Missão pronta para entregar.",
 	["Progress: %d/%d"] = "Progresso: %d/%d",
@@ -1173,6 +1223,16 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["You always keep this item."] = "Questo oggetto lo tieni sempre.",
+	["Alt-click: remind me again"] = "Alt-clic: ricordamelo di nuovo",
+	["Alt-click: always keep (no more reminders)"] = "Alt-clic: tieni sempre (niente più promemoria)",
+	["%s is kept. No more reminders."] = "%s viene tenuto. Niente più promemoria.",
+	["%s: you get reminders again."] = "%s: riceverai di nuovo i promemoria.",
+	["Quest items you may not need"] = "Oggetti delle missioni che forse non ti servono",
+	["These quest items are not in your quest log. Check them and throw away what you don't need. Hover an item to see why you may still need it."] = "Questi oggetti delle missioni non sono nel tuo registro. Controllali e butta ciò che non ti serve. Passa il mouse su un oggetto per vedere perché potrebbe servirti ancora.",
+	["Remind me later"] = "Ricordamelo più tardi",
+	["You see this list again the next time you log in."] = "Rivedrai questa lista al prossimo accesso.",
+	["and %d more in your bags (orange border)"] = "e altri %d nelle borse (bordo arancione)",
 	["For the quest %s"] = "Per la missione %s",
 	["Quest ready to turn in."] = "Missione pronta da consegnare.",
 	["Progress: %d/%d"] = "Progresso: %d/%d",
@@ -1407,6 +1467,16 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["You always keep this item."] = "Этот предмет ты всегда оставляешь.",
+	["Alt-click: remind me again"] = "Alt-клик: снова напоминать",
+	["Alt-click: always keep (no more reminders)"] = "Alt-клик: всегда оставлять (без напоминаний)",
+	["%s is kept. No more reminders."] = "%s остаётся. Напоминаний больше не будет.",
+	["%s: you get reminders again."] = "%s: напоминания снова включены.",
+	["Quest items you may not need"] = "Предметы заданий, которые, возможно, не нужны",
+	["These quest items are not in your quest log. Check them and throw away what you don't need. Hover an item to see why you may still need it."] = "Этих предметов нет в журнале заданий. Проверь их и выбрось ненужное. Наведи на предмет, чтобы узнать, зачем он может ещё понадобиться.",
+	["Remind me later"] = "Напомнить позже",
+	["You see this list again the next time you log in."] = "Ты снова увидишь этот список при следующем входе.",
+	["and %d more in your bags (orange border)"] = "и ещё %d в сумках (оранжевая рамка)",
 	["For the quest %s"] = "Для задания %s",
 	["Quest ready to turn in."] = "Задание можно сдать.",
 	["Progress: %d/%d"] = "Прогресс: %d/%d",
