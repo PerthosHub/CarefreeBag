@@ -653,6 +653,8 @@ end
 -- Item op de cursor in een vrij vakje leggen. Geen plek: melding (behalve als quiet).
 StoreCursorItem = function(quiet)
 	if not CursorHasItem() then return false end
+	-- een tas uit de tassenbalk: eerst leeghalen, dan uitdoen (BagSwap.lua)
+	if ns.BagUnequip and ns.BagUnequip() then return true end
 	local f = FirstFreeSlot()
 	if not f then
 		if not quiet and UIErrorsFrame and ERR_INV_FULL then pcall(UIErrorsFrame.AddMessage, UIErrorsFrame, ERR_INV_FULL, 1, 0.1, 0.1) end
