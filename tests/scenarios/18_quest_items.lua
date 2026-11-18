@@ -78,6 +78,12 @@ check(SEL == 0, "gekozen quest in het questlog teruggezet")
 local t = Tip(5000)
 check(t:find("For the quest", 1, true) and t:find("[12] Candles for Bob", 1, true), "tooltip: questnaam met level")
 check(t:find("Progress: 3/8", 1, true), "tooltip: voortgang 3/8")
+-- voortgang verandert vlak na het uitlezen: toch bijgewerkt
+QLOG[2].obj[1] = "Kobold Candle: 4/8"
+QE("UNIT_QUEST_LOG_CHANGED", "target")
+check(Tip(5000):find("Progress: 3/8", 1, true), "questlog van een ander: niet opnieuw uitgelezen")
+QE("UNIT_QUEST_LOG_CHANGED", "player")
+check(Tip(5000):find("Progress: 4/8", 1, true), "eigen questlog veranderd: voortgang 4/8")
 check(Btn(5001).questKind == "active" and Tip(5001):find("Burn the Nest", 1, true), "Scorched Torch: gevonden via de questtekst")
 check(Btn(5002).questKind == "orphan", "Old Scrap of Paper: niet in je questlog")
 check(not Btn(5002).cfbQuest.icon:IsShown() and Btn(5002).cfbQuest.border2:IsShown(), "  ... met dubbele oranje rand, zonder vraagteken")
@@ -107,7 +113,7 @@ BAGS[0][6] = { itemID = 5003, count = 1 }
 E("BAG_UPDATE_DELAYED"); QE("BAG_UPDATE_DELAYED")
 check(CarefreeBagQuestPopup and CarefreeBagQuestPopup:IsShown(), "venstertje: quest gevonden")
 local start = CarefreeBagQuestStartButton
-check(start.attrs.type == "item" and start.attrs.item == "0 6", "knop gebruikt het item uit tas 0 vak 6")
+check(start.attrs.type == "item" and start.attrs.item == "item:5003", "knop gebruikt de Dusty Map (op itemID, ook als hij verschuift)")
 local b = Btn(5003)
 check(b.questKind == "start" and b.cfbQuest.glow:IsShown(), "Dusty Map knippert blauw in de tas")
 check(Tip(5003):find("Starts a quest", 1, true), "tooltip: start een quest")
@@ -130,14 +136,16 @@ QE("BAG_UPDATE_DELAYED")
 check(not CarefreeBagQuestPopup:IsShown(), "in gevecht: nog geen venster")
 COMBAT = nil
 QE("PLAYER_REGEN_ENABLED")
-check(CarefreeBagQuestPopup:IsShown() and start.attrs.item == "0 7", "na het gevecht: venster voor Bloody Note")
+check(CarefreeBagQuestPopup:IsShown() and start.attrs.item == "item:5005", "na het gevecht: venster voor Bloody Note")
 -- gevecht begint terwijl het venster open is: even weg, daarna terug
 QE("PLAYER_REGEN_DISABLED")
 check(not CarefreeBagQuestPopup:IsShown(), "gevecht begint: venster weg")
 QE("PLAYER_REGEN_ENABLED")
 check(CarefreeBagQuestPopup:IsShown(), "gevecht voorbij: venster terug")
--- Start quest geklikt: venster weg
-start:Fire("PostClick"); RunTimers()
+-- Start quest: bij indrukken nog niet dicht (anders mist de knop het loslaten), bij loslaten wel
+start:Fire("PostClick", "LeftButton", true); RunTimers()
+check(CarefreeBagQuestPopup:IsShown(), "Start quest ingedrukt: venster blijft nog even")
+start:Fire("PostClick", "LeftButton", false); RunTimers()
 check(not CarefreeBagQuestPopup:IsShown(), "Start quest: venster weg")
 
 -- Bij inloggen: lijstje met restjes (Old Scrap of Paper en Faded Letter)

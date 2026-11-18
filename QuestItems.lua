@@ -66,12 +66,14 @@ local function QuestText(q, index)
 	if type(GetQuestLogQuestText) == "function" then
 		if type(SelectQuestLogEntry) == "function" and type(GetQuestLogSelection) == "function" then
 			local old = Try(GetQuestLogSelection)
+			ns.questTouched = true
 			Try(SelectQuestLogEntry, index)
 			local desc, obj = Try(GetQuestLogQuestText)
 			text = (desc or "") .. " " .. (obj or "")
 			if old then Try(SelectQuestLogEntry, old) end
 		elseif C_QuestLog and C_QuestLog.SetSelectedQuest then
 			local old = Try(C_QuestLog.GetSelectedQuest)
+			ns.questTouched = true
 			Try(C_QuestLog.SetSelectedQuest, q.questID)
 			local desc, obj = Try(GetQuestLogQuestText)
 			text = (desc or "") .. " " .. (obj or "")
@@ -93,17 +95,24 @@ local function ReadLog()
 			local title, _, _, isHeader, isCollapsed = Try(GetQuestLogTitle, i)
 			if isHeader and isCollapsed and title then collapsed[title] = true end
 		end
-		if next(collapsed) and type(ExpandQuestHeader) == "function" then Try(ExpandQuestHeader, 0) end
-		n = Try(GetNumQuestLogEntries) or 0
-		for i = 1, n do
-			local title, level, _, isHeader, _, isComplete, _, questID = Try(GetQuestLogTitle, i)
-			if title and not isHeader then
-				local q = { title = title, level = level, questID = questID, complete = (isComplete == 1 or isComplete == true) }
-				q.objectives = Objectives(q, i)
-				q.text = QuestText(q, i)
-				list[#list + 1] = q
-			end
+		if next(collapsed) and type(ExpandQuestHeader) == "function" then
+			ns.questTouched = true
+			Try(ExpandQuestHeader, 0)
 		end
+		-- in een pcall: gaat er iets mis, dan klappen we de kopjes hieronder tóch weer dicht
+		local ok, err = pcall(function()
+			n = Try(GetNumQuestLogEntries) or 0
+			for i = 1, n do
+				local title, level, _, isHeader, _, isComplete, _, questID = Try(GetQuestLogTitle, i)
+				if title and not isHeader then
+					local q = { title = title, level = level, questID = questID, complete = (isComplete == 1 or isComplete == true) }
+					q.objectives = Objectives(q, i)
+					q.text = QuestText(q, i)
+					list[#list + 1] = q
+				end
+			end
+		end)
+		if not ok then Log("quest log read: " .. tostring(err)) end
 		if next(collapsed) and type(CollapseQuestHeader) == "function" then
 			for i = (Try(GetNumQuestLogEntries) or 0), 1, -1 do
 				local title, _, _, isHeader = Try(GetQuestLogTitle, i)
@@ -127,21 +136,28 @@ local function ReadLog()
 	return list
 end
 
+local lastTouched = false -- heeft de vorige Build kopjes opengeklapt of een quest gekozen?
+
 local function Build()
+	ns.questTouched = false
 	quests = ReadLog()
 	byID, nameCache = {}, {}
 	for _, q in ipairs(quests) do if q.questID then byID[q.questID] = q end end
-	dirty = false
-	lastBuild = GetTime and GetTime() or 0
 end
 
 local function Index()
 	if dirty then
 		local ok, err = pcall(Build)
-		if not ok then dirty = false; Log("quest log: " .. tostring(err)) end
+		if not ok then Log("quest log: " .. tostring(err)) end
+		dirty = false
+		lastBuild = GetTime and GetTime() or 0
+		lastTouched = ns.questTouched and true or false
 	end
 	return quests
 end
+
+-- Questlog opnieuw uitlezen bij de volgende vraag (bijv. vlak voor de herinnering bij inloggen).
+function ns.QuestDirty() dirty = true end
 
 -- Bij welke quest hoort een item met deze naam? Eerst de doelen ("Kobold Candle: 3/8"),
 -- dan de questtekst ("Use the Kobold Candle ..."). Korte namen niet in de tekst zoeken.
@@ -173,10 +189,17 @@ end
 
 local startsCache = {} -- [itemID] = true/false: "This Item Begins a Quest" in de tooltip
 
+-- Alleen quest-items (klasse 12) en "overig" (15) kunnen een quest starten: de rest niet scannen.
+local function MaybeStarter(itemID)
+	local get = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
+	local classID = select(6, Try(get, itemID))
+	return classID == 12 or classID == 15
+end
+
 local function StartsQuestByTooltip(bag, slot, itemID)
 	if startsCache[itemID] ~= nil then return startsCache[itemID] end
 	local want = ITEM_STARTS_QUEST
-	if not want then return false end
+	if not want or not MaybeStarter(itemID) then startsCache[itemID] = false; return false end
 	local found = false
 	local data = C_TooltipInfo and C_TooltipInfo.GetBagItem and Try(C_TooltipInfo.GetBagItem, bag, slot)
 	if type(data) == "table" and data.lines then
@@ -291,6 +314,7 @@ function ns.QuestTooltip(tt, owner)
 	end
 	local isQuest = owner.group and owner.group.rep and owner.group.rep.quest
 	local s = ns.QuestState(bag, slot, info.itemID, info.hyperlink, isQuest)
+	local alt = owner.isCarefreeItem -- Alt-klik werkt alleen op onze vakjes
 	if not s then return end
 	tt:AddLine(" ")
 	if s.kind == "active" then
@@ -309,10 +333,10 @@ function ns.QuestTooltip(tt, owner)
 		tt:AddLine(BLUE .. "CarefreeBag:|r |cffffd100" .. T("Starts a quest. Right-click to read it and accept.") .. "|r", 1, 1, 1, true)
 	elseif s.kind == "kept" then
 		tt:AddLine(BLUE .. "CarefreeBag:|r " .. T("You always keep this item."), 1, 1, 1, true)
-		tt:AddLine(ALT_HINT .. T("Alt-click: remind me again") .. "|r", 1, 1, 1, true)
+		if alt then tt:AddLine(ALT_HINT .. T("Alt-click: remind me again") .. "|r", 1, 1, 1, true) end
 	elseif s.kind == "done" then
 		tt:AddLine(BLUE .. "CarefreeBag:|r " .. T("You already did the quest this item starts. It can probably go."), 1, 0.6, 0.2, true)
-		tt:AddLine(ALT_HINT .. T("Alt-click: always keep (no more reminders)") .. "|r", 1, 1, 1, true)
+		if alt then tt:AddLine(ALT_HINT .. T("Alt-click: always keep (no more reminders)") .. "|r", 1, 1, 1, true) end
 	else
 		tt:AddLine(BLUE .. "CarefreeBag:|r |cffff9933" .. T("Not in your quest log: it can probably go.") .. "|r", 1, 1, 1, true)
 		tt:AddLine(T("Check first, it may still be needed for:"), 0.8, 0.8, 0.8, true)
@@ -320,7 +344,7 @@ function ns.QuestTooltip(tt, owner)
 			T("a quest you have not picked up yet"), T("a class or dungeon quest") }) do
 			tt:AddLine("  - " .. r, 0.8, 0.8, 0.8, true)
 		end
-		tt:AddLine(ALT_HINT .. T("Alt-click: always keep (no more reminders)") .. "|r", 1, 1, 1, true)
+		if alt then tt:AddLine(ALT_HINT .. T("Alt-click: always keep (no more reminders)") .. "|r", 1, 1, 1, true) end
 	end
 	tt:Show()
 end
@@ -446,30 +470,37 @@ end
 
 function ns.QuestEvent(event, a1)
 	if event == "QUEST_LOG_UPDATE" then
-		-- Ons eigen uitlezen (kopjes open/dicht, quest kiezen) geeft ook deze melding: niet opnieuw.
+		-- Ons eigen uitlezen (kopjes open/dicht, quest kiezen) geeft ook deze melding: die
+		-- negeren we heel even, maar alleen als we het questlog echt aangeraakt hebben.
 		local now = GetTime and GetTime() or 0
-		if not dirty and now - lastBuild < 1 then return end
+		if not dirty and lastTouched and now - lastBuild < 0.3 then return end
 		dirty = true
 		ScheduleRefresh()
-	elseif event == "QUEST_ACCEPTED" or event == "QUEST_REMOVED" or event == "QUEST_TURNED_IN" then
+	elseif event == "UNIT_QUEST_LOG_CHANGED" and a1 ~= "player" then
+		return
+	elseif event == "QUEST_ACCEPTED" or event == "QUEST_REMOVED" or event == "QUEST_TURNED_IN"
+		or event == "UNIT_QUEST_LOG_CHANGED" or event == "QUEST_WATCH_UPDATE" then
+		-- echte veranderingen (voortgang, nieuwe of ingeleverde quest): altijd opnieuw uitlezen
 		dirty = true
 		if event == "QUEST_TURNED_IN" then textCache[a1 or 0] = nil end
 		ScheduleRefresh()
 	elseif event == "BAG_UPDATE_DELAYED" or event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_ENTERING_WORLD" then
+		-- laadscherm voorbij: na 3 s mag het quest-startvenster een basis nemen (QuestStart.lua)
+		if event == "PLAYER_ENTERING_WORLD" and ns.QuestStartReady then C_Timer.After(3, ns.QuestStartReady) end
 		if ns.QuestStartCheck then pcall(ns.QuestStartCheck) end
 		-- a1 = isInitialLogin: alleen bij echt inloggen het lijstje met restjes (QuestReminder.lua)
 		if event == "PLAYER_ENTERING_WORLD" and a1 and ns.QuestReminderLogin then pcall(ns.QuestReminderLogin) end
-	elseif event == "PLAYER_REGEN_DISABLED" then
-		if ns.QuestStartCombat then pcall(ns.QuestStartCombat) end
 	end
 end
 
 local events = CreateFrame("Frame")
 for _, ev in ipairs({ "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN", "BAG_UPDATE_DELAYED",
-	"PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "PLAYER_ENTERING_WORLD" }) do
+	"PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "PLAYER_ENTERING_WORLD", "UNIT_QUEST_LOG_CHANGED", "QUEST_WATCH_UPDATE" }) do
 	pcall(events.RegisterEvent, events, ev)
 end
 events:SetScript("OnEvent", function(_, event, a1)
+	-- gevecht begint: het quest-startvenster (beveiligde knop) moet weg, ook als CFB uit staat
+	if event == "PLAYER_REGEN_DISABLED" and ns.QuestStartCombat then pcall(ns.QuestStartCombat) end
 	if not (ns.DB and ns.DB.enabled ~= false) then return end
 	local ok, err = pcall(ns.QuestEvent, event, a1)
 	if not ok then Log("quest items: " .. tostring(err)) end

@@ -9,6 +9,7 @@ local Log, T = ns.Log, ns.T
 local W, ROW, MAX_ROWS = 340, 26, 8
 local win
 local rows = {}
+local retried = false -- leeg questlog bij inloggen: één keer later opnieuw kijken
 
 -- Alle quest-restjes in je tassen, één regel per item.
 function ns.QuestLeftovers()
@@ -118,6 +119,15 @@ function ns.QuestReminderRows() return rows end
 function ns.QuestReminderLogin()
 	C_Timer.After(6, function()
 		if InCombatLockdown and InCombatLockdown() then return end
+		-- questlog vers uitlezen: bij inloggen was het eerst nog leeg (dan leek alles een restje)
+		if ns.QuestDirty then ns.QuestDirty() end
+		local n = (GetNumQuestLogEntries and GetNumQuestLogEntries()) or (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetNumQuestLogEntries()) or 1
+		if n == 0 and not retried then
+			-- leeg questlog: misschien echt leeg, misschien nog niet geladen. Eén keer later opnieuw.
+			retried = true
+			ns.QuestReminderLogin()
+			return
+		end
 		local list = ns.QuestLeftovers()
 		Log(("quest reminder: %d leftover quest items"):format(#list))
 		if #list == 0 then return end

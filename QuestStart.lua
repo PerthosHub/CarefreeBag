@@ -55,13 +55,17 @@ local function Build()
 
 	local bw = (W - 2 * ns.PAD - 10) / 2
 	-- Beveiligde knop: een klik van jou gebruikt het item (type "item", item "tas vak").
-	local ok, b = pcall(CreateFrame, "Button", "CarefreeBagQuestStartButton", popup, "SecureActionButtonTemplate,UIPanelButtonTemplate")
+	-- UIPanelButtonTemplate eerst, zodat de OnClick van de beveiligde template wint
+	local ok, b = pcall(CreateFrame, "Button", "CarefreeBagQuestStartButton", popup, "UIPanelButtonTemplate,SecureActionButtonTemplate")
 	if not ok then b = ns.MakeButton(popup, T("Start quest"), bw) end
 	b:SetSize(bw, 22)
 	if b.SetText then b:SetText(T("Start quest")) end
 	if b.RegisterForClicks then pcall(b.RegisterForClicks, b, "AnyUp", "AnyDown") end
 	b:SetPoint("BOTTOMLEFT", popup, "BOTTOMLEFT", ns.PAD, 14)
-	b:HookScript("PostClick", function()
+	b:HookScript("PostClick", function(_, _, down)
+		-- We luisteren naar indrukken én loslaten (de knop doet het op één van de twee, afhankelijk
+		-- van de instelling "actie bij indrukken"). Pas bij loslaten dicht, anders mist hij het.
+		if down then return end
 		Log("quest start: item used from the popup")
 		popup.used = true
 		popup:Hide()
@@ -90,7 +94,8 @@ local function ShowFor(itemID, f)
 	popup.icon:SetTexture(f.icon)
 	popup.name:SetText(f.link or tostring(itemID))
 	popup.start:SetAttribute("type", "item")
-	popup.start:SetAttribute("item", f.bag .. " " .. f.slot)
+	-- op itemID, niet op tas/vak: schuift het item intussen op, dan gebruikt de knop nog steeds dit item
+	popup.start:SetAttribute("item", "item:" .. itemID)
 	popup.quiet = true
 	popup:Hide()
 	popup.quiet = nil
@@ -107,7 +112,14 @@ local function HideQuiet()
 end
 
 -- Kijken of er een nieuw quest-start-item is (na loot, na gevecht, na een questlog-wijziging).
+local ready = false -- pas na het laadscherm (+3 s): dan zijn tassen en questinfo er
+function ns.QuestStartReady()
+	ready = true
+	ns.QuestStartCheck()
+end
+
 function ns.QuestStartCheck()
+	if not ready then return end
 	if InCombatLockdown and InCombatLockdown() then return end -- beveiligde knop: pas na het gevecht
 	local found = Starters()
 	if not known then
