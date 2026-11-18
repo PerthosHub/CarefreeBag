@@ -161,7 +161,10 @@ end
 -- Wisselen, stap voor stap (één verplaatsing per keer, net als stapels samenvoegen)
 ---------------------------------------------------------------------------
 
-local job -- { itemID, link, slots, kind, c, steps, put, old }
+local job -- { itemID, link, slots, kind, c, steps, put, old } of { off = true, c, itemID, link, steps, put }
+-- Een tasvak dat jij zelf leeg hebt gemaakt, vullen we niet vanzelf (tot er weer een tas in zit).
+-- Wisselen voor een betere tas mag daar wel gewoon.
+local lastEquipped, emptiedByYou = nil, {}
 
 local function IsNormalBag(bag)
 	if bag == REAGENT_BAG then return false end
@@ -239,6 +242,76 @@ end
 
 local function Again(delay) C_Timer.After(delay or 0.3, function() if job then Step() end end) end
 
+-- Vrije vakjes in gewone tassen, niet in tas `skip`.
+local function CountFreeOutside(skip)
+	local n = 0
+	for bag = 0, NUM_BAGS do
+		if bag ~= skip and IsNormalBag(bag) then
+			for slot = 1, (C_Container.GetContainerNumSlots(bag) or 0) do
+				if not C_Container.GetContainerItemInfo(bag, slot) then n = n + 1 end
+			end
+		end
+	end
+	return n
+end
+
+-- Tas uitdoen: eerst de inhoud naar andere tassen (WoW weigert een niet-lege tas in een
+-- andere tas), daarna de lege tas in een vrij vakje.
+local function StepOff(j, s)
+	if s.itemID ~= j.itemID then
+		emptiedByYou[j.c] = true -- jij deed hem uit: niet vanzelf weer vullen
+		Log("bag off: bag slot " .. j.c .. " is empty now")
+		return Finish(true)
+	end
+	local noRoom = T("Not enough room to take off %s."):format(ItemName(j.itemID, j.link))
+	if j.put then return Finish(false, noRoom) end -- WoW wilde niet
+	local inside = ItemsIn(j.c)
+	for _, it in ipairs(inside) do if it.locked then return Again() end end
+	local fb, fs = FreeOutside(j.c)
+	if not fb then return Finish(false, noRoom) end
+	if #inside > 0 then
+		Move(j.c, inside[1].slot, fb, fs)
+		return Again()
+	end
+	Log("bag off: " .. j.itemID .. " from bag slot " .. j.c .. " -> " .. fb .. ":" .. fs)
+	local inv = s.inv or InvID(j.c)
+	if PickupBagFromSlot then pcall(PickupBagFromSlot, inv) elseif PickupInventoryItem then pcall(PickupInventoryItem, inv) end
+	if CursorHasItem() then C_Container.PickupContainerItem(fb, fs) end
+	if CursorHasItem() then ClearCursor() end -- niet gelukt: terug in zijn vak
+	j.put = true
+	Again(0.4)
+end
+
+-- Heb je een tas uit een tasvak vast (de tassenbalk van Blizzard)? Dan het vak, anders nil.
+local function CursorBagSlot()
+	local kind, id = GetCursorInfo()
+	if kind ~= "item" or not id then return nil end
+	for _, s in ipairs(BagSlots()) do
+		if s.itemID == id and s.inv and IsInventoryItemLocked and IsInventoryItemLocked(s.inv) then return s end
+	end
+end
+
+-- Tas uit de tassenbalk in het CarefreeBag-venster laten vallen. true = wij regelen het.
+function ns.BagUnequip()
+	local s = CursorBagSlot()
+	if not s then return false end
+	local name = ItemName(s.itemID, s.link)
+	if job or InCombatLockdown() then ClearCursor(); return true end
+	local need = #ItemsIn(s.c) + 1 -- de inhoud plus de tas zelf
+	if CountFreeOutside(s.c) < need then
+		ClearCursor()
+		local msg = T("Not enough room to take off %s."):format(name)
+		Print(msg)
+		if UIErrorsFrame then pcall(UIErrorsFrame.AddMessage, UIErrorsFrame, msg, 1, 0.1, 0.1) end
+		return true
+	end
+	ClearCursor() -- de tas gaat terug in zijn vak; wij halen hem stap voor stap leeg
+	job = { off = true, c = s.c, itemID = s.itemID, link = s.link, steps = 0 }
+	Log("bag off start: " .. s.itemID .. " from bag slot " .. s.c .. " (" .. (need - 1) .. " items inside)")
+	Step()
+	return true
+end
+
 Step = function()
 	local j = job
 	if not j then return end
@@ -248,6 +321,7 @@ Step = function()
 	if InCombatLockdown() then return Finish(false, T("Bag swap stopped: you entered combat.")) end
 	if CursorHasItem() then return Again() end -- jij hebt iets vast: even wachten
 	local s = SlotInfo(j.c)
+	if j.off then return StepOff(j, s) end
 	if j.put and s.itemID == j.itemID then
 		local msg = j.old and T("Swapped %s for %s."):format(ItemName(j.itemID, j.link), ItemName(j.old, j.oldLink))
 			or T("Equipped %s."):format(ItemName(j.itemID, j.link))
@@ -440,10 +514,6 @@ end
 ---------------------------------------------------------------------------
 -- Automatisch de beste tassen aandoen
 ---------------------------------------------------------------------------
-
--- Een tasvak dat jij zelf leeg hebt gemaakt, vullen we niet vanzelf (tot er weer een tas in zit).
--- Wisselen voor een betere tas mag daar wel gewoon.
-local lastEquipped, emptiedByYou = nil, {}
 
 function ns.RememberBags()
 	lastEquipped = {}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.1
+### ✨ New
+- 🎒 **Take off a bag that is not empty.** Drag a bag from your bag bar into CarefreeBag. If it still has items in it, CarefreeBag first moves them to your other bags, then puts the empty bag in your bags. WoW alone says "Can't put non-empty bags in other bags". Not enough room? You get a message and nothing moves.
+
 ## 1.9.0
 ### ✨ New
 - 📜 **See which quest an item is for.** Hover a quest item: the tooltip shows the quest, its level (in the difficulty color) and your progress, like 3/8. No database needed, CarefreeBag reads your quest log.
