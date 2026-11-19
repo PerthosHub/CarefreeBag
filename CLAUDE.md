@@ -15,9 +15,9 @@ antwoorden met emoji). Code-commentaar is Nederlands, teksten in het spel zijn E
 | `Blizzard.lua` | Tassen openen/vervangen (bindings, hooks), aan/uit, andere tassen-addons herkennen. |
 | `Chores.lua` | Stapels samenvoegen, Auto Sell bij de vendor. |
 | `Mail.lua` | Post naar alts per groep (vraag Ja/Overslaan, of "zonder vragen"). |
-| `QuestItems.lua` | Questlog uitlezen (geen database), `ns.QuestState` per tasvak, tooltip, markering op de vakjes, Alt-klik = altijd houden (`ch.questKeep`). |
+| `QuestItems.lua` | Questlog uitlezen (geen database), `ns.QuestState` per tasvak, tooltip, markering op de vakjes, altijd houden (`ch.questKeep`), herinner me volgend level (`ch.questSnooze[itemID] = level`). Geen Alt-klik meer. |
 | `QuestStart.lua` | Venstertje "Quest found" met beveiligde knop (item gebruiken) bij loot die een quest start. |
-| `QuestReminder.lua` | Bij inloggen: lijstje quest-restjes, "Always keep" per item / "Remind me later". |
+| `QuestReminder.lua` | Lijstje quest-restjes: bij inloggen, en via "Leftovers: N" in de kop van de groep Quest (`ns.QuestReminderOpen`, dan ook gehouden/uitgestelde items met "Remind me"). Per item "Always keep" / "Next level", onderaan "All next level" / "Remind me later". |
 | `Options.lua` | Optievenster, minimapknop. |
 | `Start.lua` | Events (`driver`), `/cfb`-commando's. |
 
@@ -40,6 +40,7 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 - `cats`/`order`/`sort`/`assign`/`hidden` op het hoogste niveau = sjabloon van vóór 1.3.0; nieuwe karakters beginnen daarmee. Niet meer wijzigen.
 
 ## Vaste afspraken
+- **Geen verborgen trucjes** (Johans afspraak, 2026-11-19): geen Alt-/Shift-klik-functies die je moet onthouden. Wat uitleg nodig heeft, liever automatisch of als zichtbare knop. Geen extra vinkjes in de opties als het niet echt nodig is (optievenster zo simpel mogelijk).
 - **Elke tekst in alle 8 talen tegelijk** (en, nl + 6 in `Locales.lua`). Controle: `python3 tests/check_locales.py`.
 - Gedrag dat per karakter hoort, ook echt per karakter (`CharEntry()`), nooit over `DB.chars` heen lopen om bij alle karakters iets te wissen.
 - Test altijd met **twee karakters met dezelfde voornaam** als het om karakterdata gaat.
@@ -128,6 +129,8 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
   - Lijstje bij inloggen (`PLAYER_ENTERING_WORLD` met isInitialLogin, na 6 s), niet bij /reload.
   - Nog letten op: items die bij een quest horen maar nergens in de questtekst genoemd worden krijgen toch een oranje rand (daarom de redenen in de tooltip).
 - **1.9.1 uitgebracht** (2026-11-18), door Johan in het spel getest: tas uit de tassenbalk in het CFB-venster slepen (`StoreCursorItem` → `ns.BagUnequip` in BagSwap.lua). Herkent de tas via `IsInventoryItemLocked`, haalt hem eerst leeg naar andere gewone tassen (job met `off = true`, `StepOff`), daarna `PickupBagFromSlot` + vrij vak buiten die tas; vak = `emptiedByYou`. Te weinig plek = melding "Not enough room to take off %s.", niets verplaatst. Test 19. Aanleiding: WoW weigert "Can't put non-empty bags in other bags" (Johan had twee Green Silk Packs, pakte de niet-lege).
+- **1.9.2** (2026-11-19): "Next level" per item en "All next level" in het questlijstje; "Leftovers: N" in de Quest-kop opent het lijstje (ook om Always keep/Next level terug te draaien); vinkje "Bags full: offer to make room" (`DB.lootPanel`); opties ook via Esc → Options → AddOns (`ns.RegisterSettings`, knop die ons venster opent); chatregel "loaded" alleen bij eerste keer/update (`DB.lastVersion`). Trucjes weg: Alt-klik quest-items, Shift bij vendor, Shift-klik minimap (CFB uit = linksklik opent opties). Slepen binnen een groep: één gedrag (item neemt de plek in, rest schuift op). Venster "Quest found" blijft zonder vinkje (Johan: opties simpel houden).
+- **Daarna (afgesproken): verbouwing onder de motorkap**, vóór 1.10.0, niet zichtbaar voor spelers: `ns.BuildConfig` (±500 regels) opknippen per sectie, events per bestand laten registreren i.p.v. het grote blok in Start.lua, `Layout()` (±285 regels) opsplitsen. Testen via GitHub Actions (Johan installeert lokaal geen Lua/Python); daarna test Johan in het spel.
 - **Volgende: issue #4 deel B (1.10.0)**: stap 2 + 3 samen. Eén keuzelijst "Tassenbalk" in Advanced settings: Blizzard-balk (altijd / alleen bij hover en slepen / nooit) / Vulbalk / Vulbalk + reagent-balk / Tas-icoon (+ reagent-icoon) / Niets; vinkje "Vrij plaatsen" (Shift+slepen, schuifje voor grootte; een greepje bestaat nog niet). Balk uit → tonen bij hover over een tas en tijdens slepen van een tas, met tip "Rechtsklik = beste vak". Startvraag bij nieuw karakter: alleen Ja/Nee met uitleg "CFB regelt je tassen"; balk al verborgen (Edit Mode) = niet vragen, hover/slepen-modus. Vulbalk/icoon: getal vrije vakjes, groen→rood, tooltip per tas; links = CFB open/dicht, rechts = opties, tas erop slepen = aandoen (BagSwap-regels). Bestanden: `BlizzBagBar.lua`, `BagMeter.lua`.
 - Idee (niet gebouwd): loot die minder waard is dan alles in je tassen kan niet weggegooid worden vanuit het lootvenster (geen API); het moet eerst in je tassen.
 - Opgelost (2026-11-16): een nieuwe tas op een tasvak slepen werkt weer met de addon aan (gemeld door Johan na 1.7.2). Oorzaak nooit vastgesteld; waarschijnlijk meegenomen met de sleep-fix van 1.6.1 (drops van buiten de tassen). Komt het terug: tijdelijke logregels op `PutItemInBag`, `ClearCursor`, `CURSOR_CHANGED` en `CharacterBagNSlot` OnReceiveDrag.

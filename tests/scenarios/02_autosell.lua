@@ -15,12 +15,15 @@ check(conflict and conflict.arg == "Baganator", "waarschuwing: Baganator neemt o
 check(StaticPopupDialogs.CAREFREEBAG_CONFLICT.button2 == "Baganator", "keuzeknop Baganator")
 StaticPopupDialogs.CAREFREEBAG_CONFLICT.OnCancel(nil, nil, "clicked")
 check(CarefreeBagDB.enabled == false and CarefreeBagDB.conflictOK.Baganator, "kies Baganator: CarefreeBag staat uit")
--- weer aanzetten met shift-klik op de minimapknop
-SHIFT = true; CarefreeBagMinimapButton:Fire("OnClick", "LeftButton"); SHIFT = false
-check(CarefreeBagDB.enabled == true, "shift-klik minimap: CarefreeBag weer aan")
-SHIFT = true; CarefreeBagMinimapButton:Fire("OnClick", "LeftButton"); SHIFT = false
-check(CarefreeBagDB.enabled == false and OVERRIDES.B == nil, "shift-klik: uit, B weer voor Blizzard")
-SHIFT = true; CarefreeBagMinimapButton:Fire("OnClick", "LeftButton"); SHIFT = false
+-- CFB uit: klik op de minimapknop opent de opties (aan/uit staat bovenaan)
+CarefreeBagMinimapButton:Fire("OnClick", "LeftButton")
+check(CarefreeBagConfig:IsShown(), "minimap bij CFB uit: opties open")
+NS.SetEnabled(true)
+check(CarefreeBagDB.enabled == true, "aanzetten in de opties: CarefreeBag weer aan")
+NS.SetEnabled(false)
+check(CarefreeBagDB.enabled == false and OVERRIDES.B == nil, "uit: B weer voor Blizzard")
+NS.SetEnabled(true)
+CarefreeBagConfig:Hide()
 -- opnieuw inloggen: niet nog eens vragen
 POPUPS = {}
 -- vendor: eerste keer vragen

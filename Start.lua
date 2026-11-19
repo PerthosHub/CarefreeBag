@@ -34,6 +34,7 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		Try("window", BuildMain)
 		Try("options", BuildConfig)
 		Try("minimap", BuildMinimapButton)
+		Try("settings", ns.RegisterSettings)
 		Try("bags", HookBags)
 		Try("bag swap", ns.SetupBagSwap)
 		C_Timer.After(3, function() ns.ScheduleBagCheck() end)
@@ -47,7 +48,13 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 			"PLAYERBANKBAGSLOTS_CHANGED", "LOOT_OPENED", "LOOT_SLOT_CLEARED", "LOOT_CLOSED" }) do
 			pcall(driver.RegisterEvent, driver, ev)
 		end
-		Print(T("v%s loaded. Open your bags as usual, or type /cfb for options."):format(ns.VERSION))
+		-- Alleen bij de eerste keer en na een update iets in de chat, niet bij elke login.
+		if not ns.DB.lastVersion then
+			Print(T("v%s loaded. Open your bags as usual, or type /cfb for options."):format(ns.VERSION))
+		elseif ns.DB.lastVersion ~= ns.VERSION then
+			Print(T("updated to v%s."):format(ns.VERSION))
+		end
+		ns.DB.lastVersion = ns.VERSION
 		local sep = SurnameSep()
 		Log("v" .. ns.VERSION .. " loaded as '" .. tostring(MyFullName()) .. "', name separator: '" .. tostring(sep) .. "'")
 		pcall(driver.RegisterEvent, driver, "UI_ERROR_MESSAGE")
@@ -160,6 +167,8 @@ driver:SetScript("OnEvent", function(_, event, a1, a2)
 		if event == "PLAYER_MONEY" then ScheduleSnap() end -- goud onthouden voor het bankpaneel
 		if event == "GET_ITEM_INFO_RECEIVED" then ns.ScheduleBagCheck() end -- tas-info binnen: misschien nu aandoen
 		if event == "BAG_UPDATE_DELAYED" then
+			-- questlijstje open en je gooit iets weg: lijstje bijwerken
+			if CarefreeBagQuestReminder and CarefreeBagQuestReminder:IsShown() then Try("quest list", ns.QuestReminderFill) end
 			ScheduleRestack()
 			ScheduleSnap()
 			ns.LootEvent("BAG")

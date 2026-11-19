@@ -74,7 +74,7 @@ local before = names()
 check(before:find("^Linen Cloth,Peacebloom") or before:find("^Peacebloom,Linen Cloth"), "twee items in Professions: " .. before)
 local first, second = CarefreeBagItem1, CarefreeBagItem2
 CURSOR = { itemID = second.group.itemID }
-first.dropMode = "swap"
+
 first:Fire("OnReceiveDrag"); RunTimers()
 local after = names()
 check(CURSOR == nil and CFC().sort.prof == "manual", "slepen in de groep: sortering op handmatig")

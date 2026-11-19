@@ -89,21 +89,56 @@ check(Btn(5002).questKind == "orphan", "Old Scrap of Paper: niet in je questlog"
 check(not Btn(5002).cfbQuest.icon:IsShown() and Btn(5002).cfbQuest.border2:IsShown(), "  ... met dubbele oranje rand, zonder vraagteken")
 t = Tip(5002)
 check(t:find("Not in your quest log", 1, true) and t:find("quest chain", 1, true) and t:find("reputation", 1, true), "tooltip: kan waarschijnlijk weg + redenen")
-check(t:find("Alt-click: always keep", 1, true), "tooltip: Alt-klik = altijd houden")
+check(not t:find("Alt-click", 1, true), "tooltip: geen Alt-klik-trucjes meer")
 check(Btn(5002).cfbQuest.border:IsShown() and Btn(5002).desat == true, "restje: oranje rand en grijs icoon")
 check(not Btn(5000).cfbQuest.border:IsShown() and not Btn(5000).desat, "lopende quest: geen oranje rand")
--- Alt-klik: altijd houden, en weer terug
-function IsAltKeyDown() return ALT end
-ALT = true
+-- Alt-klik doet niets meer (geen trucjes om te onthouden)
+function IsAltKeyDown() return true end
 Btn(5002):Fire("PreClick", "LeftButton"); RunTimers()
-check(CFC().questKeep and CFC().questKeep[5002], "Alt-klik: onthouden (per karakter)")
+check(not (CFC().questKeep and CFC().questKeep[5002]), "Alt-klik: niets")
+function IsAltKeyDown() return false end
+-- Kop van de groep Quest: oranje "Leftovers: 2"; klik = lijstje met knoppen
+LEVEL = 20
+function UnitLevel() return LEVEL end
+function GetMaxPlayerLevel() return 60 end
+local function QuestHeader()
+  for _, f in ipairs(ALLFRAMES) do if f.quest and f.key == "quest" and f.shown then return f end end
+end
+local function Row(id)
+  for _, r in ipairs(NS.QuestReminderRows()) do if r.shown and r.item and r.item.itemID == id then return r end end
+end
+local hq = QuestHeader()
+check(hq and hq.quest:IsShown() and hq.quest.fs:GetText():find("Leftovers: 2", 1, true), "Quest-kop: Leftovers: 2")
+hq.quest:Fire("OnClick"); RunTimers()
+check(CarefreeBagQuestReminder and CarefreeBagQuestReminder:IsShown(), "klik op Leftovers: lijstje open")
+check(Row(5002) and Row(5004) and not Row(5000), "lijstje: alleen de restjes")
+-- Always keep, en via hetzelfde lijstje weer terug
+Row(5002).keep:Fire("OnClick"); RunTimers()
+check(CFC().questKeep and CFC().questKeep[5002], "Always keep: onthouden (per karakter)")
 check(Btn(5002).questKind == "kept" and not Btn(5002).cfbQuest.border:IsShown() and not Btn(5002).desat, "gehouden: geen markering meer")
-check(Tip(5002):find("You always keep this item", 1, true) and Tip(5002):find("remind me again", 1, true), "tooltip: je houdt dit altijd + Alt-klik terug")
-Btn(5002):Fire("PreClick", "LeftButton"); RunTimers()
-check(not CFC().questKeep[5002] and Btn(5002).questKind == "orphan", "nog een Alt-klik: weer herinneren")
-Btn(5000):Fire("PreClick", "LeftButton"); RunTimers()
-check(not CFC().questKeep[5000], "Alt-klik op een item van een lopende quest: niets")
-ALT = nil
+check(Tip(5002):find("You always keep this item", 1, true), "tooltip: je houdt dit altijd")
+check(Row(5002) and Row(5002).keep:GetText() == "Remind me" and not Row(5002).snooze:IsShown(), "lijstje: gehouden item met knop Remind me")
+Row(5002).keep:Fire("OnClick"); RunTimers()
+check(not CFC().questKeep[5002] and Btn(5002).questKind == "orphan", "Remind me: weer een restje")
+-- Next level, en weer terug
+Row(5002).snooze:Fire("OnClick"); RunTimers()
+check(CFC().questSnooze and CFC().questSnooze[5002] == 20 and not CFC().questKeep[5002], "Next level: uitgesteld tot level 21 (per karakter)")
+check(Btn(5002).questKind == "snoozed" and not Btn(5002).cfbQuest.border:IsShown(), "uitgesteld: geen oranje rand")
+check(Tip(5002):find("level 21", 1, true), "tooltip: herinnering op level 21")
+check(Row(5002) and Row(5002).name:GetText():find("from level 21", 1, true), "lijstje: from level 21")
+Row(5002).keep:Fire("OnClick"); RunTimers()
+check(not CFC().questSnooze[5002] and Btn(5002).questKind == "orphan", "Remind me: meteen weer herinneren")
+Row(5002).snooze:Fire("OnClick"); RunTimers()
+LEVEL = 21
+NS.Refresh(); RunTimers()
+check(Btn(5002).questKind == "orphan" and not CFC().questSnooze[5002], "level hoger: weer een restje")
+LEVEL = 60
+NS.QuestReminderFill()
+check(Row(5002) and not Row(5002).snooze:IsShown() and not CarefreeBagQuestReminder.snoozeAll:IsShown(), "max level: geen Next level")
+LEVEL = 20
+hq = QuestHeader()
+hq.quest:Fire("OnClick"); RunTimers()
+check(not CarefreeBagQuestReminder:IsShown(), "nog een klik op Leftovers: lijstje dicht")
 check(Btn(5004).questKind == "done" and Tip(5004):find("already did", 1, true), "Faded Letter: quest al gedaan")
 check(not Btn(2589).questKind and Tip(2589) == "", "Linen Cloth: geen quest-regels")
 check(not (CarefreeBagQuestPopup and CarefreeBagQuestPopup:IsShown()), "geen venstertje bij inloggen")
@@ -149,7 +184,7 @@ start:Fire("PostClick", "LeftButton", false); RunTimers()
 check(not CarefreeBagQuestPopup:IsShown(), "Start quest: venster weg")
 
 -- Bij inloggen: lijstje met restjes (Old Scrap of Paper en Faded Letter)
-check(not CarefreeBagQuestReminder, "geen lijstje bij laadscherm/reload")
+check(not CarefreeBagQuestReminder:IsShown(), "geen lijstje bij laadscherm/reload")
 QE("PLAYER_ENTERING_WORLD", true)
 check(CarefreeBagQuestReminder and CarefreeBagQuestReminder:IsShown(), "inloggen: lijstje met restjes")
 local rows = NS.QuestReminderRows()
@@ -163,4 +198,10 @@ for _, r in ipairs(rows) do if r.shown and r.item then left = left + 1 end end
 check(left == 1 and CarefreeBagQuestReminder:IsShown(), "lijstje: nog 1 over")
 CarefreeBagQuestReminder.later:Fire("OnClick")
 check(not CarefreeBagQuestReminder:IsShown() and not CFC().questKeep[5002], "Remind me later: dicht, niets onthouden")
+-- "All next level": alles in het lijstje uitstellen tot het volgende level
+CarefreeBagQuestReminder:Show(); NS.QuestReminderFill()
+check(CarefreeBagQuestReminder.snoozeAll:IsShown(), "lijstje: knop All next level")
+CarefreeBagQuestReminder.snoozeAll:Fire("OnClick"); RunTimers()
+check(CFC().questSnooze[5002] == 20 and not CarefreeBagQuestReminder:IsShown(), "All next level: uitgesteld, lijstje dicht")
+check(#NS.QuestLeftovers() == 0, "uitgesteld: niet meer in het lijstje")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))

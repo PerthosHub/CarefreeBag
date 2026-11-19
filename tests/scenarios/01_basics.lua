@@ -187,7 +187,8 @@ check(not soldCloak, "cloak die je eruit haalde wordt NIET verkocht")
 MerchantFrame.shown = false; E("MERCHANT_CLOSED")
 SOLD = {}; SHIFT = true; BAGS[1][7] = { itemID = 8000, count = 1 }
 MerchantFrame.shown = true; E("MERCHANT_SHOW"); RunTimers()
-check(#SOLD == 0, "Shift bij openen = niets verkocht")
+local sold8000 = false; for _, id in ipairs(SOLD) do if id == 8000 then sold8000 = true end end
+check(sold8000, "Shift bij openen: geen trucje meer, gewoon verkocht")
 SHIFT = false; MerchantFrame.shown = false; E("MERCHANT_CLOSED")
 E("MAIL_CLOSED")
 -- in gevecht openen, met nieuw item

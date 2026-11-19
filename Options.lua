@@ -140,6 +140,18 @@ function ns.BuildConfig()
 	config.clamCb = clamCb
 	y = y - 28
 
+	-- Tassen vol bij het looten: paneel "Bags full" (Loot.lua)
+	local lootCb = NewCheck(config, T("Bags full: offer to make room"), T("When loot does not fit, a panel next to the loot window offers to destroy your cheapest item. Off = no panel."),
+		function() return ns.DB.lootPanel ~= false end, function(v)
+			ns.DB.lootPanel = v
+			Log("bags full panel: " .. tostring(v))
+			if not v and ns.LootEvent then ns.LootEvent("BAG") end
+		end)
+	lootCb:SetPoint("TOPLEFT", config, "TOPLEFT", ns.PAD + 4, y)
+	config.checks[#config.checks + 1] = lootCb
+	config.lootCb = lootCb
+	y = y - 28
+
 	y = y - 10
 
 	-- Geavanceerd (onderaan, pas zichtbaar na uitklappen; plaats wordt in RefreshConfig gezet)
@@ -247,7 +259,7 @@ function ns.BuildConfig()
 		quest = T("Quest items. Never sold or mailed."),
 		keys = T("Your keyring."),
 		boe = T("Unbound BoE items, green and better."),
-		grey = T("Grey items. Sold at a vendor (Shift = skip)."),
+		grey = T("Grey items. Sold at a vendor."),
 		other = T("Everything without a group."),
 	}
 
@@ -529,7 +541,7 @@ local FIXED_ROW = {
 	quest = {},
 	keys = {},
 	boe = { mail = true },
-	grey = { cb1 = { "autoSell", "sell automatically", "Sell at a vendor. Shift = skip once." } },
+	grey = { cb1 = { "autoSell", "sell automatically", "Sell at a vendor." } },
 	other = {},
 }
 local FIXED_NAME = { quest = "Quest", keys = "Keys", boe = "BoE", grey = "Auto Sell", other = "Other" }
@@ -689,6 +701,37 @@ ns.ToggleConfig = function()
 end
 
 ---------------------------------------------------------------------------
+-- Esc → Options → AddOns: een pagina met één knop die ons eigen optievenster opent
+-- (zelfde instellingen, één plek om ze te onderhouden).
+---------------------------------------------------------------------------
+
+function ns.RegisterSettings()
+	local p = CreateFrame("Frame")
+	p.name = "CarefreeBag"
+	local title = p:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	title:SetPoint("TOPLEFT", p, "TOPLEFT", 16, -16)
+	title:SetText("CarefreeBag")
+	local text = p:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	text:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
+	text:SetText(T("All settings are in the CarefreeBag options window, next to your bags."))
+	local btn = MakeButton(p, T("Open options"), 180)
+	btn:SetPoint("TOPLEFT", text, "BOTTOMLEFT", 0, -14)
+	btn:SetScript("OnClick", function()
+		-- eerst het WoW-menu dicht, anders ligt dat over onze vensters
+		for _, f in ipairs({ SettingsPanel, InterfaceOptionsFrame, GameMenuFrame }) do
+			if f and f.IsShown and f:IsShown() then pcall(HideUIPanel, f) end
+		end
+		if not config:IsShown() then ns.ToggleConfig() end
+	end)
+	if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
+		local cat = Settings.RegisterCanvasLayoutCategory(p, "CarefreeBag")
+		Settings.RegisterAddOnCategory(cat)
+	elseif InterfaceOptions_AddCategory then
+		InterfaceOptions_AddCategory(p)
+	end
+end
+
+---------------------------------------------------------------------------
 -- Minimapknop
 ---------------------------------------------------------------------------
 
@@ -732,14 +775,11 @@ function ns.BuildMinimapButton()
 	end)
 	btn:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
 	btn:SetScript("OnClick", function(_, mouse)
-		if IsShiftKeyDown and IsShiftKeyDown() then
-			SetEnabled(not ns.DB.enabled)
-		elseif mouse == "RightButton" then
+		if mouse == "RightButton" or not ns.DB.enabled then
+			-- staat CFB uit, dan opent ook links de opties: aan/uit staat daar bovenaan
 			ns.ToggleConfig()
-		elseif ns.DB.enabled then
-			if ns.main:IsShown() then ns.main:Hide() else ShowMain() end
 		else
-			Print(T("CarefreeBag is off. Shift-click the minimap button to turn it on."))
+			if ns.main:IsShown() then ns.main:Hide() else ShowMain() end
 		end
 	end)
 	btn.icon = icon
@@ -753,7 +793,6 @@ function ns.BuildMinimapButton()
 		GameTooltip:AddLine("CarefreeBag  " .. (ns.DB.enabled and ("|cff33ff99" .. T("on") .. "|r") or ("|cffff5555" .. T("off") .. "|r")))
 		GameTooltip:AddLine(T("Left-click: open/close bags"), 1, 1, 1)
 		GameTooltip:AddLine(T("Right-click: options"), 1, 1, 1)
-		GameTooltip:AddLine(T("Shift-click: turn CarefreeBag on/off"), 1, 1, 1)
 		GameTooltip:AddLine(T("Drag: move along the minimap"), 0.7, 0.7, 0.7)
 		GameTooltip:Show()
 	end)

@@ -14,7 +14,7 @@ CarefreeBag is a simple bag addon for WoW Forever, made with retail and Classic 
 ## Features
 - **Works out of the box**: ready-made categories (Consumables, Professions, Gear, and more in the options) fill themselves. Drag an item onto any group and it stays there. Groups, learned items and settings are kept per character.
 - Fixed groups: **Quest**, **BoE**, **Auto Sell**, **Other** and **Keys** (off by default). Each can be turned off.
-- **Auto Sell**: grey items, plus anything you drop in, are sold when you open a vendor. Hold **Shift** to skip once.
+- **Auto Sell**: grey items, plus anything you drop in, are sold when you open a vendor.
 - **Stacks**: the same item shows as one tile; half stacks are combined in your bags (never during combat).
 - **Mail to alts**: give a group an address. At a mailbox you're asked per group: Yes, send or Skip. Or tick "Send without asking" for a group.
 - **Per group**: collapse it, and (optional) pick the sorting: stack price, newest last or manual (drag to reorder).
@@ -26,7 +26,7 @@ CarefreeBag is a simple bag addon for WoW Forever, made with retail and Classic 
 
 ## Usage
 - Open your bags the way you always do (B, the backpack key or a bag button): CarefreeBag opens instead.
-- Minimap button: **left-click** bags, **right-click** options, **Shift-click** turns CarefreeBag on or off.
+- Minimap button: **left-click** bags, **right-click** options. Options are also in Esc → Options → AddOns.
 - `/cfb` options · `/cfb log` shows the log (handy for bug reports).
 
 ## Works with

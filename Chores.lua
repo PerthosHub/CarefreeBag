@@ -133,7 +133,6 @@ ns.SellStart = function(confirmed)
 	if sell.busy or not ns.DB.enabled then return end
 	if not confirmed and ns.DB.autoSellAsked and not ns.DB.autoSell then return end
 	if not On("grey") then return end
-	if IsShiftKeyDown and IsShiftKeyDown() then Print(T("Auto Sell skipped (Shift).")); return end
 	local items = Scan()
 	local q = {}
 	for _, e in ipairs(items) do

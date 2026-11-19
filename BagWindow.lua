@@ -236,22 +236,18 @@ local function Reorder(b)
 		if v == target and not to then to = i end
 	end
 	if not from or not to then return false end
-	if (b.dropMode or "swap") == "swap" then
-		list[from], list[to] = list[to], list[from]
-	else
-		table.remove(list, from)
-		if from < to then to = to - 1 end
-		table.insert(list, to, id)
-	end
+	-- Eén gedrag: het item neemt de plek van de tegel in, de rest schuift op.
+	table.remove(list, from)
+	table.insert(list, to, id)
 	CS().sort = CS().sort or {}
 	if CS().sort[key] ~= "manual" then
 		CS().sort[key] = "manual"
 		Print(T("Sorting set to manual for this group."))
 	end
 	CharData().manual[key] = list
-	Log("reorder " .. key .. ": " .. id .. " " .. (b.dropMode or "swap") .. " " .. target)
+	Log("reorder " .. key .. ": " .. id .. " -> plek van " .. target)
 	ClearCursor()
-	b.insertMark:Hide(); b.swapMark:Hide(); b.watch:Hide()
+	b.swapMark:Hide(); b.watch:Hide()
 	ns.ResetOrder(); ns.Refresh()
 	return true
 end
@@ -261,14 +257,8 @@ local function NewItemButton(i)
 	b:SetSize(ns.TILE, ns.TILE)
 	b.isCarefreeItem = true
 	HookAHTooltip()
-	-- Volgorde aanpassen: sleep een item op een ander item in dezelfde groep.
-	-- Links op de tegel = ertussen zetten (gouden streep), rest = omwisselen (gouden rand).
-	b.insertMark = b:CreateTexture(nil, "OVERLAY", nil, 7)
-	b.insertMark:SetColorTexture(1, 0.82, 0, 1)
-	b.insertMark:SetPoint("TOPLEFT", b, "TOPLEFT", -3, 2)
-	b.insertMark:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", -3, -2)
-	b.insertMark:SetWidth(3)
-	b.insertMark:Hide()
+	-- Volgorde aanpassen: sleep een item op een ander item in dezelfde groep (gouden rand =
+	-- hier komt het, de rest schuift op).
 	b.swapMark = b:CreateTexture(nil, "OVERLAY", nil, 7)
 	b.swapMark:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
 	b.swapMark:SetBlendMode("ADD")
@@ -312,18 +302,14 @@ local function NewItemButton(i)
 	b.watch:Hide()
 	b.watch:SetScript("OnUpdate", function()
 		if not CursorHasItem() or not b:IsMouseOver() then
-			b.insertMark:Hide(); b.swapMark:Hide(); b.dropMode = nil; b.watch:Hide(); return
+			b.swapMark:Hide(); b.watch:Hide(); return
 		end
-		local x = GetCursorPosition() / (b:GetEffectiveScale() or 1)
-		local left, w = b:GetLeft() or 0, b:GetWidth() or ns.TILE
-		b.dropMode = ((x - left) / w < 0.35) and "insert" or "swap"
-		b.insertMark:SetShown(b.dropMode == "insert")
-		b.swapMark:SetShown(b.dropMode == "swap")
+		b.swapMark:Show()
 	end)
 	b:HookScript("OnEnter", function(self)
 		if ReorderTarget(self) then self.watch:Show() end
 	end)
-	b:HookScript("OnLeave", function(self) self.insertMark:Hide(); self.swapMark:Hide(); self.watch:Hide() end)
+	b:HookScript("OnLeave", function(self) self.swapMark:Hide(); self.watch:Hide() end)
 	-- Rechtsklik op een tas: slim wisselen als alle tasvakken vol zijn (BagSwap.lua).
 	-- Rechtsklik bij de mailbox: alle stapels van dit vakje in de mail (Mail.lua).
 	b:HookScript("PreClick", function(self, button)
@@ -331,8 +317,6 @@ local function NewItemButton(i)
 		-- één stapel: WoW's splitsvenster krijgt daarom het echte aantal van de stapel.
 		-- (Niet afhankelijk van IsShiftKeyDown: die mist de eerste klik vanuit een ander venster.)
 		if self.group and self.group.rep then self.count = self.group.rep.count end
-		-- Alt-klik op een quest-restje: altijd houden / weer herinneren (QuestItems.lua).
-		if ns.QuestClick and ns.QuestClick(self, button) then return end
 		if button ~= "RightButton" then return end
 		if ns.BagRightClick then pcall(ns.BagRightClick, self:GetBagID(), self:GetID()) end
 		if ns.MailAttachRest then pcall(ns.MailAttachRest, self.group, self:GetBagID(), self:GetID()) end
@@ -530,6 +514,22 @@ local function GetHeader()
 			GameTooltip:Show()
 		end)
 		h.mail:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		-- Groep Quest: oranje "3 leftovers" (of grijs "2 kept"); klik = lijstje met knoppen (QuestReminder.lua)
+		h.quest = CreateFrame("Button", nil, h)
+		h.quest:SetSize(90, 14)
+		h.quest:SetPoint("LEFT", h.fs, "RIGHT", 8, 0)
+		h.quest.fs = h.quest:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		h.quest.fs:SetPoint("LEFT")
+		h.quest:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+		h.quest:SetScript("OnClick", function() if ns.QuestReminderOpen then ns.QuestReminderOpen() end end)
+		h.quest:SetScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:AddLine(T("Quest items you may not need"))
+			GameTooltip:AddLine(T("Click: keep, remind me next level, or see why you may still need them."), 1, 1, 1, true)
+			GameTooltip:Show()
+		end)
+		h.quest:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		h.quest:Hide()
 		-- Sorteerknop rechts: klik = volgende manier van sorteren
 		h.sort = CreateFrame("Button", nil, h)
 		h.sort:SetSize(15, 15)
@@ -765,7 +765,7 @@ local function FixedSection(key)
 	elseif key == "grey" then
 		return { key = "grey", title = "Auto Sell" .. ((ns.DB.autoSell or not ns.DB.autoSellAsked) and "" or ("  |cff888888(" .. T("selling is off") .. ")|r")), plus = true, byValue = true, fixed = true,
 			tip = T("Drop an item: it goes here from now on."),
-			rules = T("Grey items. Sold at a vendor (Shift = skip).") }
+			rules = T("Grey items. Sold at a vendor.") }
 	elseif key == "other" then
 		return { key = "other", title = T("Other"), plus = true, fixed = true,
 			tip = T("Drop an item: it goes here from now on."),
@@ -990,6 +990,18 @@ local function Layout()
 			f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
 		h.sort:SetShown(ns.DB.showSort and not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys" or false)
 		h.mail:SetShown(f.sec.mailTo ~= nil)
+		-- Quest: hoeveel restjes (oranje) of, als die er niet zijn, hoeveel je houdt/uitstelt (grijs)
+		local qText
+		if f.sec.key == "quest" and ns.QuestLeftovers then
+			local all, nLeft = ns.QuestLeftovers(true)
+			if nLeft > 0 then qText = "|cffff9933" .. T("Leftovers: %d"):format(nLeft) .. "|r"
+			elseif #all > 0 then qText = "|cff888888" .. T("Kept: %d"):format(#all) .. "|r" end
+		end
+		h.quest:SetShown(qText ~= nil)
+		if qText then
+			h.quest.fs:SetText(qText)
+			h.quest:SetWidth((h.quest.fs:GetStringWidth() or 80) + 4)
+		end
 		h.sort.mode = SortMode(f.sec)
 		h.rules, h.ruleTitle = f.sec.rules, StripColors(f.sec.title)
 		y = y - 18

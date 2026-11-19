@@ -227,6 +227,28 @@ function ns.QuestKeep()
 	return ch.questKeep
 end
 
+-- "Remind me next level": [itemID] = je level toen je het uitstelde. Per karakter.
+-- Pas als je hoger bent is het weer een restje (oranje rand, lijstje bij inloggen).
+function ns.QuestSnooze()
+	local ch = ns.CharEntry and ns.CharEntry()
+	if not ch then return {} end
+	ch.questSnooze = ch.questSnooze or {}
+	return ch.questSnooze
+end
+
+local function PlayerLevel() return tonumber(Try(UnitLevel, "player")) or 0 end
+
+local function MaxLevel()
+	return tonumber(Try(GetMaxLevelForPlayerExpansion)) or tonumber(Try(GetMaxPlayerLevel))
+		or tonumber(MAX_PLAYER_LEVEL)
+end
+
+-- Uitstellen tot het volgende level kan alleen als je nog kunt levelen.
+function ns.QuestCanSnooze()
+	local lvl, max = PlayerLevel(), MaxLevel()
+	return lvl > 0 and not (max and lvl >= max)
+end
+
 local function ItemName(itemID, link)
 	local n = link and link:match("%[(.-)%]")
 	if n then return n end
@@ -236,12 +258,19 @@ end
 -- Wat weten we van het item in dit tasvak?
 -- kind: "active" (hoort bij een quest in je log), "start" (start een quest die je nog niet hebt),
 -- "done" (start een quest die je al gedaan hebt), "orphan" (quest-item, niet in je log),
--- "kept" (orphan/done, maar je houdt het altijd), of nil.
+-- "kept" (orphan/done, maar je houdt het altijd), "snoozed" (orphan/done, herinnering pas
+-- op een hoger level), of nil.
 local RawState
 function ns.QuestState(bag, slot, itemID, link, isQuest)
 	local s = RawState(bag, slot, itemID, link, isQuest)
-	if s and (s.kind == "orphan" or s.kind == "done") and ns.QuestKeep()[itemID] then
-		return { kind = "kept", was = s.kind }
+	if s and (s.kind == "orphan" or s.kind == "done") then
+		if ns.QuestKeep()[itemID] then return { kind = "kept", was = s.kind } end
+		local snooze = ns.QuestSnooze()
+		local at = snooze[itemID]
+		if at then
+			if PlayerLevel() <= at then return { kind = "snoozed", was = s.kind, level = at + 1 } end
+			snooze[itemID] = nil -- je bent hoger: weer gewoon een restje
+		end
 	end
 	return s
 end
@@ -280,7 +309,6 @@ end
 ---------------------------------------------------------------------------
 
 local BLUE = "|cff66ccff"
-local ALT_HINT = "|cff40ff40" -- groen, zoals WoW "Right Click to Read" toont
 
 local function QuestLabel(q)
 	local name = q.title or "?"
@@ -314,7 +342,6 @@ function ns.QuestTooltip(tt, owner)
 	end
 	local isQuest = owner.group and owner.group.rep and owner.group.rep.quest
 	local s = ns.QuestState(bag, slot, info.itemID, info.hyperlink, isQuest)
-	local alt = owner.isCarefreeItem -- Alt-klik werkt alleen op onze vakjes
 	if not s then return end
 	tt:AddLine(" ")
 	if s.kind == "active" then
@@ -333,10 +360,10 @@ function ns.QuestTooltip(tt, owner)
 		tt:AddLine(BLUE .. "CarefreeBag:|r |cffffd100" .. T("Starts a quest. Right-click to read it and accept.") .. "|r", 1, 1, 1, true)
 	elseif s.kind == "kept" then
 		tt:AddLine(BLUE .. "CarefreeBag:|r " .. T("You always keep this item."), 1, 1, 1, true)
-		if alt then tt:AddLine(ALT_HINT .. T("Alt-click: remind me again") .. "|r", 1, 1, 1, true) end
+	elseif s.kind == "snoozed" then
+		tt:AddLine(BLUE .. "CarefreeBag:|r " .. T("Not in your quest log. Reminder again at level %d."):format(s.level), 1, 1, 1, true)
 	elseif s.kind == "done" then
 		tt:AddLine(BLUE .. "CarefreeBag:|r " .. T("You already did the quest this item starts. It can probably go."), 1, 0.6, 0.2, true)
-		if alt then tt:AddLine(ALT_HINT .. T("Alt-click: always keep (no more reminders)") .. "|r", 1, 1, 1, true) end
 	else
 		tt:AddLine(BLUE .. "CarefreeBag:|r |cffff9933" .. T("Not in your quest log: it can probably go.") .. "|r", 1, 1, 1, true)
 		tt:AddLine(T("Check first, it may still be needed for:"), 0.8, 0.8, 0.8, true)
@@ -344,28 +371,13 @@ function ns.QuestTooltip(tt, owner)
 			T("a quest you have not picked up yet"), T("a class or dungeon quest") }) do
 			tt:AddLine("  - " .. r, 0.8, 0.8, 0.8, true)
 		end
-		if alt then tt:AddLine(ALT_HINT .. T("Alt-click: always keep (no more reminders)") .. "|r", 1, 1, 1, true) end
 	end
 	tt:Show()
 end
 
--- Alt-klik op een quest-restje: altijd houden, of weer herinneren. true = afgehandeld.
-function ns.QuestClick(b, button)
-	if button ~= "LeftButton" or not (IsAltKeyDown and IsAltKeyDown()) then return false end
-	local e = b and b.group and b.group.rep
-	if not e then return false end
-	local s = ns.QuestState(e.bag, e.slot, e.itemID, e.link, e.quest)
-	if not s or not (s.kind == "kept" or ns.QuestLeftover(s)) then return false end
-	ns.QuestSetKeep(e.itemID, s.kind ~= "kept", e.link)
-	if GameTooltip.IsOwned and GameTooltip:IsOwned(b) then
-		local enter = b:GetScript("OnEnter")
-		if enter then pcall(enter, b) end
-	end
-	return true
-end
-
 function ns.QuestSetKeep(itemID, keep, link)
 	ns.QuestKeep()[itemID] = keep or nil
+	if keep then ns.QuestSnooze()[itemID] = nil end -- altijd houden gaat voor uitstellen
 	local name = link or tostring(itemID)
 	if keep then
 		ns.Print(T("%s is kept. No more reminders."):format(name))
@@ -373,6 +385,23 @@ function ns.QuestSetKeep(itemID, keep, link)
 		ns.Print(T("%s: you get reminders again."):format(name))
 	end
 	Log("quest keep " .. tostring(itemID) .. " = " .. tostring(keep))
+	if ns.Refresh then pcall(ns.Refresh) end
+end
+
+-- Herinnering uitstellen tot je een level hoger bent (on = true), of weer nu (on = false).
+-- quiet = geen chatregel (bij "All next level" in het lijstje).
+function ns.QuestSetSnooze(itemID, on, link, quiet)
+	local lvl = PlayerLevel()
+	ns.QuestSnooze()[itemID] = on and lvl or nil
+	local name = link or tostring(itemID)
+	if quiet then
+		-- niets melden
+	elseif on then
+		ns.Print(T("%s: reminder again at level %d."):format(name, lvl + 1))
+	else
+		ns.Print(T("%s: you get reminders again."):format(name))
+	end
+	Log("quest snooze " .. tostring(itemID) .. " = " .. tostring(on and lvl))
 	if ns.Refresh then pcall(ns.Refresh) end
 end
 

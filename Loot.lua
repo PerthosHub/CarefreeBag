@@ -550,6 +550,8 @@ function ns.LootEvent(event)
 		state.pending, state.dismissed = nil, false
 		state.skipItems, state.skipGroups, state.left = {}, {}, {} -- "eenmalig overslaan" is voorbij
 		HidePanel()
+	elseif ns.DB and ns.DB.lootPanel == false then
+		HidePanel() -- optie "Bags full: offer to make room" staat uit
 	elseif event == "BAG" then
 		if panel and panel:IsShown() then Schedule() end
 	else -- LOOT_OPENED, LOOT_SLOT_CLEARED, tassen vol

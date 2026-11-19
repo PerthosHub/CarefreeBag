@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.9.2
+### ✨ New
+- ⏰ **Remind me next level.** Not sure if a leftover quest item can go? Click **Next level** in the quest list. No orange border and no reminder until you are a level higher. **All next level** does this for the whole list at once.
+- 🟧 **Leftovers at a glance.** The Quest group shows **Leftovers: 3** in orange. Click it for the list with all choices, also to undo **Always keep** or **Next level** later.
+- 🎛️ **Options in the WoW menu.** Esc → Options → AddOns → CarefreeBag opens the CarefreeBag options.
+- 🔕 **Bags full panel can be turned off.** New option "Bags full: offer to make room".
+
+### 🔧 Simpler
+- 🧹 **Nothing to remember.** No more key tricks: Alt-click on quest items, Shift at the vendor and Shift-click on the minimap button are gone. Everything is a button you can see. CarefreeBag off? Click the minimap button and switch it on at the top of the options.
+- ↔️ **Moving items in a group is one simple move.** Drag an item onto another: it takes that spot and the rest shifts along.
+- 🤫 **Quieter chat.** The "loaded" line only shows the first time and after an update.
+
 ## 1.9.1
 ### ✨ New
 - 🎒 **Take off a bag that is not empty.** Drag a bag from your bag bar into CarefreeBag. If it still has items in it, CarefreeBag first moves them to your other bags, then puts the empty bag in your bags. WoW alone says "Can't put non-empty bags in other bags". Not enough room? You get a message and nothing moves.
