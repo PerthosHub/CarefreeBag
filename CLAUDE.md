@@ -56,13 +56,18 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 ## Waar werken: lokaal (voorkeur) of cloud
 - **Lokaal** (Claude desktop-app → Code → omgeving "Local", map `C:\Dev\CarefreeBag`): Claude kan installeren in de AddOns-map en de browser bedienen (browserpaneel van de app of de Claude-extensie in Edge). Gebruik dit voor alles met testen in het spel, CurseForge/Wago-pagina's of releases.
 - **Cloud** (omgeving niet "Local"): alleen code en GitHub, geen browser, geen toegang tot Johans pc. Zeg dat meteen als een taak dat nodig heeft.
-- Johan werkt op een **desktop én een laptop**, elk met een eigen kloon. Begin elke lokale sessie met `git pull origin main`; eindig met pushen naar `main` (zie "Einde van elke sessie").
+- Johan werkt op een **desktop én een laptop**, elk met een eigen kloon. Elke lokale sessie begint vanzelf met `git pull` + installeren (hook, zie "Installeren op Johans pc"); eindig met pushen naar `main` (zie "Einde van elke sessie").
 - WoW-instellingen (`WTF\`, `Interface\AddOns\`) staan per pc en syncen niet via git. Alleen kopiëren als WoW op beide pc's dicht is.
 - Lokaal op Windows zijn `lua5.1`/`python3` misschien niet geïnstalleerd: dan draait GitHub Actions de tests na de push (controleer het resultaat).
 
 ## Installeren op Johans pc
-- Doel: `C:\Games\World of Warcraft Forever\World of Warcraft\_forever_\Interface\AddOns\CarefreeBag\`.
-- **Lokale sessie:** kopieer de addon-bestanden (`.toc`, `*.lua`, `media/`; niet `tests/`, `.git`, `.github`) naar het doel, zet daar `## Version: x.y.z-dev` in de .toc en vergelijk daarna de hashes (bijv. `Get-FileHash`) met de bron.
+- Doel (verschilt per pc):
+  - Desktop: `C:\Games\World of Warcraft Forever\World of Warcraft\_forever_\Interface\AddOns\CarefreeBag\`
+  - Laptop: `C:\Games\World of Warcraft\_forever_\Interface\AddOns\CarefreeBag\`
+  - Kijk eerst welk pad op deze pc bestaat (`Test-Path`). Draait WoW, dan geeft `(Get-Process Wow).Path` de juiste `_forever_`-map.
+- Wissen in de AddOns-map wordt door Claude Code geblokkeerd: alleen overschrijven. Een oud bestand dat niet in de .toc staat laadt WoW niet (op de laptop staat nog `CarefreeBag.lua` van 0.9.6).
+- **Lokale sessie:** `powershell -NoProfile -ExecutionPolicy Bypass -File tools\install.ps1`. Het script vindt zelf de map (draaiende `Wow.exe`, anders de paden hierboven), kopieert `.toc`, `*.lua` en `media/`, zet `## Version: <VERSION>-dev` in de .toc en controleert de hashes. Nieuw pc-pad? Voeg het toe in het script én hierboven.
+- **Vanzelf bij elke nieuwe sessie** (hook `SessionStart` in `.claude/settings.json`): `git pull --ff-only origin main` en daarna `tools\install.ps1 -Quiet`. Wisselen tussen desktop en laptop = nieuwe sessie starten, dan zijn code en addon bij.
 - **Gewone Claude-chat met gekoppelde pc:** kopieer naar een **nieuwe** map onder `/mnt/user-data/outputs/<uniek>/`, zet `## Version: x.y.z-dev` in de .toc, `device_commit_files` met `force`, en **controleer daarna met `md5sum`** (een oud pad gaf ooit een oude versie door).
 - Nieuwe bestanden in de .toc worden sinds patch 9.0.1 ook met `/reload` geladen.
 - De nagebootste WoW (`tests/mock.lua`) ziet niet alles (bijv. Blizzard-templates). Laat Johan na grote verbouwingen altijd eerst zelf in het spel testen vóór een release.

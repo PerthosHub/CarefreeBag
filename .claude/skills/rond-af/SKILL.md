@@ -28,7 +28,7 @@ Los op wat binnen scope valt; meld wat je laat liggen met reden. Vindt hij niets
 ## 4. Checks
 - `lua5.1 tests/run.lua`, `python3 tests/check_locales.py`, `python3 tests/check_globals.py` als ze lokaal bestaan.
 - Niet lokaal (Windows zonder Lua/Python): zeg dat; GitHub Actions draait ze na de push.
-- Lokale sessie: installeer de dev-versie (zie "Installeren op Johans pc" in `CLAUDE.md`), vergelijk de hashes en zeg wat Johan in het spel moet testen.
+- Lokale sessie: installeer de dev-versie met `powershell -NoProfile -ExecutionPolicy Bypass -File tools\install.ps1` (vindt zelf de map en controleert de hashes) en zeg wat Johan in het spel moet testen.
 
 ## 5. Commit en push
 - Stage alleen bestanden van deze stap, bekijk de staged diff.

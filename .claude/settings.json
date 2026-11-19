@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && { git pull --ff-only -q origin main 2>&1 | head -3; powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/install.ps1 -Quiet; } || true",
+            "timeout": 60,
+            "statusMessage": "CFB: git pull + installeren in WoW..."
+          }
+        ]
+      }
+    ]
+  }
+}
