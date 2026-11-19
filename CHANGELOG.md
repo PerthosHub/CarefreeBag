@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.3
+### ✨ New
+- 🎛️ **Simpler options.** General now only has the basics: on/off, language and sort options. Bags full, clams, mailing without asking and better bags moved to **Advanced settings**.
+
+### 🔧 Fixes
+- 🧱 **Sturdier under the hood.** If one part of CarefreeBag runs into a problem, the rest keeps working.
+- 🔤 **"Sell automatically"** now starts with a capital letter.
+
 ## 1.9.2
 ### ✨ New
 - ⏰ **Remind me next level.** Not sure if a leftover quest item can go? Click **Next level** in the quest list. No orange border and no reminder until you are a level higher. **All next level** does this for the whole list at once.
