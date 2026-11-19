@@ -57,14 +57,19 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 - **Lokaal** (Claude desktop-app → Code → omgeving "Local", map `C:\Dev\CarefreeBag`): Claude kan installeren in de AddOns-map en de browser bedienen (browserpaneel van de app of de Claude-extensie in Edge). Gebruik dit voor alles met testen in het spel, CurseForge/Wago-pagina's of releases.
 - **Cloud** (omgeving niet "Local"): alleen code en GitHub, geen browser, geen toegang tot Johans pc. Zeg dat meteen als een taak dat nodig heeft.
 - Johan werkt op een **desktop én een laptop**, elk met een eigen kloon. Elke lokale sessie begint vanzelf met `git pull` + installeren (hook, zie "Installeren op Johans pc"); eindig met pushen naar `main` (zie "Einde van elke sessie").
-- WoW-instellingen (`WTF\`, `Interface\AddOns\`) staan per pc en syncen niet via git. Alleen kopiëren als WoW op beide pc's dicht is.
+- WoW-instellingen (`WTF\`) syncen niet via git maar via Google Drive (`Mijn Drive\WoW-backup`) met `tools\wow-sync.ps1` (WoW moet dicht zijn):
+  - `wow-sync.ps1 backup`: zip van `WTF` + `Interface\AddOns`, naam `wow-backup_<datum>_<tijd>_<PC>.zip` (desktop = ZOLDER, laptop = LAPTOP).
+  - `wow-sync.ps1 restore [-DryRun] [-From <zip>]`: eerst een back-up van deze pc, dan `WTF` uit de nieuwste back-up van de andere pc. `Config.wtf` (grafisch) blijft van deze pc. Addons niet kopiëren (Johan gebruikt CurseForge; CFB en CarefreeTank via git + install); het script meldt alleen de verschillen.
+  - `wow-sync.ps1 check` draait in de start-hook en meldt een nieuwere back-up van de andere pc.
+  - Paden per pc staan in `tools\WowPaths.ps1`.
+- CarefreeTank (`C:\Dev\CarefreeTank`, privé-repo) wordt ook via git geïnstalleerd; de oude `TankLab` staat op beide pc's uit (`TankLab.toc.uit`).
 - Lokaal op Windows zijn `lua5.1`/`python3` misschien niet geïnstalleerd: dan draait GitHub Actions de tests na de push (controleer het resultaat).
 
 ## Installeren op Johans pc
 - Doel (verschilt per pc):
   - Desktop: `C:\Games\World of Warcraft Forever\World of Warcraft\_forever_\Interface\AddOns\CarefreeBag\`
   - Laptop: `C:\Games\World of Warcraft\_forever_\Interface\AddOns\CarefreeBag\`
-  - Kijk eerst welk pad op deze pc bestaat (`Test-Path`). Draait WoW, dan geeft `(Get-Process Wow).Path` de juiste `_forever_`-map.
+  - De scripts kiezen zelf (`tools\WowPaths.ps1`: draaiende `Wow.exe`, anders deze paden).
 - Wissen in de AddOns-map wordt door Claude Code geblokkeerd: alleen overschrijven. Een oud bestand dat niet in de .toc staat laadt WoW niet (op de laptop staat nog `CarefreeBag.lua` van 0.9.6).
 - **Lokale sessie:** `powershell -NoProfile -ExecutionPolicy Bypass -File tools\install.ps1`. Het script vindt zelf de map (draaiende `Wow.exe`, anders de paden hierboven), kopieert `.toc`, `*.lua` en `media/`, zet `## Version: <VERSION>-dev` in de .toc en controleert de hashes. Nieuw pc-pad? Voeg het toe in het script én hierboven.
 - **Vanzelf bij elke nieuwe sessie** (hook `SessionStart` in `.claude/settings.json`): `git pull --ff-only origin main` en daarna `tools\install.ps1 -Quiet`. Wisselen tussen desktop en laptop = nieuwe sessie starten, dan zijn code en addon bij.

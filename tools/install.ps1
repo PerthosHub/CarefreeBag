@@ -5,18 +5,11 @@ param([switch]$Quiet)
 $ErrorActionPreference = 'Stop'
 
 $src = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'WowPaths.ps1')
 
 # 1. WoW Forever-map vinden
-$forever = $null
-$proc = Get-Process Wow -ErrorAction SilentlyContinue | Where-Object { $_.Path -match '\\_forever_\\' } | Select-Object -First 1
-if ($proc) { $forever = Split-Path -Parent $proc.Path }
-if (-not $forever) {
-	$candidates = @(
-		'C:\Games\World of Warcraft Forever\World of Warcraft\_forever_',  # desktop
-		'C:\Games\World of Warcraft\_forever_'                             # laptop
-	)
-	$forever = $candidates | Where-Object { Test-Path (Join-Path $_ 'Interface\AddOns') } | Select-Object -First 1
-}
+$proc = Get-WowProcess
+$forever = Find-WowForever
 if (-not $forever) {
 	Write-Output 'CFB install: geen WoW Forever-map gevonden op deze pc, niets geinstalleerd.'
 	exit 0
