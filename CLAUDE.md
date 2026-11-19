@@ -56,6 +56,8 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 ## Waar werken: lokaal (voorkeur) of cloud
 - **Lokaal** (Claude desktop-app → Code → omgeving "Local", map `C:\Dev\CarefreeBag`): Claude kan installeren in de AddOns-map en de browser bedienen (browserpaneel van de app of de Claude-extensie in Edge). Gebruik dit voor alles met testen in het spel, CurseForge/Wago-pagina's of releases.
 - **Cloud** (omgeving niet "Local"): alleen code en GitHub, geen browser, geen toegang tot Johans pc. Zeg dat meteen als een taak dat nodig heeft.
+- Johan werkt op een **desktop én een laptop**, elk met een eigen kloon. Begin elke lokale sessie met `git pull origin main`; eindig met pushen naar `main` (zie "Einde van elke sessie").
+- WoW-instellingen (`WTF\`, `Interface\AddOns\`) staan per pc en syncen niet via git. Alleen kopiëren als WoW op beide pc's dicht is.
 - Lokaal op Windows zijn `lua5.1`/`python3` misschien niet geïnstalleerd: dan draait GitHub Actions de tests na de push (controleer het resultaat).
 
 ## Installeren op Johans pc
