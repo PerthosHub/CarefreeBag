@@ -5,6 +5,7 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\wow-sync.ps1 check
 #
 # backup : zip van WTF + Interface\AddOns naar de back-upmap, naam wow-backup_<datum>_<tijd>_<PC>.zip
+#          (zonder *.bak en *.reset-bak)
 # restore: eerst een back-up van deze pc, dan WTF uit de nieuwste back-up van de ANDERE pc (of -From).
 #          Config.wtf (grafisch, resolutie) blijft van deze pc. Addons worden niet gekopieerd
 #          (die komen via CurseForge / tools\install.ps1); wel een lijstje met verschillen.
@@ -48,7 +49,8 @@ function Invoke-Backup {
 	$out = Join-Path $backupDir ("wow-backup_{0}_{1}.zip" -f (Get-Date -Format 'yyyy-MM-dd_HHmm'), $pc)
 	if (Test-Path $out) { Write-Output "wow-sync: $out bestaat al, wacht een minuut."; exit 1 }
 	$files = @()
-	foreach ($d in 'WTF', 'Interface\AddOns') { $p = Join-Path $forever $d; if (Test-Path $p) { $files += Get-ChildItem $p -Recurse -File } }
+	# .bak (vorige versie die WoW zelf maakt) en .reset-bak (handmatig uitgezet) niet meenemen
+	foreach ($d in 'WTF', 'Interface\AddOns') { $p = Join-Path $forever $d; if (Test-Path $p) { $files += Get-ChildItem $p -Recurse -File | Where-Object { $_.Name -notmatch '\.(reset-)?bak(\.bak)?$' } } }
 	$zip = [IO.Compression.ZipFile]::Open($out, 'Create')
 	try {
 		foreach ($f in $files) {
