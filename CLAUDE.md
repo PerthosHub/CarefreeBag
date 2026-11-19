@@ -59,7 +59,7 @@ Standaard WoW-manier: elk bestand begint met `local ADDON, ns = ...` (de addon-t
 - **Cloud** (omgeving niet "Local"): alleen code en GitHub, geen browser, geen toegang tot Johans pc. Zeg dat meteen als een taak dat nodig heeft.
 - Johan werkt op een **desktop én een laptop**, elk met een eigen kloon. Elke lokale sessie begint vanzelf met `git pull` + installeren (hook, zie "Installeren op Johans pc"); eindig met pushen naar `main` (zie "Einde van elke sessie").
 - WoW-instellingen (`WTF\`) syncen niet via git maar via Google Drive (`Mijn Drive\WoW-backup`) met `tools\wow-sync.ps1` (WoW moet dicht zijn):
-  - `wow-sync.ps1 backup`: zip van `WTF` + `Interface\AddOns`, naam `wow-backup_<datum>_<tijd>_<PC>.zip` (desktop = ZOLDER, laptop = LAPTOP).
+  - `wow-sync.ps1 backup`: zip van alleen `WTF` (zonder `*.bak`/`*.reset-bak`) + `addons.txt` (naam en versie van elke addon; de addons zelf niet, Johans keuze), ~1 MB, naam `wow-backup_<datum>_<tijd>_<PC>.zip` (desktop = ZOLDER, laptop = LAPTOP).
   - `wow-sync.ps1 restore [-DryRun] [-From <zip>]`: eerst een back-up van deze pc, dan `WTF` uit de nieuwste back-up van de andere pc. `Config.wtf` (grafisch) blijft van deze pc. Addons niet kopiëren (Johan gebruikt CurseForge; CFB en CarefreeTank via git + install); het script meldt alleen de verschillen.
   - `wow-sync.ps1 check` draait in de start-hook en meldt een nieuwere back-up van de andere pc.
   - Paden per pc staan in `tools\WowPaths.ps1`.

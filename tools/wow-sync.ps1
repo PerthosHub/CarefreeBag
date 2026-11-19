@@ -4,8 +4,9 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\wow-sync.ps1 restore [-DryRun] [-From <zip>]
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\wow-sync.ps1 check
 #
-# backup : zip van WTF + Interface\AddOns naar de back-upmap, naam wow-backup_<datum>_<tijd>_<PC>.zip
-#          (zonder *.bak en *.reset-bak)
+# backup : zip van alleen WTF (instellingen, toetsen, macro's) naar de back-upmap,
+#          naam wow-backup_<datum>_<tijd>_<PC>.zip, zonder *.bak en *.reset-bak.
+#          Addons zelf niet (CurseForge/git); wel addons.txt met naam en versie.
 # restore: eerst een back-up van deze pc, dan WTF uit de nieuwste back-up van de ANDERE pc (of -From).
 #          Config.wtf (grafisch, resolutie) blijft van deze pc. Addons worden niet gekopieerd
 #          (die komen via CurseForge / tools\install.ps1); wel een lijstje met verschillen.
@@ -48,24 +49,35 @@ function Invoke-Backup {
 	Assert-WowClosed
 	$out = Join-Path $backupDir ("wow-backup_{0}_{1}.zip" -f (Get-Date -Format 'yyyy-MM-dd_HHmm'), $pc)
 	if (Test-Path $out) { Write-Output "wow-sync: $out bestaat al, wacht een minuut."; exit 1 }
-	$files = @()
-	# .bak (vorige versie die WoW zelf maakt) en .reset-bak (handmatig uitgezet) niet meenemen
-	foreach ($d in 'WTF', 'Interface\AddOns') { $p = Join-Path $forever $d; if (Test-Path $p) { $files += Get-ChildItem $p -Recurse -File | Where-Object { $_.Name -notmatch '\.(reset-)?bak(\.bak)?$' } } }
+	# Alleen WTF (instellingen van addons en UI, toetsen, macro's). Addons zelf niet: die komen via CurseForge/git.
+	# .bak (vorige versie die WoW zelf maakt) en .reset-bak (handmatig uitgezet) niet meenemen.
+	$files = @(Get-ChildItem (Join-Path $forever 'WTF') -Recurse -File | Where-Object { $_.Name -notmatch '\.(reset-)?bak(\.bak)?$' })
+	$addons = Get-LocalAddons
+	$list = ($addons.Keys | Sort-Object | ForEach-Object { "$_`t$($addons[$_])" }) -join "`r`n"
 	$zip = [IO.Compression.ZipFile]::Open($out, 'Create')
 	try {
 		foreach ($f in $files) {
 			$rel = $f.FullName.Substring($forever.Length + 1) -replace '\\', '/'
 			[void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $f.FullName, $rel)
 		}
+		# Lijst van geïnstalleerde addons (naam<TAB>versie), zodat restore de verschillen kan melden
+		$w = New-Object IO.StreamWriter($zip.CreateEntry('addons.txt').Open())
+		$w.Write($list); $w.Close()
 	} finally { $zip.Dispose() }
 	$z = [IO.Compression.ZipFile]::OpenRead($out); $n = $z.Entries.Count; $z.Dispose()
-	if ($n -ne $files.Count) { Write-Output "wow-sync: FOUT, zip heeft $n van $($files.Count) bestanden: $out"; exit 1 }
-	Write-Output ("wow-sync: back-up gemaakt: {0} ({1} bestanden, {2:N0} MB)" -f $out, $n, ((Get-Item $out).Length / 1MB))
+	if ($n -ne $files.Count + 1) { Write-Output "wow-sync: FOUT, zip heeft $n van $($files.Count + 1) bestanden: $out"; exit 1 }
+	Write-Output ("wow-sync: back-up gemaakt: {0} ({1} bestanden + lijst van {2} addons, {3:N1} MB)" -f $out, $files.Count, $addons.Count, ((Get-Item $out).Length / 1MB))
 }
 
-# Addon-mappen met versie uit de .toc
+# Addons met versie: uit addons.txt (nieuwe back-ups), anders uit de .toc-bestanden (oude back-ups met AddOns)
 function Get-ZipAddons($z) {
 	$h = @{}
+	$listEntry = $z.Entries | Where-Object { $_.FullName -eq 'addons.txt' } | Select-Object -First 1
+	if ($listEntry) {
+		$r = New-Object IO.StreamReader($listEntry.Open()); $t = $r.ReadToEnd(); $r.Close()
+		foreach ($line in ($t -split "`r?`n")) { $parts = $line -split "`t", 2; if ($parts[0]) { $h[$parts[0]] = $parts[1] } }
+		return $h
+	}
 	foreach ($e in $z.Entries) {
 		$p = $e.FullName -replace '\\', '/'
 		if ($p -match '^Interface/AddOns/([^/]+)/\1(_[A-Za-z]+)?\.toc$' -and -not $h[$Matches[1]]) {
