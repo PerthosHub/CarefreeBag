@@ -414,3 +414,73 @@ function ns.BuildMailPanel()
 	-- Kruisje tijdens het verslag: netjes afsluiten en weer aan de mailbox vastmaken.
 	ns.mailPanel:HookScript("OnHide", function(self) if self.reporting then ns.MailReportClose() end end)
 end
+
+---------------------------------------------------------------------------
+-- Events: mailbox
+---------------------------------------------------------------------------
+
+ns.OnEvent("MAIL_SHOW", "mail", function()
+	ns.mailOpen = true -- geen stapels samenvoegen zolang de mailbox open is (Chores.lua)
+	ns.mail.step = false -- nieuw bezoek: eerst weer automatisch proberen
+	ns.mail.skipped = {}  -- en alle categorieën worden weer gevraagd
+	ns.MailReportClose()  -- oud verslag nog in beeld: weg, paneel weer aan de mailbox
+	ns.mail.report = nil
+	if not ns.DB.enabled then return end
+	if not ns.mailPanel then ns.Try("mail", ns.BuildMailPanel) end
+	if ns.mailPanel then ns.mailPanel:Show(); ns.UpdateMailPanel() end
+	C_Timer.After(0.5, ns.MailAutoNext)
+end)
+
+ns.OnEvent("MAIL_CLOSED", "mail", function()
+	ns.mailOpen = false
+	if ns.mail.busy then ns.MailStop(T("mailbox closed, stopped.")) end
+	-- Tijdens het verslag blijft het paneel staan (het telt zelf af).
+	if ns.mailPanel and not ns.mailPanel.reporting then ns.mailPanel:Hide() end
+end)
+
+ns.OnEvent("MAIL_SEND_SUCCESS", "mail", function()
+	if not (ns.mail.busy and ns.mail.waiting) then return end
+	ns.mail.waiting = false
+	ns.MailSent(ns.mail.current)
+	ns.mail.current = nil
+	if ns.mail.step then
+		ns.UpdateMailPanel()
+	else
+		C_Timer.After(0.6, function()
+			if ns.mail.busy and ns.MailPack() then
+				C_Timer.After(0.4, function() if ns.mail.busy then ns.MailSend() end end)
+			end
+			ns.UpdateMailPanel()
+		end)
+	end
+end)
+
+ns.OnEvent("MAIL_FAILED", "mail", function()
+	Log("MAIL_FAILED" .. (ns.mail.current and (" (to '" .. ns.mail.current.to .. "')") or ""))
+	if ns.mail.busy then
+		ns.mail.waiting = false
+		ns.MailStop(T("sending failed (not enough gold or wrong name?). The items are still in the mail window."))
+	end
+end)
+
+ns.OnEvent("UI_ERROR_MESSAGE", "mail", function(_, _, msg)
+	if ns.mail.busy then Log("game message during mail: " .. tostring(msg)) end
+end)
+
+-- WoW staat automatisch versturen niet toe: vanaf nu één klik per stap.
+local function MailBlocked(_, addon)
+	if addon ~= ADDON or not ns.mail.busy or ns.mail.step then return end
+	ns.mail.step = true
+	ns.mail.waiting = false
+	Print(T("WoW blocks automatic sending. Click the button for each mail this time."))
+	ns.UpdateMailPanel()
+end
+ns.OnEvent("ADDON_ACTION_BLOCKED", "mail", MailBlocked)
+ns.OnEvent("ADDON_ACTION_FORBIDDEN", "mail", MailBlocked)
+
+-- Paneel bijwerken; was het weg omdat er niets te versturen was, misschien nu wel (post opgehaald).
+ns.OnEvent("BAG_UPDATE_DELAYED", "mail", function()
+	if not ns.mailPanel or ns.mail.busy then return end
+	if ns.mailPanel:IsShown() then ns.UpdateMailPanel()
+	elseif ns.mailPanel.emptyHidden and MailFrame and MailFrame:IsShown() then ns.mailPanel:Show() end
+end)

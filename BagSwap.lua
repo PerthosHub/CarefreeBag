@@ -609,3 +609,13 @@ function ns.SetupBagSwap()
 	HookBagSlots()
 	ns.RememberBags()
 end
+
+---------------------------------------------------------------------------
+-- Events: na tassen-, vendor-, bank-, mail- of lootwerk even kijken of er een betere tas is
+---------------------------------------------------------------------------
+
+ns.OnEvent("BAG_UPDATE_DELAYED", "bag check", function() ns.ScheduleBagCheck() end)
+ns.OnEvent("GET_ITEM_INFO_RECEIVED", "bag check", function() ns.ScheduleBagCheck() end) -- tas-info binnen
+for _, ev in ipairs({ "BANKFRAME_CLOSED", "MERCHANT_CLOSED", "MAIL_CLOSED", "LOOT_CLOSED", "PLAYER_REGEN_ENABLED" }) do
+	ns.OnEvent(ev, "bag check", function() ns.ScheduleBagCheck(1.5) end)
+end

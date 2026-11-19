@@ -796,44 +796,15 @@ function ns.SectionList()
 	return list
 end
 
-local gapPool, usedGaps = {}, 0
 local FOOTER_H = ns.TILE + 6
-
--- Gat op de plek van een item dat net op is (tot je de tassen sluit).
--- Laat je er een item op vallen, dan gaat het naar een leeg vakje.
-local function GetGap()
-	usedGaps = usedGaps + 1
-	local t = gapPool[usedGaps]
-	if not t then
-		t = NewSlotTile(ns.main.content)
-		-- Onzichtbaar: alleen de plek blijft vrij, zodat niets verspringt tot je de tas sluit.
-		t.bg:Hide()
-		local hl = t.GetHighlightTexture and t:GetHighlightTexture()
-		if hl then hl:SetAlpha(0) end
-		local function drop() StoreCursorItem() end
-		t:SetScript("OnReceiveDrag", drop)
-		t:SetScript("OnClick", drop)
-		gapPool[usedGaps] = t
-	end
-	t:Show()
-	return t
-end
 
 local function StripColors(t)
 	return (t:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end
 
-local function Layout()
-	if not ns.main or not ns.main:IsShown() then return end
-	if not ns.DB.enabled then ns.main:Hide(); return end
-	-- Tassenknoppen zijn geen beschermde frames: opbouwen mag ook in een gevecht.
-	if inLayout then return end
-	inLayout = true
-
-	local items, free, total = Scan()
-	lastFree, lastItems = free, items
-
-	-- 1. Groeperen per sectie (en per item als stapels samengevoegd worden).
+-- Stap 1: items groeperen per sectie (en per item als stapels samengevoegd worden).
+-- Geeft { [sectie] = { groups = {...}, byKey = {...} } } en het aantal verborgen items.
+local function GroupItems(items)
 	local bySection, hiddenCount = {}, 0
 	for _, e in ipairs(items) do
 		local sec = SectionOf(e)
@@ -859,119 +830,132 @@ local function Layout()
 		-- WoW zelf, ook als WoW de Shift bij de eerste klik vanuit een ander venster niet doorgeeft.
 		if not g.rep or e.count > g.rep.count then g.rep = e end
 	end
+	return bySection, hiddenCount
+end
 
-	-- Nieuwste als laatst: onthoud wanneer een item voor het eerst in je tassen kwam.
-	do
-		local ch, now, present = CharData(), (time and time()) or 0, {}
-		for _, e in ipairs(items) do
-			present[e.itemID] = true
-			if not ch.seen[e.itemID] then ch.seen[e.itemID] = now end
-		end
-		for id in pairs(ch.seen) do if not present[id] then ch.seen[id] = nil end end
+-- Stap 2: bijhouden wat nieuw is.
+-- Nieuwste als laatst: onthoud wanneer een item voor het eerst in je tassen kwam.
+-- Knipperen: erbij geloot terwijl het venster open is = meer dan de laagste stand sinds openen
+-- (een drankje drinken en er daarna één looten telt ook als nieuw).
+local function TrackNew(items)
+	local ch, now, present, counts = CharData(), (time and time()) or 0, {}, {}
+	for _, e in ipairs(items) do
+		present[e.itemID] = true
+		if not ch.seen[e.itemID] then ch.seen[e.itemID] = now end
+		counts[e.itemID] = (counts[e.itemID] or 0) + (e.count or 1)
 	end
-
-	-- Erbij geloot terwijl het venster open is: meer dan de laagste stand sinds openen.
-	-- (Laagste stand: een drankje drinken en er daarna één looten telt ook als nieuw.)
-	do
-		local counts = {}
-		for _, e in ipairs(items) do counts[e.itemID] = (counts[e.itemID] or 0) + (e.count or 1) end
-		if not openCounts then
-			openCounts = counts
-		else
-			for id, n in pairs(counts) do
-				local was = openCounts[id] or 0
-				if n > was then freshIDs[id] = true end
-				if n < was then openCounts[id] = n end
-			end
-			for id in pairs(openCounts) do if not counts[id] then openCounts[id] = 0 end end
-		end
+	for id in pairs(ch.seen) do if not present[id] then ch.seen[id] = nil end end
+	if not openCounts then
+		openCounts = counts
+		return
 	end
+	for id, n in pairs(counts) do
+		local was = openCounts[id] or 0
+		if n > was then freshIDs[id] = true end
+		if n < was then openCounts[id] = n end
+	end
+	for id in pairs(openCounts) do if not counts[id] then openCounts[id] = 0 end end
+end
 
-	-- 2. Per sectie sorteren, of de vaste volgorde aanhouden zolang het venster open is.
+-- Stap 3a: de groepen van één sectie sorteren zoals gekozen (waarde, nieuwste, handmatig).
+local function SortGroups(sec, groups)
+	local field = (sec.byValue == "ah") and "ahValue" or "value"
+	local mode = SortMode(sec)
+	local ch = CharData()
+	local function newer(a, b)
+		local ta, tb = ch.seen[a.itemID] or 0, ch.seen[b.itemID] or 0
+		if ta ~= tb then return ta < tb end
+		return a.name < b.name
+	end
+	if mode == "value" then
+		table.sort(groups, function(a, b)
+			if a[field] ~= b[field] then return a[field] > b[field] end
+			return a.name < b.name
+		end)
+	elseif mode == "manual" then
+		local pos = {}
+		for i, id in ipairs(ch.manual[sec.key] or {}) do pos[id] = pos[id] or i end
+		table.sort(groups, function(a, b)
+			local pa, pb = pos[a.itemID], pos[b.itemID]
+			if pa and pb then if pa ~= pb then return pa < pb end return a.key < b.key end
+			if pa or pb then return pa ~= nil end
+			return newer(a, b)
+		end)
+	else
+		table.sort(groups, newer)
+	end
+end
+
+-- Stap 3b: zolang het venster open is blijft de volgorde staan (niets verspringt).
+-- Wat op is valt weg en de rest schuift op (issue #6); wat nieuw is komt achteraan.
+local function FrozenCells(sec, s, groups)
+	local cells = {}
+	local order = frozen[sec.key]
+	if not order then
+		order = {}
+		for _, g in ipairs(groups) do cells[#cells + 1] = g; order[#order + 1] = g.key end
+		frozen[sec.key] = order
+		return cells
+	end
+	local byKey = s and s.byKey or {}
+	local used = {}
+	for _, k in ipairs(order) do
+		if byKey[k] then cells[#cells + 1] = byKey[k]; used[k] = true end
+	end
+	for _, g in ipairs(groups) do
+		if not used[g.key] then cells[#cells + 1] = g; order[#order + 1] = g.key end
+	end
+	return cells
+end
+
+-- Stap 3: welke secties komen in beeld, met welke vakjes. Lege vaste groepen krijgen een
+-- gewone regel (met het lege +vakje als die er een heeft); ingeklapt = alleen de kop.
+local function BuildSections(bySection)
 	local full = {}
+	CS().collapsed = CS().collapsed or {}
 	for _, sec in ipairs(ns.SectionList()) do
 		local s = bySection[sec.key]
 		local groups = s and s.groups or {}
-		local field = (sec.byValue == "ah") and "ahValue" or "value"
-		local mode = SortMode(sec)
-		local ch = CharData()
-		local function newer(a, b)
-			local ta, tb = ch.seen[a.itemID] or 0, ch.seen[b.itemID] or 0
-			if ta ~= tb then return ta < tb end
-			return a.name < b.name
-		end
-		if mode == "value" then
-			table.sort(groups, function(a, b)
-				if a[field] ~= b[field] then return a[field] > b[field] end
-				return a.name < b.name
-			end)
-		elseif mode == "newest" then
-			table.sort(groups, newer)
-		elseif mode == "manual" then
-			local pos = {}
-			for i, id in ipairs(ch.manual[sec.key] or {}) do pos[id] = pos[id] or i end
-			table.sort(groups, function(a, b)
-				local pa, pb = pos[a.itemID], pos[b.itemID]
-				if pa and pb then if pa ~= pb then return pa < pb end return a.key < b.key end
-				if pa or pb then return pa ~= nil end
-				return newer(a, b)
-			end)
-		else
-			table.sort(groups, newer)
-		end
-		local cells = {}
-		local order = frozen[sec.key]
-		if order then
-			local byKey = s and s.byKey or {}
-			local used = {}
-			for _, k in ipairs(order) do
-				-- Item op (weggegooid, gemaild, gebruikt): geen gat, de rest schuift op (issue #6).
-				if byKey[k] then cells[#cells + 1] = byKey[k]; used[k] = true end
-			end
-			for _, g in ipairs(groups) do
-				if not used[g.key] then cells[#cells + 1] = g; order[#order + 1] = g.key end
-			end
-		else
-			order = {}
-			for _, g in ipairs(groups) do cells[#cells + 1] = g; order[#order + 1] = g.key end
-			frozen[sec.key] = order
-		end
-		local title = sec.title
-		CS().collapsed = CS().collapsed or {}
+		SortGroups(sec, groups)
+		local cells = FrozenCells(sec, s, groups)
 		if CS().collapsed[sec.key] then
-			full[#full + 1] = { sec = sec, cells = {}, title = title, collapsed = true, n = #groups }
-		elseif #cells > 0 then
-			full[#full + 1] = { sec = sec, cells = cells, title = title }
-		elseif sec.plus or (sec.fixed and sec.key ~= "hidden" and (sec.key ~= "keys" or KeyringBag())) then
-			-- Lege groep: gewone regel (met het lege +vakje als die er een heeft).
-			full[#full + 1] = { sec = sec, cells = cells, title = title }
+			full[#full + 1] = { sec = sec, cells = {}, title = sec.title, collapsed = true, n = #groups }
+		elseif #cells > 0 or sec.plus or (sec.fixed and sec.key ~= "hidden" and (sec.key ~= "keys" or KeyringBag())) then
+			full[#full + 1] = { sec = sec, cells = cells, title = sec.title }
 		end
 	end
+	return full
+end
 
-	usedItems, usedHeaders, usedPlus, usedGaps = 0, 0, 0, 0
-
-	-- 4. Hoogte uitrekenen voor een aantal kolommen.
-	local function Measure(cols)
-		local h = 8
-		for _, f in ipairs(full) do
-			local n = f.collapsed and 0 or (#f.cells + (f.sec.plus and 1 or 0))
-			h = h + 18 + math.ceil(n / cols) * (ns.TILE + ns.GAP) + 6
-		end
-		return h
+-- Kop van een sectie: naam, in-/uitklappen, sorteerknop, post en (Quest) de restjes.
+local function SetupHeader(h, f)
+	h.key, h.sec = f.sec.key, f.sec
+	local t = f.sec.fixed and (ns.BLUE .. f.title .. "|r") or f.title
+	if f.collapsed and f.n > 0 then t = t .. "  |cff888888(" .. f.n .. ")|r" end
+	h:SetText(t)
+	SetRedKit(h.toggle, f.collapsed and "128-redbutton-plus" or "128-redbutton-minus",
+		f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
+	h.sort:SetShown(ns.DB.showSort and not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys" or false)
+	h.sort.mode = SortMode(f.sec)
+	h.mail:SetShown(f.sec.mailTo ~= nil)
+	-- Quest: hoeveel restjes (oranje) of, als die er niet zijn, hoeveel je houdt/uitstelt (grijs)
+	local qText
+	if f.sec.key == "quest" and ns.QuestLeftovers then
+		local all, nLeft = ns.QuestLeftovers(true)
+		if nLeft > 0 then qText = "|cffff9933" .. T("Leftovers: %d"):format(nLeft) .. "|r"
+		elseif #all > 0 then qText = "|cff888888" .. T("Kept: %d"):format(#all) .. "|r" end
 	end
+	h.quest:SetShown(qText ~= nil)
+	if qText then
+		h.quest.fs:SetText(qText)
+		h.quest:SetWidth((h.quest.fs:GetStringWidth() or 80) + 4)
+	end
+	h.rules, h.ruleTitle = f.sec.rules, StripColors(f.sec.title)
+end
 
-	-- 5. Kolommen kiezen: eerst breder (tot het maximum), dan pas scrollen.
-	local top = showHidden and 78 or 62
-	local screenH = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 768
-	if screenH <= 0 then screenH = 768 end
-	local maxView = math.floor(screenH * 0.8) - top - FOOTER_H - ns.PAD
-	-- Breedte = het aantal kolommen uit de opties, maar nooit breder dan je scherm.
-	local fit = math.floor(((UIParent:GetWidth() or 1200) - 80) / (ns.TILE + ns.GAP))
-	local cols = math.max(5, math.min(ns.DB.maxCols, fit))
-	local contentH = Measure(cols)
-	local width = cols * (ns.TILE + ns.GAP) - ns.GAP
-
-	-- 6. Plaatsen.
+-- Stap 4: koppen, vakjes en +vakjes neerzetten. Geeft de hoogte van de inhoud terug.
+local function PlaceSections(full, cols, width)
+	usedItems, usedHeaders, usedPlus = 0, 0, 0
 	local y = -8
 	local function place(frame, col)
 		frame:ClearAllPoints()
@@ -982,42 +966,16 @@ local function Layout()
 		h:ClearAllPoints()
 		h:SetPoint("TOPLEFT", ns.main.content, "TOPLEFT", 0, y)
 		h:SetWidth(width)
-		h.key, h.sec = f.sec.key, f.sec
-		local t = f.sec.fixed and (ns.BLUE .. f.title .. "|r") or f.title
-		if f.collapsed and f.n > 0 then t = t .. "  |cff888888(" .. f.n .. ")|r" end
-		h:SetText(t)
-		SetRedKit(h.toggle, f.collapsed and "128-redbutton-plus" or "128-redbutton-minus",
-			f.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
-		h.sort:SetShown(ns.DB.showSort and not f.collapsed and f.sec.key ~= "hidden" and f.sec.key ~= "keys" or false)
-		h.mail:SetShown(f.sec.mailTo ~= nil)
-		-- Quest: hoeveel restjes (oranje) of, als die er niet zijn, hoeveel je houdt/uitstelt (grijs)
-		local qText
-		if f.sec.key == "quest" and ns.QuestLeftovers then
-			local all, nLeft = ns.QuestLeftovers(true)
-			if nLeft > 0 then qText = "|cffff9933" .. T("Leftovers: %d"):format(nLeft) .. "|r"
-			elseif #all > 0 then qText = "|cff888888" .. T("Kept: %d"):format(#all) .. "|r" end
-		end
-		h.quest:SetShown(qText ~= nil)
-		if qText then
-			h.quest.fs:SetText(qText)
-			h.quest:SetWidth((h.quest.fs:GetStringWidth() or 80) + 4)
-		end
-		h.sort.mode = SortMode(f.sec)
-		h.rules, h.ruleTitle = f.sec.rules, StripColors(f.sec.title)
+		SetupHeader(h, f)
 		y = y - 18
 		local col = 0
 		local ids = {}
 		lastOrder[f.sec.key] = ids
 		for _, cell in ipairs(f.collapsed and {} or f.cells) do
-			local b
-			if cell.gap then
-				b = GetGap()
-			else
-				b = GetItemButton()
-				SetupItemButton(b, cell)
-				b.secKey = f.sec.key
-				ids[#ids + 1] = cell.itemID
-			end
+			local b = GetItemButton()
+			SetupItemButton(b, cell)
+			b.secKey = f.sec.key
+			ids[#ids + 1] = cell.itemID
 			place(b, col)
 			col = col + 1
 			if col == cols then col = 0; y = y - (ns.TILE + ns.GAP) end
@@ -1036,11 +994,11 @@ local function Layout()
 	for i = usedItems + 1, #itemPool do itemPool[i]:Hide(); itemPool[i].group = nil end
 	for i = usedHeaders + 1, #headerPool do headerPool[i]:Hide() end
 	for i = usedPlus + 1, #plusPool do plusPool[i]:Hide() end
-	for i = usedGaps + 1, #gapPool do gapPool[i]:Hide() end
+	return -y
+end
 
-	-- 7. Scrollgebied en venstergrootte.
-	local keep = keepHeader
-	contentH = -y
+-- Stap 5: scrollgebied. Geeft de zichtbare hoogte terug.
+local function FitScroll(width, contentH, top, maxView)
 	local viewH = math.min(contentH, maxView)
 	ns.main.content:SetSize(width, contentH)
 	ns.main.scroll:ClearAllPoints()
@@ -1050,25 +1008,44 @@ local function Layout()
 	local cur = ns.main.scroll.GetVerticalScroll and ns.main.scroll:GetVerticalScroll() or 0
 	if cur > ns.main.scrollMax then ns.main.scroll:SetVerticalScroll(ns.main.scrollMax) end
 	ns.main.scrollHint:SetShown(ns.main.scrollMax > 0)
-	if keep then
-		keepHeader = nil
-		for i = 1, usedHeaders do
-			local h = headerPool[i]
-			if h.key == keep.key and keep.top then
-				local now = h:GetTop()
-				local p, rel, rp, x, yy = ns.main:GetPoint(1)
-				if now and p then
-					ns.main:ClearAllPoints()
-					ns.main:SetPoint(p, rel, rp, x, yy + (keep.top - now))
-					ns.SavePos()
-				end
+	return viewH
+end
+
+-- In- of uitgeklapt: het venster verschuift zo dat de kop (en het minnetje) onder je muis blijft.
+local function KeepHeaderInPlace()
+	local keep = keepHeader
+	if not keep then return end
+	keepHeader = nil
+	for i = 1, usedHeaders do
+		local h = headerPool[i]
+		if h.key == keep.key and keep.top then
+			local now = h:GetTop()
+			local p, rel, rp, x, yy = ns.main:GetPoint(1)
+			if now and p then
+				ns.main:ClearAllPoints()
+				ns.main:SetPoint(p, rel, rp, x, yy + (keep.top - now))
+				ns.SavePos()
 			end
 		end
 	end
+end
 
-	-- Voetregel: vrije vakjes + goud, altijd onderaan in beeld.
-	-- De reagent-tas (retail/Forever) apart tellen: daar passen alleen crafting reagents in,
-	-- dus vrije vakjes daar betekenen niet dat gewone loot nog past.
+-- Vulbalk: vloeiend van groen naar oranje naar rood.
+local function FillBar(b, usedN, totalN)
+	local frac = totalN > 0 and usedN / totalN or 0
+	b:SetValue(frac)
+	local r, g, bl
+	if frac < 0.6 then r, g, bl = 0.30, 0.80, 0.40
+	elseif frac < 0.85 then local t = (frac - 0.6) / 0.25; r, g, bl = 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t
+	else local t = math.min(1, (frac - 0.85) / 0.15); r, g, bl = 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t end
+	b:SetStatusBarColor(r, g, bl)
+	b.text:SetText(usedN .. "/" .. totalN)
+end
+
+-- Stap 6: voetregel (vrije vakjes + goud) en de verbergknop.
+-- De reagent-tas (retail/Forever) apart tellen: daar passen alleen crafting reagents in,
+-- dus vrije vakjes daar betekenen niet dat gewone loot nog past.
+local function UpdateFooter(free, total, hiddenCount)
 	local rTotal, rFree = 0, 0
 	local rBag = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag
 	if rBag and rBag <= (NUM_TOTAL_EQUIPPED_BAG_SLOTS or NUM_BAG_SLOTS or 4) then
@@ -1077,19 +1054,7 @@ local function Layout()
 	end
 	total = total - rTotal
 	local nFree = #free - rFree
-	local used = math.max(0, total - nFree)
-	-- vloeiend van groen naar oranje naar rood
-	local function Fill(b, usedN, totalN)
-		local frac = totalN > 0 and usedN / totalN or 0
-		b:SetValue(frac)
-		local r, g, bl
-		if frac < 0.6 then r, g, bl = 0.30, 0.80, 0.40
-		elseif frac < 0.85 then local t = (frac - 0.6) / 0.25; r, g, bl = 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t
-		else local t = math.min(1, (frac - 0.85) / 0.15); r, g, bl = 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t end
-		b:SetStatusBarColor(r, g, bl)
-		b.text:SetText(usedN .. "/" .. totalN)
-	end
-	Fill(ns.main.freeBar, used, total)
+	FillBar(ns.main.freeBar, math.max(0, total - nFree), total)
 	ns.main.freeBar.free, ns.main.freeBar.total = nFree, total
 	ns.main.freeBar.rFree, ns.main.freeBar.rTotal = rFree, rTotal
 	-- Reagent-tas: kleine balk, breedte in verhouding tot de grote (tussen 20 en 60 pixels).
@@ -1098,18 +1063,45 @@ local function Layout()
 		if rTotal > 0 then
 			local w = 150 * rTotal / math.max(1, total)
 			rb:SetWidth(math.max(20, math.min(60, math.floor(w + 0.5))))
-			Fill(rb, rTotal - rFree, rTotal)
+			FillBar(rb, rTotal - rFree, rTotal)
 			rb:Show()
 		else
 			rb:Hide()
 		end
 	end
 	ns.main.money:SetText(ns.FooterMoney(GetMoney()))
-
 	ns.main.hiddenBtn.count:SetText(hiddenCount > 0 and hiddenCount or "")
 	SetRedKit(ns.main.hiddenBtn, showHidden and "128-redbutton-visibilityon" or "128-redbutton-visibilityoff", "Interface\\Icons\\Spell_Shadow_EvilEye")
 	ns.main.hint:SetShown(showHidden)
+end
 
+-- Het tassenvenster opbouwen. Tassenknoppen zijn geen beschermde frames: mag ook in een gevecht.
+local function Layout()
+	if not ns.main or not ns.main:IsShown() then return end
+	if not ns.DB.enabled then ns.main:Hide(); return end
+	if inLayout then return end
+	inLayout = true
+
+	local items, free, total = Scan()
+	lastFree, lastItems = free, items
+	local bySection, hiddenCount = GroupItems(items)
+	TrackNew(items)
+	local full = BuildSections(bySection)
+
+	-- Breedte = het aantal kolommen uit de opties, maar nooit breder dan je scherm.
+	-- Hoogte: tot 80% van je scherm, daarna scrollen.
+	local top = showHidden and 78 or 62
+	local screenH = (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 768
+	if screenH <= 0 then screenH = 768 end
+	local maxView = math.floor(screenH * 0.8) - top - FOOTER_H - ns.PAD
+	local fit = math.floor(((UIParent:GetWidth() or 1200) - 80) / (ns.TILE + ns.GAP))
+	local cols = math.max(5, math.min(ns.DB.maxCols, fit))
+	local width = cols * (ns.TILE + ns.GAP) - ns.GAP
+
+	local contentH = PlaceSections(full, cols, width)
+	local viewH = FitScroll(width, contentH, top, maxView)
+	KeepHeaderInPlace()
+	UpdateFooter(free, total, hiddenCount)
 	ns.main:SetSize(width + 2 * ns.PAD, top + viewH + FOOTER_H + ns.PAD)
 	inLayout = false
 
@@ -1291,3 +1283,16 @@ function ns.BuildMain()
 	ns.main.money:SetJustifyH("RIGHT")
 	ns.main.money:SetPoint("RIGHT", ns.main, "BOTTOMRIGHT", -ns.PAD - 4, ns.PAD - 2 + ns.TILE / 2)
 end
+
+---------------------------------------------------------------------------
+-- Events: venster opnieuw opbouwen (Refresh wacht zelf even en doet niets als het venster dicht is)
+---------------------------------------------------------------------------
+
+for _, ev in ipairs({ "BAG_UPDATE_DELAYED", "ITEM_LOCK_CHANGED", "BAG_UPDATE_COOLDOWN", "PLAYER_MONEY", "GET_ITEM_INFO_RECEIVED",
+	"MERCHANT_SHOW", "MERCHANT_CLOSED", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_SEND_SUCCESS" }) do
+	ns.OnEvent(ev, "window", function() ns.Refresh() end)
+end
+-- in een gevecht uitgesteld: nu alsnog
+ns.OnEvent("PLAYER_REGEN_ENABLED", "window", function()
+	if ns.layoutPending then ns.layoutPending = false; ns.Refresh() end
+end)

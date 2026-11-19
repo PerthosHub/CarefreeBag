@@ -373,3 +373,14 @@ function ns.MailTarget(e)
 	if SameName(name, MyFullName()) then return nil end -- nooit naar jezelf
 	return FullName(name), sec
 end
+
+---------------------------------------------------------------------------
+-- Events: tassen en goud van dit karakter onthouden (voor het bankpaneel en de tooltip)
+---------------------------------------------------------------------------
+
+ns.OnEvent("BAG_UPDATE_DELAYED", "snapshot", function() ns.ScheduleSnap() end)
+ns.OnEvent("PLAYER_MONEY", "snapshot", function() ns.ScheduleSnap() end)
+-- Meteen na versturen onthouden (anders mist het bankpaneel het als je vlak daarna van karakter wisselt).
+ns.OnEvent("MAIL_SEND_SUCCESS", "snapshot", function()
+	C_Timer.After(0.5, function() ns.Try("snapshot", ns.SnapBags) end)
+end)

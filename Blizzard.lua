@@ -225,3 +225,14 @@ function ns.CheckOtherBags()
 		end
 	end
 end
+
+---------------------------------------------------------------------------
+-- Events: toetsen (B, Shift-B, ...) opnieuw aan CarefreeBag koppelen
+---------------------------------------------------------------------------
+
+ns.OnEvent("UPDATE_BINDINGS", "keys", function()
+	if not ns.binding then C_Timer.After(0.1, ns.BindKeys) end
+end)
+ns.OnEvent("PLAYER_REGEN_ENABLED", "keys", function()
+	if ns.bindPending then ns.bindPending = false; ns.BindKeys() end
+end)

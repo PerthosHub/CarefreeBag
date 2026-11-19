@@ -191,3 +191,26 @@ function ns.OpenClams()
 		end
 	end
 end
+
+---------------------------------------------------------------------------
+-- Events: samenvoegen, Auto Sell en clams
+---------------------------------------------------------------------------
+
+-- Samenvoegen wacht zolang bank, mailbox of een gevecht bezig is; daarna alsnog.
+for _, ev in ipairs({ "BAG_UPDATE_DELAYED", "BANKFRAME_CLOSED", "MAIL_CLOSED", "PLAYER_REGEN_ENABLED" }) do
+	ns.OnEvent(ev, "restack", function() ns.ScheduleRestack() end)
+end
+ns.OnEvent("MERCHANT_SHOW", "auto sell", function() ns.SellStart() end)
+ns.OnEvent("MERCHANT_CLOSED", "auto sell", function() ns.SellStop("vendor closed") end)
+ns.OnEvent("BAG_UPDATE_DELAYED", "clams", function() ns.OpenClams() end)
+ns.OnEvent("LOOT_CLOSED", "clams", function()
+	C_Timer.After(0.5, function() ns.Try("clams", ns.OpenClams) end)
+end)
+-- WoW staat automatisch openen hier niet toe: stoppen (tot /reload) en één keer melden.
+local function ClamBlocked(_, addon, what)
+	if addon ~= ADDON or ns.clamBlocked or not tostring(what):find("UseContainerItem") then return end
+	ns.clamBlocked = true
+	Print(T("WoW does not allow opening clams automatically here. Open them yourself with a right-click."))
+end
+ns.OnEvent("ADDON_ACTION_BLOCKED", "clams", ClamBlocked)
+ns.OnEvent("ADDON_ACTION_FORBIDDEN", "clams", ClamBlocked)

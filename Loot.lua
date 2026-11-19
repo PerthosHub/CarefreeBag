@@ -558,3 +558,15 @@ function ns.LootEvent(event)
 		Schedule()
 	end
 end
+
+---------------------------------------------------------------------------
+-- Events: lootvenster en "tassen vol"
+---------------------------------------------------------------------------
+
+for _, ev in ipairs({ "LOOT_OPENED", "LOOT_SLOT_CLEARED", "LOOT_CLOSED" }) do
+	ns.OnEvent(ev, "loot", function(event) ns.LootEvent(event) end)
+end
+ns.OnEvent("BAG_UPDATE_DELAYED", "loot", function() ns.LootEvent("BAG") end)
+ns.OnEvent("UI_ERROR_MESSAGE", "loot", function(_, _, msg)
+	if ERR_INV_FULL and msg == ERR_INV_FULL then ns.LootEvent("FULL") end
+end)

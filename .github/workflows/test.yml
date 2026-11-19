@@ -1,9 +1,9 @@
 name: Test CarefreeBag
 
-# Bij elke push naar main en elke pull request: alle scenario's en de vertalingen.
+# Bij elke push (ook op een zijbranch, om eerst te testen) en elke pull request: alle scenario's en de vertalingen.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
 
 jobs:

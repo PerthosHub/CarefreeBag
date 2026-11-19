@@ -191,3 +191,8 @@ function ns.QuestReminderOpen()
 	win:Show()
 	ns.QuestReminderFill()
 end
+
+-- Lijstje open en je gooit iets weg: lijstje bijwerken.
+ns.OnEvent("BAG_UPDATE_DELAYED", "quest list", function()
+	if win and win:IsShown() then ns.QuestReminderFill() end
+end)

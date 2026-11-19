@@ -515,3 +515,22 @@ ns.OnSearch = function()
 		ViewLayout()
 	end
 end
+
+---------------------------------------------------------------------------
+-- Events: bank open/dicht
+---------------------------------------------------------------------------
+
+ns.OnEvent("BANKFRAME_OPENED", "bank", function()
+	ns.bankOpen = true
+	ns.SnapBank()
+	if ns.ViewRefresh then ns.ViewRefresh() end
+end)
+-- Bij het sluiten niet meer uitlezen: dan is de bank al (deels) leeg.
+ns.OnEvent("BANKFRAME_CLOSED", "bank", function() ns.bankOpen = false end)
+local function BankChanged()
+	if not ns.bankOpen then return end
+	ns.SnapBank()
+	if ns.ViewRefresh then ns.ViewRefresh() end
+end
+ns.OnEvent("PLAYERBANKSLOTS_CHANGED", "bank", BankChanged)
+ns.OnEvent("PLAYERBANKBAGSLOTS_CHANGED", "bank", BankChanged)

@@ -55,6 +55,54 @@ function ns.Log(msg)
 	while #ns.DB.log > 80 do table.remove(ns.DB.log, 1) end
 end
 
+-- Iets uitvoeren; gaat het mis, dan in het logboek, bij /cfb error en één regel in de chat.
+function ns.Try(label, fn, ...)
+	local ok, err = pcall(fn, ...)
+	if not ok then
+		if ns.DB then ns.DB.lastError = label .. ": " .. tostring(err) end
+		ns.Log("error in " .. label .. ": " .. tostring(err))
+		ns.Print(ns.T("error in %s: %s"):format(label, tostring(err)))
+	end
+	return ok
+end
+
+---------------------------------------------------------------------------
+-- Events: elk bestand meldt zelf waar het op reageert, met ns.OnEvent(event, naam, functie).
+-- De functie krijgt (event, ...) zoals WoW ze geeft. Een fout in één bestand stopt de andere niet.
+-- Tot PLAYER_LOGIN luisteren we alleen naar ADDON_LOADED en PLAYER_LOGIN (vensters bestaan nog niet).
+---------------------------------------------------------------------------
+
+local bus = CreateFrame("Frame")
+local handlers = {}
+local live = false
+bus:RegisterEvent("ADDON_LOADED") -- de tests vuren alle events af op het frame dat dit als eerste registreert
+bus:RegisterEvent("PLAYER_LOGIN")
+
+function ns.OnEvent(event, label, fn)
+	local list = handlers[event]
+	if not list then
+		list = {}
+		handlers[event] = list
+		if live then pcall(bus.RegisterEvent, bus, event) end
+	end
+	list[#list + 1] = { label = label, fn = fn }
+end
+
+-- Aangeroepen bij PLAYER_LOGIN (Start.lua), als alle vensters er zijn.
+function ns.StartEvents()
+	live = true
+	for event in pairs(handlers) do
+		if event ~= "ADDON_LOADED" and event ~= "PLAYER_LOGIN" then pcall(bus.RegisterEvent, bus, event) end
+	end
+end
+
+bus:SetScript("OnEvent", function(_, event, ...)
+	if not live and event ~= "ADDON_LOADED" and event ~= "PLAYER_LOGIN" then return end
+	local list = handlers[event]
+	if not list then return end
+	for i = 1, #list do ns.Try(list[i].label, list[i].fn, event, ...) end
+end)
+
 ---------------------------------------------------------------------------
 -- Instellingen
 ---------------------------------------------------------------------------
