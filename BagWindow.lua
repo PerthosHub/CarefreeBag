@@ -1202,7 +1202,7 @@ ns.Refresh = function()
 		refreshQueued = false
 		local ok, err = pcall(Layout)
 		inLayout = false
-		if not ok then ns.DB.lastError = tostring(err); Log("error: " .. tostring(err)); Print(T("error: %s"):format(tostring(err))) end
+		if not ok then ns.SetError("window: " .. tostring(err)); Print(T("error: %s"):format(tostring(err))) end
 	end)
 end
 

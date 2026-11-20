@@ -65,7 +65,7 @@ function ns.ScheduleRestack()
 	C_Timer.After(0.3, function()
 		stack.scheduled = false
 		local ok, err = pcall(RestackStep)
-		if not ok then ns.DB.lastError = "restack: " .. tostring(err); Log("restack error: " .. tostring(err)) end
+		if not ok then ns.SetError("restack: " .. tostring(err)) end
 	end)
 end
 
@@ -170,27 +170,53 @@ local function SomethingOpen()
 end
 
 local openPending = false
+local clamTry -- { id, t }: laatste poging, om te zien wat WoW daarna deed (belangrijke momenten)
+local clamWait -- laatste reden van wachten (één keer noteren, niet bij elke tasupdate)
+
+local function FreeSlots()
+	local _, free = Scan()
+	local n = 0
+	for _, f in ipairs(free) do if not f.reagent then n = n + 1 end end
+	return n
+end
+
 function ns.OpenClams()
 	if not ns.DB.enabled or not ns.DB.autoOpenClams or ns.clamBlocked or openPending then return end
-	if InCombatLockdown() or CursorHasItem() or SomethingOpen() then return end
-	if ns.BagSwapBusy and ns.BagSwapBusy() then return end
-	if GetNumLootItems and (GetNumLootItems() or 0) > 0 then return end
+	local clam
 	for _, e in ipairs(Scan()) do
-		if IsClam(e) and not e.info.isLocked then
-			openPending = true
-			-- even wachten: net geloot, de tas moet eerst bijgewerkt zijn
-			C_Timer.After(0.3, function()
-				openPending = false
-				if InCombatLockdown() or CursorHasItem() or SomethingOpen() then return end
-				local info = C_Container.GetContainerItemInfo(e.bag, e.slot)
-				if not info or info.itemID ~= e.itemID or info.isLocked then return end
-				Log("open clam " .. tostring(e.itemID))
-				pcall(C_Container.UseContainerItem, e.bag, e.slot)
-			end)
-			return -- één tegelijk; de volgende na het looten van deze
-		end
+		if IsClam(e) and not e.info.isLocked then clam = e; break end
 	end
+	if not clam then clamWait = nil; return end
+	local why = (InCombatLockdown() and "combat") or (CursorHasItem() and "item on cursor") or (SomethingOpen() and "vendor/bank/mail open")
+		or (ns.BagSwapBusy and ns.BagSwapBusy() and "bag swap") or (GetNumLootItems and (GetNumLootItems() or 0) > 0 and "loot window")
+	if why then
+		if clamWait ~= why then ns.Note("clam", clam.itemID .. " waits: " .. why); clamWait = why end
+		return
+	end
+	clamWait = nil
+	local e = clam
+	openPending = true
+	-- even wachten: net geloot, de tas moet eerst bijgewerkt zijn
+	C_Timer.After(0.3, function()
+		openPending = false
+		if InCombatLockdown() or CursorHasItem() or SomethingOpen() then return end
+		local info = C_Container.GetContainerItemInfo(e.bag, e.slot)
+		if not info or info.itemID ~= e.itemID or info.isLocked then return end
+		ns.Note("clam", ("open %s at %d:%d, free slots %d"):format(tostring(e.itemID), e.bag, e.slot, FreeSlots()))
+		clamTry = { id = e.itemID, t = GetTime() }
+		pcall(C_Container.UseContainerItem, e.bag, e.slot)
+	end)
+	-- één tegelijk; de volgende na het looten van deze
 end
+
+-- Wat deed WoW na een poging? (lootvenster = gelukt; foutmelding = welke)
+local function RecentTry() return clamTry and GetTime() - clamTry.t < 3 end
+ns.OnEvent("LOOT_OPENED", "clam result", function()
+	if RecentTry() then ns.Note("clam", clamTry.id .. " opened (loot window)"); clamTry = nil end
+end)
+ns.OnEvent("UI_ERROR_MESSAGE", "clam result", function(_, _, msg)
+	if RecentTry() then ns.Note("clam", clamTry.id .. " WoW says: " .. tostring(msg)); clamTry = nil end
+end)
 
 ---------------------------------------------------------------------------
 -- Events: samenvoegen, Auto Sell en clams
@@ -210,6 +236,7 @@ end)
 local function ClamBlocked(_, addon, what)
 	if addon ~= ADDON or ns.clamBlocked or not tostring(what):find("UseContainerItem") then return end
 	ns.clamBlocked = true
+	ns.Note("clam", "blocked by WoW, free slots " .. FreeSlots() .. ": no more automatic opening until /reload")
 	Print(T("WoW does not allow opening clams automatically here. Open them yourself with a right-click."))
 end
 ns.OnEvent("ADDON_ACTION_BLOCKED", "clams", ClamBlocked)

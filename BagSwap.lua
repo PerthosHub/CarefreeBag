@@ -578,7 +578,7 @@ function ns.ScheduleBagCheck(delay)
 	C_Timer.After(delay or 0.5, function()
 		checkPending = false
 		local ok, err = pcall(ns.BagCheck)
-		if not ok then ns.DB.lastError = "bags: " .. tostring(err); Log("bag check error: " .. tostring(err)) end
+		if not ok then ns.SetError("bag check: " .. tostring(err)) end
 	end)
 end
 

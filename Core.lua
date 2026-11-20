@@ -52,15 +52,40 @@ function ns.Log(msg)
 	ns.DB.log = ns.DB.log or {}
 	local stamp = date and date("%d-%m %H:%M:%S") or tostring(GetTime())
 	table.insert(ns.DB.log, stamp .. "  " .. tostring(msg))
-	while #ns.DB.log > 80 do table.remove(ns.DB.log, 1) end
+	while #ns.DB.log > 300 do table.remove(ns.DB.log, 1) end
+end
+
+-- Belangrijke momenten (clams, tassen vol, geblokkeerd door WoW, fouten) apart bewaren in
+-- DB.events (laatste 200), zodat ze later nog terug te lezen zijn, ook als het gewone log al
+-- is doorgeschoven (Johan kan niet altijd meteen uitzoeken wat er gebeurde). Staat ook in het log.
+-- Dezelfde regel binnen 10 s maar één keer.
+local lastNote = {}
+function ns.Note(kind, msg)
+	if not ns.DB then return end
+	local line = kind .. ": " .. tostring(msg)
+	local now = GetTime and GetTime() or 0
+	if lastNote.line == line and now - (lastNote.t or 0) < 10 then return end
+	lastNote.line, lastNote.t = line, now
+	ns.Log(line)
+	ns.DB.events = ns.DB.events or {}
+	local stamp = date and date("%d-%m %H:%M:%S") or tostring(now)
+	table.insert(ns.DB.events, stamp .. "  " .. line)
+	while #ns.DB.events > 200 do table.remove(ns.DB.events, 1) end
+end
+
+-- Fout onthouden (voor /cfb error) mét tijdstip, en in de belangrijke momenten.
+function ns.SetError(msg)
+	if not ns.DB then return end
+	ns.DB.lastError = tostring(msg)
+	ns.DB.lastErrorTime = date and date("%d-%m %H:%M:%S") or nil
+	ns.Note("error", msg)
 end
 
 -- Iets uitvoeren; gaat het mis, dan in het logboek, bij /cfb error en één regel in de chat.
 function ns.Try(label, fn, ...)
 	local ok, err = pcall(fn, ...)
 	if not ok then
-		if ns.DB then ns.DB.lastError = label .. ": " .. tostring(err) end
-		ns.Log("error in " .. label .. ": " .. tostring(err))
+		ns.SetError(label .. ": " .. tostring(err))
 		ns.Print(ns.T("error in %s: %s"):format(label, tostring(err)))
 	end
 	return ok

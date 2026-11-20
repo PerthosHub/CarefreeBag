@@ -223,7 +223,7 @@ local function Swap()
 	DeleteCursorItem()
 	local what = (e.link or e.name) .. (e.count > 1 and (" x" .. e.count) or "")
 	Print(T("Destroyed %s to make room for %s."):format(what, o.loot.link))
-	Log(("loot swap: destroyed %s (%d copper) for %s"):format(tostring(e.itemID), o.junk.value, o.loot.link:match("%[(.-)%]") or "?"))
+	ns.Note("bags full", ("destroyed %s (%d copper) for %s"):format(tostring(e.itemID), o.junk.value, o.loot.link:match("%[(.-)%]") or "?"))
 	state.pending = { slot = o.loot.slot, link = o.loot.link, id = o.loot.id, reagent = o.loot.reagent, tries = 0 }
 	HidePanel()
 	C_Timer.After(0.2, TryPending)
@@ -529,7 +529,12 @@ Evaluate = function()
 		if id then lootIDs[id] = true end
 	end
 	local junk = lootItem and Cheapest(items, lootItem, lootIDs)
-	if not junk then HidePanel(); return end
+	if not junk then
+		if lootItem then ns.Note("bags full", "no offer for " .. (lootItem.link and lootItem.link:match("%[(.-)%]") or "?") .. ": nothing cheaper to destroy") end
+		HidePanel(); return
+	end
+	ns.Note("bags full", ("offer: destroy %s (%d copper) for %s (%d copper)"):format(tostring(junk.e.itemID), junk.value or 0,
+		lootItem.link and lootItem.link:match("%[(.-)%]") or "?", lootItem.value or 0))
 	ShowOffer(lootItem, junk)
 end
 
@@ -540,7 +545,7 @@ local function Schedule()
 	C_Timer.After(0.3, function()
 		state.scheduled = false
 		local ok, err = pcall(Evaluate)
-		if not ok then ns.DB.lastError = "loot: " .. tostring(err); Log("loot error: " .. tostring(err)) end
+		if not ok then ns.SetError("loot: " .. tostring(err)) end
 	end)
 end
 
@@ -568,5 +573,12 @@ for _, ev in ipairs({ "LOOT_OPENED", "LOOT_SLOT_CLEARED", "LOOT_CLOSED" }) do
 end
 ns.OnEvent("BAG_UPDATE_DELAYED", "loot", function() ns.LootEvent("BAG") end)
 ns.OnEvent("UI_ERROR_MESSAGE", "loot", function(_, _, msg)
-	if ERR_INV_FULL and msg == ERR_INV_FULL then ns.LootEvent("FULL") end
+	if ERR_INV_FULL and msg == ERR_INV_FULL then
+		-- belangrijk moment: later terug te lezen (DB.events)
+		local okS, _, free = pcall(Scan)
+		local loot = GetNumLootItems and (GetNumLootItems() or 0) or 0
+		ns.Note("bags full", ("free slots %s, loot window items %d, panel %s"):format(okS and free and #free or "?", loot,
+			ns.DB.lootPanel == false and "off" or "on"))
+		ns.LootEvent("FULL")
+	end
 end)

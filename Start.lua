@@ -39,6 +39,7 @@ ns.OnEvent("PLAYER_LOGIN", "login", function()
 	end
 	ns.DB.lastVersion = ns.VERSION
 	Log("v" .. ns.VERSION .. " loaded as '" .. tostring(MyFullName()) .. "', name separator: '" .. tostring(SurnameSep()) .. "'")
+	ns.Note("login", "v" .. ns.VERSION .. " as '" .. tostring(MyFullName()) .. "'") -- context bij de belangrijke momenten
 	ScheduleRestack()
 	C_Timer.After(3, function() Try("snapshot", SnapBags) end)
 end)
@@ -46,8 +47,11 @@ end)
 -- WoW blokkeerde iets van ons: onthouden voor /cfb error (Chores.lua en Mail.lua reageren er zelf op).
 local function Blocked(event, addon, what)
 	if addon ~= ADDON then return end
-	ns.DB.lastError = event .. ": " .. tostring(what)
-	Log("blocked by WoW: " .. tostring(what))
+	-- welke tassen-toestand erbij hoorde (voor later terugkijken)
+	local okS, _, free = pcall(ns.Scan)
+	local loot = GetNumLootItems and (GetNumLootItems() or 0) or 0
+	ns.SetError(event .. ": " .. tostring(what) .. (okS and free and (" (free slots " .. #free .. ", loot window items " .. loot
+		.. (InCombatLockdown and InCombatLockdown() and ", in combat" or "") .. ")") or ""))
 end
 ns.OnEvent("ADDON_ACTION_BLOCKED", "blocked", Blocked)
 ns.OnEvent("ADDON_ACTION_FORBIDDEN", "blocked", Blocked)
@@ -80,7 +84,7 @@ SlashCmdList["CAREFREEBAG"] = function(msg)
 			Log("groups reset by /cfb resetgroups")
 		end
 	elseif msg == "fout" or msg == "error" then
-		Print(T("last error: %s"):format(tostring(ns.DB.lastError or T("none"))))
+		Print(T("last error: %s"):format(tostring(ns.DB.lastError or T("none")) .. (ns.DB.lastErrorTime and (" (" .. ns.DB.lastErrorTime .. ")") or "")))
 	else
 		ns.ToggleConfig()
 	end
