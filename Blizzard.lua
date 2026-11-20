@@ -177,6 +177,7 @@ function ns.SetEnabled(v)
 		Print(T("CarefreeBag is on."))
 	end
 	if ns.UpdateMinimapIcon then ns.UpdateMinimapIcon() end
+	if ns.UpdateBagSlots then ns.UpdateBagSlots() end -- CFB uit = de normale tassenbalk terug (BlizzBagBar.lua)
 	if ns.RefreshConfig then ns.RefreshConfig() end
 end
 

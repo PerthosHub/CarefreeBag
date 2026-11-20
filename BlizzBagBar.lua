@@ -2,9 +2,9 @@
 -- De tassenbalk van WoW zelf (issue #4, deel B):
 --  * vulbalk óp de echte rugzakknop: van onder naar boven, groen -> rood (alleen gewone vakjes;
 --    reagent-tas en beroepstassen tellen niet mee). Optie DB.bagFill, standaard aan.
---  * de andere tasvakjes verbergen (per karakter: ch.hideBagSlots). Retail/Forever: WoW's eigen
---    inklap-pijltje (CVar expandBagBar). Classic: de vakjes zelf verbergen.
---  * sleep je een tas, dan komen de vakjes even terug.
+--  * de andere tasvakjes verbergen (per karakter: ch.hideBagSlots) zolang het CFB-venster dicht is;
+--    tassen open = hele balk zichtbaar. Retail: WoW's eigen inklap-pijltje (CVar expandBagBar).
+--    Forever/Classic: geen werkend pijltje, dus de vakjes, sleutelring en balk-achtergrond zelf.
 --  * eenmalige vraag per karakter, alleen als je je UI al hebt aangepast (eigen Edit Mode-layout
 --    of een balk-addon). Standaard-UI = niet vragen (anders ontstaat er een gat). Al ingeklapt = niet vragen.
 -- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
@@ -17,7 +17,6 @@ local BAR_ADDONS = { "Bartender4", "Dominos", "ElvUI", "Tukui", "NDui", "RealUI"
 
 local fill          -- de vulbalk op de rugzakknop
 local slotsHidden = false -- nu verborgen door ons
-local peeking = false -- vakjes even zichtbaar omdat je een tas sleept
 local pending = nil -- in gevecht gevraagd: na het gevecht toepassen (true/false)
 
 ---------------------------------------------------------------------------
@@ -199,63 +198,22 @@ local function SetSlotsHidden(hide, quiet)
 	if not quiet then Log("bag slots " .. (hide and "hidden" or "shown") .. " (" .. #ClassicSlots() .. " frames, " .. nArt .. " art)") end
 end
 
+-- Hoe hoort de balk nu te staan? Verborgen alleen als je dat gekozen hebt, CFB aan staat en
+-- het CFB-venster dicht is. Tassen open = hele balk zichtbaar (tassen + sleutelring).
+-- Alleen iets doen als het verandert (en dan stil: openen/sluiten hoort niet in de log).
+function ns.UpdateBagSlots(quiet)
+	local hide = WantHidden() and ns.DB.enabled and not (ns.main and ns.main:IsShown()) or false
+	if hide == slotsHidden and pending == nil then return end
+	SetSlotsHidden(hide, quiet)
+end
+
 -- Vanuit de opties (en de vraag): per karakter.
 function ns.SetHideBagSlots(v)
 	local ch = ns.CharEntry()
 	if not ch then return end
 	ch.hideBagSlots = v and true or false
 	Log("hide other bag slots: " .. tostring(ch.hideBagSlots))
-	peeking = false
-	SetSlotsHidden(ch.hideBagSlots)
-end
-
----------------------------------------------------------------------------
--- Tas slepen of erover hoveren: vakjes even terug
----------------------------------------------------------------------------
-
-local hoverBag = false -- de muis staat op een tas (tooltip van een tas zichtbaar)
-
-local function IsBag(id)
-	if not id then return false end
-	local ok, _, _, _, _, _, _, _, _, equip = pcall(C_Item.GetItemInfo, id)
-	return ok and (equip == "INVTYPE_BAG" or equip == "INVTYPE_QUIVER") or false
-end
-
-local function CursorIsBag()
-	if not GetCursorInfo then return false end
-	local kind, id = GetCursorInfo()
-	return kind == "item" and IsBag(id)
-end
-
-local function UpdatePeek()
-	if not WantHidden() then return end
-	if CursorIsBag() or hoverBag then
-		if not peeking then
-			peeking = true
-			SetSlotsHidden(false, true)
-		end
-	elseif peeking then
-		-- even wachten: WoW (en BagSwap) handelen eerst het neerleggen af, en van een tas
-		-- naar een tasvakje bewegen mag de vakjes niet laten verdwijnen
-		C_Timer.After(0.3, function()
-			if peeking and not CursorIsBag() and not hoverBag then
-				peeking = false
-				SetSlotsHidden(true, true)
-			end
-		end)
-	end
-end
-
--- Aangeroepen vanuit de item-tooltip (Data.lua): staat de muis op een tas?
-function ns.BagTooltip(tt)
-	if tt ~= GameTooltip or not tt.GetItem then return end
-	local _, link = tt:GetItem()
-	local id = link and tonumber(link:match("item:(%d+)"))
-	local bag = IsBag(id)
-	if bag ~= hoverBag then
-		hoverBag = bag
-		UpdatePeek()
-	end
+	ns.UpdateBagSlots()
 end
 
 ---------------------------------------------------------------------------
@@ -296,7 +254,7 @@ function ns.BagBarAsk()
 	if InCombatLockdown() then ns.bagBarAskLater = true; return end
 	if not StaticPopupDialogs or not StaticPopup_Show then return end
 	StaticPopupDialogs["CAREFREEBAG_BAGBAR"] = {
-		text = T("CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots? They come back while you drag a bag. You can change this in the options."),
+		text = T("CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots and key ring while your bags are closed? You can change this in the options."),
 		button1 = YES or "Yes",
 		button2 = NO or "No",
 		OnAccept = function() ns.SetHideBagSlots(true) end,
@@ -316,20 +274,17 @@ end
 
 function ns.SetupBagBar()
 	ns.UpdateBackpackFill()
-	if WantHidden() then SetSlotsHidden(true) end
-	if ns.HookAHTooltip then ns.HookAHTooltip() end -- item-tooltip: hoveren over een tas (ns.BagTooltip)
-	if GameTooltip and GameTooltip.HookScript then
-		GameTooltip:HookScript("OnHide", function()
-			if hoverBag then hoverBag = false; UpdatePeek() end
-		end)
+	ns.UpdateBagSlots()
+	-- CFB open = tassen en sleutelring zichtbaar, dicht = alleen de rugzak
+	if ns.main and ns.main.HookScript then
+		ns.main:HookScript("OnShow", function() ns.UpdateBagSlots(true) end)
+		ns.main:HookScript("OnHide", function() ns.UpdateBagSlots(true) end)
 	end
 	C_Timer.After(8, function() ns.Try("bag bar question", ns.BagBarAsk) end)
 end
 
 ns.OnEvent("BAG_UPDATE_DELAYED", "backpack fill", function() ns.UpdateBackpackFill() end)
-ns.OnEvent("CURSOR_CHANGED", "bag slots", UpdatePeek) -- retail/Forever
-ns.OnEvent("CURSOR_UPDATE", "bag slots", UpdatePeek)  -- classic
 ns.OnEvent("PLAYER_REGEN_ENABLED", "bag slots", function()
-	if pending ~= nil then SetSlotsHidden(pending) end
+	if pending ~= nil then pending = nil; ns.UpdateBagSlots(true) end -- stand van nu, niet van tijdens het gevecht
 	if ns.bagBarAskLater then ns.bagBarAskLater = nil; ns.BagBarAsk() end
 end)

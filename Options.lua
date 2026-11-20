@@ -204,7 +204,7 @@ local function BuildAdvanced()
 		end)
 	y = y - ROW_H
 	config.slotsCb = AddCheck(adv, 4, y, T("Hide the other bag slots"),
-		T("Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."),
+		T("While your bags are closed, only the backpack stays. Open your bags to see the bag slots and key ring. Only for this character."),
 		function() local ch = ns.CharEntry(); return ch and ch.hideBagSlots == true end, function(v)
 			if ns.SetHideBagSlots then ns.SetHideBagSlots(v) end
 		end)
