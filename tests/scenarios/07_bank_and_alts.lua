@@ -90,6 +90,12 @@ search("")
 check(not CarefreeBagViewer:IsShown() and not CarefreeBagBankButton.glow.shown, "zoekbalk leeg: paneel (zelf geopend door zoeken) weer dicht")
 search("linen"); CarefreeBagViewer:Hide(); search("linen c")
 check(not CarefreeBagViewer:IsShown(), "zelf dichtgedaan tijdens zoeken: blijft dicht")
+-- #18: knop Bank & alts = altijd eerst je eigen bank, ook met hits bij een alt
+CarefreeBagViewer:Hide(); CarefreeBagViewer.noAuto = nil
+CarefreeBagBankButton:Fire("OnClick"); RunTimers()
+check(CarefreeBagViewer:IsShown() and CarefreeBagViewer.key == "Thrall Stormrage-" and CarefreeBagViewer.part == "bank",
+  "#18: knop opent je eigen bank, ook met zoek-hits bij een alt")
+CarefreeBagViewer:Hide()
 search("")
 CarefreeBagBankButton:Fire("OnClick"); RunTimers()
 -- opties en bankpaneel: vast links naast de tassen, één tegelijk

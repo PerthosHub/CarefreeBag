@@ -505,7 +505,9 @@ end
 
 ns.ToggleViewer = function()
 	if viewer and viewer:IsShown() then viewer:Hide(); return end
-	OpenViewer(FirstHit())
+	-- Knop Bank & alts: altijd eerst je eigen bank (issue #18), ook als er zoek-hits bij een alt zijn
+	-- (die zie je aan het getal op het portret). Alleen tijdens het typen springt het paneel naar hits.
+	OpenViewer(nil, nil)
 end
 
 ns.HideViewer = function() if viewer then viewer:Hide() end end
