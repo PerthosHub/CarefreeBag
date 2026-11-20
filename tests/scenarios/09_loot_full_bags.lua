@@ -46,22 +46,29 @@ local P = NS.lootPanel
 check(P and P:IsShown(), "tassen vol + loot past niet: paneel open")
 check(P.offer.loot.slot == 2 and P.offer.junk.e.itemID == 8000, "biedt ring aan tegen goedkoopste stapel (Broken Fang)")
 check(P.offer.loot.value == 500 and P.junkRow.value.text == "15c", "waarde: loot 500c, in de tas 15c")
-check(P.question.text:find("Shiny Ring", 1, true), "vraag noemt de loot: " .. tostring(P.question.text))
+check(P.lootRow.name.text:find("Shiny Ring", 1, true) and P.lootRow.label.text:find("Pick up"), "bovenste rij: oppakken, de ring: " .. tostring(P.lootRow.name.text))
+check(P.lootRow.value.text == "500c", "waarde bij de loot: 500c")
 check(P.junkRow.name.text:find("Broken Fang") and P.junkRow.name.text:find("x3"), "stapel met aantal: Broken Fang x3")
+check(P.junkRow.label.text:find("Destroy"), "onderste rij: weggooien")
+check(P.more.text == "Item 1 of 2", "twee items passen niet: Item 1 of 2 (" .. tostring(P.more.text) .. ")")
 check(P.verdict.text:find("485c") and P.verdict.text:find("more"), "loot is 485c meer waard")
 check(P.advice == "pickup" and P.swap.green and not P.skip.green, "advies oppakken: Destroy & pick up groen, Leave it niet")
 check(P.swap.text == "Destroy & pick up" and P.skip.text == "Leave it", "knoppen heten Destroy & pick up en Leave it")
 
 -- 2. Klik: weggooien en looten
-P.swap:Fire("OnClick"); RunTimers()
-check(DELETED[1] == 8000, "Broken Fang weggegooid")
+P.swap:Fire("OnClick")
+check(P:IsShown() and P.busy and P.verdict.text:find("Picking up") and P.swap.enabled == false, "tijdens het oppakken blijft het paneel open (knoppen even uit)")
+P.swap:Fire("OnClick") -- dubbelklik: niet nog iets weggooien
+RunTimers()
+check(#DELETED == 1 and DELETED[1] == 8000, "Broken Fang weggegooid (één keer)")
 check(LOOTED[1] == 9000, "ring opgepakt")
 check(BAGS[0][1] and BAGS[0][1].itemID == 9000, "ring ligt in het vrijgekomen vak")
 local said = false; for _, l in ipairs(LOG) do if l:find("Destroyed") and l:find("Shiny Ring") then said = true end end
 check(said, "melding in de chat")
 
 -- 3. Linnen past nog steeds niet; nu is Torn Wing (50c) de goedkoopste en de loot minder waard
-check(P:IsShown() and P.offer.loot.slot == 1 and P.offer.junk.e.itemID == 8001, "volgende: linnen tegen Torn Wing")
+check(P:IsShown() and P.offer.loot.slot == 1 and P.offer.junk.e.itemID == 8001, "meteen door: linnen tegen Torn Wing")
+check(P.more.text == "Item 2 of 2" and P.lootRow.name.text:find("Linen Cloth") and not P.busy and P.swap.enabled, "Item 2 of 2, knoppen weer aan")
 check(P.verdict.text:find("30c") and P.verdict.text:find("less"), "loot is 30c minder waard")
 check(P.advice == "leave" and P.skip.green and not P.swap.green, "advies laten liggen: Leave it groen")
 check(P.offer.junk.e.itemID ~= 6948, "hearthstone (geen waarde) nooit voorgesteld")

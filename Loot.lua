@@ -13,7 +13,7 @@ local LOOT_ITEM = (Enum and Enum.LootSlotType and Enum.LootSlotType.Item) or LOO
 local AH_CUT = 0.05
 local QUEST_VALUE = 2 ^ 50                                -- questloot is altijd "meer waard"
 local NEVER = { quest = true, keys = true, hidden = true } -- deze groepen stellen we nooit voor
-local W, H = 300, 150
+local W, H = 300, 172
 local MENU_W = 250
 
 -- Naam van een groep zoals in de tas.
@@ -26,7 +26,8 @@ local function GroupName(key)
 end
 
 -- skipItems/skipGroups: "eenmalig overslaan", geldt tot het lootvenster dichtgaat.
-local state = { pending = nil, dismissed = false, scheduled = false, skipItems = {}, skipGroups = {}, left = {} }
+-- done: hoeveel loot-items je in dit lootvenster al gekozen hebt (voor "Item 2 van 3").
+local state = { pending = nil, dismissed = false, scheduled = false, skipItems = {}, skipGroups = {}, left = {}, done = 0 }
 local panel
 
 local function Money(m)
@@ -114,10 +115,10 @@ local function Fits(items, free, itemID, qty, reagent)
 	return false
 end
 
--- Het meest waardevolle loot-item dat niet in je tassen past.
+-- Het meest waardevolle loot-item dat niet in je tassen past, en hoeveel er niet passen.
 local function BestLoot(items, free)
 	local n = GetNumLootItems and GetNumLootItems() or 0
-	local best
+	local best, todo = nil, 0
 	for i = 1, n do
 		local link = GetLootSlotLink and GetLootSlotLink(i)
 		if link and (not GetLootSlotType or GetLootSlotType(i) == LOOT_ITEM) then
@@ -126,6 +127,7 @@ local function BestLoot(items, free)
 			local r = id and Info(id)
 			qty = (qty and qty > 0) and qty or 1
 			if id and not locked and not state.left[i .. link] and not Fits(items, free, id, qty, r and r[18]) then
+				todo = todo + 1
 				local each, ah = Each(link, r and r[12])
 				local v = isQuest and QUEST_VALUE or each * qty
 				if not best or v > best.value then
@@ -135,7 +137,7 @@ local function BestLoot(items, free)
 			end
 		end
 	end
-	return best
+	return best, todo
 end
 
 -- Waar de prijzen vandaan komen (voor de hover): geen Auctionator, nog geen AH-prijs,
@@ -181,10 +183,26 @@ end
 -- Dicht vanuit de code (na weggooien, loot dicht, niets meer te doen): niet als "laten liggen" tellen.
 local function HidePanel()
 	if panel and panel:IsShown() then panel.quiet = true; panel:Hide(); panel.quiet = nil end
-	if panel then panel.offer = nil end
+	if panel then
+		panel.offer, panel.busy = nil, false
+		panel.swap:SetEnabled(true); panel.skip:SetEnabled(true)
+	end
 end
 
 local Evaluate -- vooruit
+
+-- Tijdens het oppakken blijft het paneel staan (knoppen even uit), zodat het volgende
+-- item van dezelfde loot er meteen in komt in plaats van dat het venster verdwijnt.
+local function SetBusy(busy)
+	if not panel then return end
+	panel.busy = busy and true or false
+	panel.swap:SetEnabled(not busy)
+	panel.skip:SetEnabled(not busy)
+	if busy then
+		panel.menu:Hide()
+		panel.verdict:SetText(T("Picking up..."))
+	end
+end
 
 -- Na het weggooien wachten tot het vakje echt vrij is, dan de loot oppakken.
 local function TryPending()
@@ -193,6 +211,7 @@ local function TryPending()
 	if not GetLootSlotLink or GetLootSlotLink(p.slot) ~= p.link then
 		Log("loot: slot " .. p.slot .. " changed before looting")
 		state.pending = nil
+		C_Timer.After(0.1, Evaluate) -- volgende, of het paneel dicht
 		return
 	end
 	local _, free = Scan()
@@ -212,7 +231,7 @@ end
 -- Klik op "Destroy & pick up" (een echte klik: anders weigert WoW het weggooien).
 local function Swap()
 	local o = panel and panel.offer
-	if not o then return end
+	if not o or panel.busy then return end
 	local e = o.junk.e
 	local info = C_Container.GetContainerItemInfo(e.bag, e.slot)
 	if not info or info.itemID ~= e.itemID or info.isLocked then Evaluate(); return end
@@ -225,7 +244,9 @@ local function Swap()
 	Print(T("Destroyed %s to make room for %s."):format(what, o.loot.link))
 	ns.Note("bags full", ("destroyed %s (%d copper) for %s"):format(tostring(e.itemID), o.junk.value, o.loot.link:match("%[(.-)%]") or "?"))
 	state.pending = { slot = o.loot.slot, link = o.loot.link, id = o.loot.id, reagent = o.loot.reagent, tries = 0 }
-	HidePanel()
+	state.done = state.done + 1
+	panel.offer = nil -- paneel blijft open (zie SetBusy); kruisje telt nu niet als "laten liggen"
+	SetBusy(true)
 	C_Timer.After(0.2, TryPending)
 end
 
@@ -347,35 +368,54 @@ local function BuildPanel()
 	panel.solid:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -10)
 	panel.solid:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 10)
 	local inner = W - 2 * ns.PAD
-	-- De vraag: om de loot op te pakken, dit weggooien?
-	panel.question = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	panel.question:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -32)
-	panel.question:SetWidth(inner)
-	panel.question:SetJustifyH("LEFT")
-	panel.question:SetWordWrap(true) -- lange itemnaam: liever 2 regels dan "destroy:" kwijt
+	-- Bij meer items die niet passen: "Item 1 van 2".
+	panel.more = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	panel.more:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -ns.PAD, -32)
+	panel.more:SetJustifyH("RIGHT")
+	-- Twee rijen met icoon: bovenaan wat je oppakt, daaronder wat ervoor weg moet.
+	local function Row(anchor, dy)
+		local r = CreateFrame("Button", nil, panel)
+		r:SetSize(inner, 30)
+		if anchor then r:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, dy)
+		else r:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, dy) end
+		r:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+		r.icon = r:CreateTexture(nil, "ARTWORK")
+		r.icon:SetSize(26, 26)
+		r.icon:SetPoint("LEFT", r, "LEFT", 2, 0)
+		r.value = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		r.value:SetPoint("RIGHT", r, "RIGHT", -20, 0)
+		r.value:SetJustifyH("RIGHT")
+		r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		r.name:SetPoint("TOPLEFT", r.icon, "TOPRIGHT", 6, -1)
+		r.name:SetWidth(inner - 34 - 100)
+		r.name:SetJustifyH("LEFT")
+		r.name:SetWordWrap(false)
+		r.label = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall") -- Oppakken / Weggooien (+ groep)
+		r.label:SetPoint("BOTTOMLEFT", r.icon, "BOTTOMRIGHT", 6, 1)
+		r.label:SetWidth(inner - 34 - 100)
+		r.label:SetJustifyH("LEFT")
+		r.label:SetWordWrap(false)
+		r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		return r
+	end
+	local lr = Row(nil, -44)
+	lr:SetScript("OnEnter", function(self)
+		if not self.link then return end
+		GameTooltip:SetOwner(self, "ANCHOR_NONE")
+		GameTooltip:ClearAllPoints()
+		GameTooltip:SetPoint("TOPLEFT", panel, "BOTTOMLEFT", 0, -2)
+		GameTooltip:SetHyperlink(self.link)
+		GameTooltip:Show()
+	end)
+	panel.lootRow = lr
 	-- Het item dat weg zou gaan; pijltje rechts = er zijn opties (hover).
-	local r = CreateFrame("Button", nil, panel)
-	r:SetSize(inner, 30)
-	r:SetPoint("TOPLEFT", panel.question, "BOTTOMLEFT", 0, -4)
-	r:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-	r.icon = r:CreateTexture(nil, "ARTWORK")
-	r.icon:SetSize(26, 26)
-	r.icon:SetPoint("LEFT", r, "LEFT", 2, 0)
+	local r = Row(lr, -4)
 	r.arrow = r:CreateTexture(nil, "OVERLAY")
 	r.arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
 	r.arrow:SetSize(12, 12)
 	r.arrow:SetPoint("RIGHT", r, "RIGHT", -2, 0)
-	r.value = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	r.value:SetPoint("RIGHT", r.arrow, "LEFT", -6, 0)
-	r.value:SetJustifyH("RIGHT")
-	r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	r.name:SetPoint("TOPLEFT", r.icon, "TOPRIGHT", 6, -1)
-	r.name:SetWidth(inner - 34 - 100)
-	r.name:SetJustifyH("LEFT")
-	r.name:SetWordWrap(false)
-	r.label = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall") -- groep
-	r.label:SetPoint("BOTTOMLEFT", r.icon, "BOTTOMRIGHT", 6, 1)
 	r:SetScript("OnEnter", function(self)
+		if panel.busy then return end
 		ShowMenu()
 		if not self.link then return end
 		-- tooltip onder het paneel, zodat het menu ernaast vrij blijft
@@ -390,7 +430,6 @@ local function BuildPanel()
 		end
 		GameTooltip:Show()
 	end)
-	r:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	panel.junkRow = r
 	panel.menu = BuildMenu()
 	-- oude namen, voor de tests en wie ze nog gebruikt
@@ -407,7 +446,12 @@ local function BuildPanel()
 	-- Leave it: alleen dit loot-item laten liggen; ligt er nog meer dat niet past, dan meteen dat.
 	panel.skip:SetScript("OnClick", function()
 		local o = panel.offer
-		if o then state.left[o.loot.slot .. o.loot.link] = true; Log("loot: leave " .. (o.loot.link:match("%[(.-)%]") or "?")) end
+		if panel.busy then return end
+		if o then
+			state.left[o.loot.slot .. o.loot.link] = true
+			state.done = state.done + 1
+			Log("loot: leave " .. (o.loot.link:match("%[(.-)%]") or "?"))
+		end
 		HidePanel()
 		Evaluate()
 	end)
@@ -421,7 +465,7 @@ local function BuildPanel()
 		panel.menu:Hide()
 		-- Zelf dichtgedaan (kruisje of Escape): niet meer vragen tot het lootvenster dichtgaat.
 		-- Anders komt hij bij de volgende tas-update of "Inventory is full" meteen terug.
-		if not panel.quiet and panel.offer then
+		if not panel.quiet and (panel.offer or panel.busy) then
 			state.dismissed = true
 			panel.offer = nil
 			Log("loot: window closed by the player, no more questions for this loot")
@@ -473,20 +517,27 @@ local function Place()
 	panel.menuLeft = pick.menuLeft or (pick.r[3] + mw > sw) or false
 end
 
-local function ShowOffer(lootItem, junk)
+local function ShowOffer(lootItem, junk, todo)
 	if not panel then BuildPanel() end
 	local old = panel.offer and panel.offer.junk and panel.offer.junk.e
 	local same = old and old.bag == junk.e.bag and old.slot == junk.e.slot and old.itemID == junk.e.itemID
 	panel.offer = { loot = lootItem, junk = junk }
-	panel.question:SetText(T("To pick up %s, destroy:"):format(lootItem.link .. ((lootItem.count or 1) > 1 and (" x" .. lootItem.count) or "")))
-	-- hoogte: vraag (1 of 2 regels) + rij + advies + knoppen
-	local qh = panel.question:GetStringHeight() or 12
-	panel:SetHeight(math.max(H, 32 + qh + 4 + 30 + 34 + 36))
+	panel.busy = false
+	panel.swap:SetEnabled(true); panel.skip:SetEnabled(true)
+	local total = state.done + (todo or 1)
+	panel.more:SetText(total > 1 and T("Item %d of %d"):format(state.done + 1, total) or "")
+	-- Bovenaan: wat je oppakt (groen), daaronder wat ervoor weg moet (rood).
+	local l = panel.lootRow
+	l.link = lootItem.link
+	l.icon:SetTexture(lootItem.icon)
+	l.name:SetText(lootItem.link .. ((lootItem.count or 1) > 1 and (" x" .. lootItem.count) or ""))
+	l.label:SetText("|cff33ff33" .. T("Pick up") .. "|r")
+	l.value:SetText(lootItem.quest and "" or (Money(lootItem.value) .. (lootItem.ah and " |cff66ccffAH|r" or "")))
 	local e, r = junk.e, panel.junkRow
 	r.link = e.link
 	r.icon:SetTexture(e.info.iconFileID)
 	r.name:SetText((e.link or e.name or "?") .. (e.count > 1 and (" x" .. e.count) or ""))
-	r.label:SetText(GroupName(junk.sec))
+	r.label:SetText("|cffff5555" .. T("Destroy") .. "|r  " .. GroupName(junk.sec))
 	r.value:SetText(Money(junk.value) .. (junk.ah and " |cff66ccffAH|r" or ""))
 	-- Advies: oppakken als de loot meer waard is (of een questitem), anders laten liggen.
 	local pickUp = lootItem.quest or lootItem.value > junk.value
@@ -520,7 +571,7 @@ Evaluate = function()
 	if not ns.DB.enabled or state.dismissed or state.pending then return end
 	if not (GetNumLootItems and (GetNumLootItems() or 0) > 0) then HidePanel(); return end
 	local items, free = Scan()
-	local lootItem = BestLoot(items, free)
+	local lootItem, todo = BestLoot(items, free)
 	-- Items die ook in de loot liggen (bijv. een schelp die op je stapel past) niet weggooien.
 	local lootIDs = {}
 	for i = 1, (GetNumLootItems() or 0) do
@@ -535,7 +586,7 @@ Evaluate = function()
 	end
 	ns.Note("bags full", ("offer: destroy %s (%d copper) for %s (%d copper)"):format(tostring(junk.e.itemID), junk.value or 0,
 		lootItem.link and lootItem.link:match("%[(.-)%]") or "?", lootItem.value or 0))
-	ShowOffer(lootItem, junk)
+	ShowOffer(lootItem, junk, todo)
 end
 
 -- Even wachten: met autoloot pakt WoW eerst op wat past.
@@ -554,6 +605,7 @@ function ns.LootEvent(event)
 	if event == "LOOT_CLOSED" then
 		state.pending, state.dismissed = nil, false
 		state.skipItems, state.skipGroups, state.left = {}, {}, {} -- "eenmalig overslaan" is voorbij
+		state.done = 0
 		HidePanel()
 	elseif ns.DB and ns.DB.lootPanel == false then
 		HidePanel() -- optie "Bags full: offer to make room" staat uit

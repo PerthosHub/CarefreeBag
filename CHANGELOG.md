@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+### ✨ New
+- 🎒 **Bags full: see what you pick up and what goes.** The panel now shows both items with their icon: the loot on top (Pick up), the item that makes room below it (Destroy).
+- ⏭️ **More loot that doesn't fit? It goes straight on.** After you choose, the panel stays open and shows the next item from the same loot, with "Item 2 of 3" at the top.
+- 📒 **Clams and full bags are logged** with the time, so problems can be looked at later.
+
 ## 1.10.1
 ### ✨ New
 - 📦 **Drag a slot to the bank, everything goes.** A slot with more than one stack (like 5 + 3 potions) now moves all of them when you drag it into the bank, not just one stack. Right-click and Shift-click work like normal WoW.
