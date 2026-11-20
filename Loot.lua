@@ -572,6 +572,22 @@ Evaluate = function()
 	if not (GetNumLootItems and (GetNumLootItems() or 0) > 0) then HidePanel(); return end
 	local items, free = Scan()
 	local lootItem, todo = BestLoot(items, free)
+	local normalFree = 0
+	for _, f in ipairs(free) do if not f.reagent then normalFree = normalFree + 1 end end
+	if not lootItem and normalFree == 0 then
+		-- Tassen vol, loot open, maar niets aan te bieden: per loot-vak vastleggen waarom (later terug te lezen).
+		for i = 1, (GetNumLootItems() or 0) do
+			local link = GetLootSlotLink and GetLootSlotLink(i)
+			local _, _, qty, _, _, locked, isQuest = GetLootSlotInfo(i)
+			local id = link and tonumber(link:match("item:(%d+)"))
+			local r = id and Info(id)
+			ns.Note("bags full", ("no offer, loot slot %d: %s id %s x%s, type %s, locked %s, quest %s, left %s, fits %s"):format(i,
+				link and (link:match("%[(.-)%]") or "?") or "no link", tostring(id), tostring(qty),
+				tostring(GetLootSlotType and GetLootSlotType(i)), tostring(locked), tostring(isQuest),
+				tostring(link and state.left[i .. link] or false),
+				tostring(id and Fits(items, free, id, (qty and qty > 0) and qty or 1, r and r[18]) or false)))
+		end
+	end
 	-- Items die ook in de loot liggen (bijv. een schelp die op je stapel past) niet weggooien.
 	local lootIDs = {}
 	for i = 1, (GetNumLootItems() or 0) do
@@ -632,5 +648,7 @@ ns.OnEvent("UI_ERROR_MESSAGE", "loot", function(_, _, msg)
 		ns.Note("bags full", ("free slots %s, loot window items %d, panel %s"):format(okS and free and #free or "?", loot,
 			ns.DB.lootPanel == false and "off" or "on"))
 		ns.LootEvent("FULL")
+	elseif GetNumLootItems and (GetNumLootItems() or 0) > 0 then
+		ns.Note("bags full", "loot window open, WoW says: " .. tostring(msg)) -- bijv. "kan er niet meer van dragen"
 	end
 end)

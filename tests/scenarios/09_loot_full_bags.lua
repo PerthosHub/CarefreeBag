@@ -101,6 +101,8 @@ BAGS[0][3].count = 18
 LOOT = { { id = 2589, qty = 2 } }
 E("LOOT_OPENED")
 check(not P:IsShown(), "past bij een stapel (18+2): geen paneel")
+check(table.concat(CarefreeBagDB.events or {}, "\n"):find("no offer, loot slot 1: Linen Cloth id 2589 x2, type 1, locked false, quest nil, left false, fits true", 1, true),
+  "geen paneel bij volle tassen: reden per loot-vak in DB.events")
 E("LOOT_CLOSED")
 
 -- 8. Melding "Inventory is full" opent het paneel ook (autoloot)
