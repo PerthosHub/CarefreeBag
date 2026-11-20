@@ -14,7 +14,7 @@ local LOOT_ITEM = (Enum and Enum.LootSlotType and Enum.LootSlotType.Item) or LOO
 local AH_CUT = 0.05
 local QUEST_VALUE = 2 ^ 50                                -- questloot is altijd "meer waard"
 local NEVER = { quest = true, keys = true, hidden = true } -- deze groepen stellen we nooit voor
-local W = 300
+local W = 330
 local ROW_H, ICON = 36, 30
 local MAX_ROWS = 6
 local MENU_W = 250
@@ -268,9 +268,9 @@ local function Swap(row)
 	C_Timer.After(0.2, TryPending)
 end
 
--- Opties bij het item dat weg zou gaan (zichtbaar bij hover): nooit / nu niet, voor het item of de hele groep.
-local function MenuChoice(what)
-	local row = panel and (panel.menuRow or panel.rows[1])
+-- Opties bij het item dat weg zou gaan (knopje ▼ in de rij): nooit / nu niet, voor het item of de hele groep.
+local function MenuChoice(what, row)
+	row = row or (panel and (panel.menuRow or panel.rows[1]))
 	local o = row and row.offer
 	if not o or panel.busy then return end
 	local e, sec = o.junk.e, o.junk.sec
@@ -339,7 +339,7 @@ local function BuildMenu()
 	m.away = 0
 	m:SetScript("OnUpdate", function(self, dt)
 		local r = panel.menuRow
-		if self:IsMouseOver() or (r and r.junk:IsMouseOver()) then self.away = 0; return end
+		if self:IsMouseOver() or (r and r.opt:IsMouseOver()) then self.away = 0; return end
 		self.away = self.away + (dt or 0)
 		if self.away > 0.3 then self:Hide() end
 	end)
@@ -351,9 +351,22 @@ local function ShowMenu(row)
 	local o = row and row.offer
 	if not o or panel.busy then return end
 	panel.menuRow = row
-	local m = panel.menu
 	-- Auto Sell en Other zijn er juist voor spullen die weg mogen: geen "hele groep nooit".
 	local groupOk = o.junk.sec ~= "grey" and o.junk.sec ~= "other"
+	-- Eerst WoW's eigen keuzemenu (zoals rechtsklik op een speler); bestaat dat niet, dan ons eigen menu.
+	if MenuUtil and MenuUtil.CreateContextMenu then
+		local ok = pcall(MenuUtil.CreateContextMenu, row.opt, function(_, root)
+			root:CreateTitle(o.junk.e.name or "?")
+			root:CreateButton(T("Never destroy this item"), function() MenuChoice("keepItem", row) end)
+			root:CreateButton(T("Skip this item this time"), function() MenuChoice("skipItem", row) end)
+			root:CreateDivider()
+			root:CreateTitle(T("Group: %s"):format(GroupName(o.junk.sec)))
+			if groupOk then root:CreateButton(T("Never destroy anything from this group"), function() MenuChoice("keepGroup", row) end) end
+			root:CreateButton(T("Skip this group this time"), function() MenuChoice("skipGroup", row) end)
+		end)
+		if ok then return end
+	end
+	local m = panel.menu
 	-- Van boven naar beneden: kopje item, 2 keuzes, streep, kopje groep, 1 of 2 keuzes.
 	local y = -14
 	local function Put(f, h, x)
@@ -373,9 +386,8 @@ local function ShowMenu(row)
 	Put(m.skipGroup, 16)
 	m:SetHeight(-y + 12)
 	m:ClearAllPoints()
-	-- naast het paneel, op de hoogte van de rij
-	if panel.menuLeft then m:SetPoint("TOPRIGHT", row, "TOPLEFT", -(ns.PAD + 2), 4)
-	else m:SetPoint("TOPLEFT", row, "TOPRIGHT", ns.PAD + 2, 4) end
+	-- onder het knopje ▼
+	m:SetPoint("TOPRIGHT", row.opt, "BOTTOMRIGHT", 0, -2)
 	m.away = 0
 	m:Show()
 end
@@ -420,19 +432,33 @@ local function NewRow(i)
 	r.arrow:SetSize(14, 14)
 	r.arrow:SetPoint("LEFT", r.loot, "RIGHT", 4, 0)
 	r.junk = Icon(2 + ICON + 22)
-	r.junk:SetScript("OnEnter", function() ShowMenu(r); Tip(r, r.offer and r.offer.junk.e.link) end)
-	-- ► = er zijn opties bij hover
-	r.more = r:CreateTexture(nil, "OVERLAY")
-	r.more:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
-	r.more:SetSize(10, 10)
-	r.more:SetPoint("LEFT", r.junk, "RIGHT", 1, 0)
+	r.junk:SetScript("OnEnter", function() Tip(r, r.offer and r.offer.junk.e.link) end)
+	-- Achtergrond over de hele rij: groen = slim, rood = niet slim (van de rand van het lootvenster tot de knop).
+	r.bg = r:CreateTexture(nil, "BACKGROUND")
+	r.bg:SetPoint("TOPLEFT", r, "TOPLEFT", -6, 1)
+	r.bg:SetPoint("BOTTOMRIGHT", r, "BOTTOMRIGHT", 6, -1)
+	-- Vinkje of kruisje (zoals bij een ready check), dan het verschil.
+	r.mark = r:CreateTexture(nil, "OVERLAY")
+	r.mark:SetSize(18, 18)
+	r.mark:SetPoint("LEFT", r.junk, "RIGHT", 6, 0)
 	r.diff = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	r.diff:SetPoint("LEFT", r.junk, "RIGHT", 14, 0)
+	r.diff:SetPoint("LEFT", r.mark, "RIGHT", 3, 0)
 	r.diff:SetJustifyH("LEFT")
 	r.ah = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	r.ah:SetPoint("LEFT", r.diff, "RIGHT", 3, 0)
+	-- Knopje ▼ (zoals een WoW-keuzelijst): opties voor het item dat weg zou gaan.
+	r.opt = CreateFrame("Button", nil, r)
+	r.opt:SetSize(24, 24)
+	r.opt:SetPoint("RIGHT", r, "RIGHT", 0, 0)
+	r.opt:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
+	r.opt:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Down")
+	r.opt:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+	r.opt:SetScript("OnClick", function()
+		if panel.menu:IsShown() and panel.menuRow == r then panel.menu:Hide() else ShowMenu(r) end
+	end)
+	ns.Tooltip(r.opt, T("Options"), T("Never destroy this item or group, or skip it this time."))
 	r.btn = MakeButton(r, T("Pick up"), 76)
-	r.btn:SetPoint("RIGHT", r, "RIGHT", 0, 0)
+	r.btn:SetPoint("RIGHT", r.opt, "LEFT", -2, 0)
 	r.btn:SetScript("OnClick", function() Swap(r) end)
 	ns.Tooltip(r.btn, T("Pick up"), T("Destroys the item on the right of the arrow for good (it cannot be bought back) and picks up the loot."))
 	r:SetScript("OnEnter", function() Tip(r, r.offer and r.offer.loot.link) end)
@@ -491,36 +517,76 @@ end
 
 local function Overlap(a, b) return a[1] < b[3] and b[1] < a[3] and a[2] < b[4] and b[2] < a[4] end
 
--- Naast het lootvenster, op de eerste plek die op het scherm past en je tassen niet
--- bedekt: rechts, links, eronder, erboven. Lukt dat nergens: rechts of links, wat past.
-local function Place()
+-- Het knopje in het lootvenster voor loot-vak `slot` (nieuw lootvenster: ScrollBox; oud: LootButton1-4).
+local function LootButtonFor(slot)
+	if not (LootFrame and LootFrame:IsShown()) then return nil end
+	local found
+	local sb = LootFrame.ScrollBox
+	if sb and sb.ForEachFrame then
+		pcall(sb.ForEachFrame, sb, function(f)
+			local d = f.GetElementData and f:GetElementData()
+			local s = (f.GetSlotIndex and f:GetSlotIndex()) or (type(d) == "table" and d.slotIndex) or f.slot
+			if s == slot and f:IsVisible() then found = f end
+		end)
+	end
+	if found then return found end
+	for k = 1, (LOOTFRAME_NUMBUTTONS or 4) do
+		local b = _G["LootButton" .. k]
+		if b and b:IsVisible() and b.slot == slot then return b end
+	end
+end
+
+-- Rijen onder elkaar (geen lootvenster te zien, bijv. autoloot).
+local function Stack(n)
+	for i, r in ipairs(panel.rows) do
+		r:ClearAllPoints()
+		r:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -30 - (i - 1) * ROW_H)
+	end
+	panel:SetHeight(30 + n * ROW_H + 8 + 22 + 16)
+end
+
+-- Naast het lootvenster, even hoog, en elke rij op dezelfde hoogte als zijn item in het
+-- lootvenster: zo loopt de regel door. Rechts, of links als rechts niet op het scherm past
+-- of je tassen bedekt. Geen lootvenster (of een item niet te vinden): rijen onder elkaar.
+local function Place(n)
 	panel:ClearAllPoints()
-	panel.menuLeft = false
 	local L = LootFrame and LootFrame:IsShown() and Rect(LootFrame)
 	if not L then
+		Stack(n)
 		if LootFrame and LootFrame:IsShown() then panel:SetPoint("TOPLEFT", LootFrame, "TOPRIGHT", 4, 0)
 		else panel:SetPoint("TOP", UIParent, "TOP", 0, -140) end
 		return
 	end
 	local k = (panel:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1)
-	local pw, ph, mw = W * k, (panel:GetHeight() or 120) * k, MENU_W * k
-	local sw, sh = UIParent:GetWidth() or 1920, UIParent:GetHeight() or 1080
+	local pw = W * k
+	local sw = UIParent:GetWidth() or 1920
 	local bags = ns.main and ns.main:IsShown() and Rect(ns.main)
-	local spots = {
-		{ r = { L[3] + 4, L[4] - ph, L[3] + 4 + pw, L[4] }, p = { "TOPLEFT", "TOPRIGHT", 4, 0 } },
-		{ r = { L[1] - 4 - pw, L[4] - ph, L[1] - 4, L[4] }, p = { "TOPRIGHT", "TOPLEFT", -4, 0 }, menuLeft = true },
-		{ r = { L[1], L[2] - 4 - ph, L[1] + pw, L[2] - 4 }, p = { "TOPLEFT", "BOTTOMLEFT", 0, -4 } },
-		{ r = { L[1], L[4] + 4, L[1] + pw, L[4] + 4 + ph }, p = { "BOTTOMLEFT", "TOPLEFT", 0, 4 } },
-	}
-	local function OnScreen(r) return r[1] >= 0 and r[2] >= 0 and r[3] <= sw and r[4] <= sh end
-	local pick
-	for _, s in ipairs(spots) do
-		if OnScreen(s.r) and not (bags and Overlap(s.r, bags)) then pick = s; break end
+	local right = { L[3] + 4, L[2], L[3] + 4 + pw, L[4] }
+	local left = { L[1] - 4 - pw, L[2], L[1] - 4, L[4] }
+	local useLeft = (right[3] > sw or (bags and Overlap(right, bags))) and left[1] >= 0
+	-- Hoogte van elk loot-item, gemeten vanaf de bovenkant van het lootvenster (in de maat van het paneel).
+	local ui = UIParent:GetEffectiveScale() or 1
+	local ys, aligned = {}, true
+	for i, r in ipairs(panel.rows) do
+		if r.offer then
+			local b = LootButtonFor(r.offer.loot.slot)
+			local _, cy = b and b:GetCenter()
+			if not cy then aligned = false; break end
+			ys[i] = (cy * (b:GetEffectiveScale() or 1) / ui - L[4]) / k
+		end
 	end
-	if not pick then pick = OnScreen(spots[1].r) and spots[1] or spots[2] end
-	panel:SetPoint(pick.p[1], LootFrame, pick.p[2], pick.p[3], pick.p[4])
-	-- menu aan de kant waar plek is (niet over het lootvenster of buiten beeld)
-	panel.menuLeft = pick.menuLeft or (pick.r[3] + mw > sw) or false
+	local a, b = useLeft and "TOPRIGHT" or "TOPLEFT", useLeft and "TOPLEFT" or "TOPRIGHT"
+	local dx = useLeft and -4 or 4
+	panel:SetPoint(a, LootFrame, b, dx, 0)
+	if not aligned then Stack(n); return end
+	-- even hoog als het lootvenster, elke rij naast zijn loot-item
+	panel:SetPoint(useLeft and "BOTTOMRIGHT" or "BOTTOMLEFT", LootFrame, useLeft and "BOTTOMLEFT" or "BOTTOMRIGHT", dx, 0)
+	for i, r in ipairs(panel.rows) do
+		if ys[i] then
+			r:ClearAllPoints()
+			r:SetPoint("LEFT", panel, "TOPLEFT", ns.PAD, ys[i])
+		end
+	end
 end
 
 -- Eén rij vullen: iconen, verschil in groen/rood (quest = groen "Quest"), knop groen/rood.
@@ -539,6 +605,10 @@ local function FillRow(r, o)
 		r.diff:SetText("|cffff5555-" .. Money(o.junk.value - o.loot.value) .. "|r")
 	end
 	r.ah:SetText((o.junk.ah or o.loot.ah) and "|cff66ccffAH|r" or "")
+	-- in één oogopslag: groene rij met vinkje = doen, rode rij met kruisje = liever niet
+	if smart then r.bg:SetColorTexture(0.1, 0.8, 0.1, 0.28) else r.bg:SetColorTexture(0.85, 0.1, 0.1, 0.22) end
+	r.mark:SetTexture(smart and "Interface\\RaidFrame\\ReadyCheck-Ready" or "Interface\\RaidFrame\\ReadyCheck-NotReady")
+	r.smart = smart
 	r.advice = smart and "pickup" or "leave"
 	Tint(r.btn, smart)
 	r:Show()
@@ -553,10 +623,9 @@ local function ShowOffers(offers)
 	end
 	local first = panel.rows[1]
 	panel.offer, panel.advice = first.offer, first.advice -- korte namen (tests, andere bestanden)
-	panel:SetHeight(30 + math.min(#offers, MAX_ROWS) * ROW_H + 8 + 22 + 16)
 	-- menu open bij een rij die er nog staat: bijwerken, anders weg
 	if panel.menu:IsShown() and panel.menuRow and panel.menuRow.offer then ShowMenu(panel.menuRow) else panel.menu:Hide() end
-	Place()
+	Place(math.min(#offers, MAX_ROWS))
 	panel:Show()
 end
 

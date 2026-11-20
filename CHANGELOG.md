@@ -2,7 +2,8 @@
 
 ## Unreleased
 ### ✨ New
-- 🎒 **Bags full: see the smart choice at a glance.** Each loot item that doesn't fit gets one row: the loot ➜ the item that goes, and the difference in green (smart) or red (not smart). Click **Pick up** on the row you want. Names and prices are in the tooltip.
+- 🎒 **Bags full: see the smart choice at a glance.** Each loot item that doesn't fit gets one row, right next to that item in the loot window: the loot ➜ the item that goes, and the difference. A green row with a check mark is a smart swap, a red row with a cross is not. Click **Pick up** on the row you want. Names and prices are in the tooltip.
+- ▼ **Options per row.** The small arrow at the end of a row opens WoW's own menu: never destroy this item or group, or skip it this time.
 - ⏭️ **All loot at once.** More items that don't fit? You see them all, each with its own item to destroy. After a pick-up, the other rows stay. **Leave all** closes the panel.
 - ❗ **Quest loot** shows a green "Quest" and is always worth picking up.
 - 📒 **Clams and full bags are logged** with the time, so problems can be looked at later.

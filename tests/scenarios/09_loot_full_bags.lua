@@ -113,16 +113,16 @@ check(P:IsShown(), "foutmelding 'tassen vol' opent het paneel")
 
 -- 9. "Keep this item": Torn Wing nooit meer, meteen het volgende goedkoopste item
 check(P.offer.junk.e.itemID == 8001 and not P.menu:IsShown(), "goedkoopste: Torn Wing; opties pas zichtbaar bij hover")
-P.rows[1].junk:Fire("OnEnter")
+P.rows[1].opt:Fire("OnClick")
 check(P.menu:IsShown() and P.menu.groupHead.text:find("Auto Sell") and not P.keepGroup:IsShown() and P.skipGroup:IsShown(), "hover: opties met groepsnaam; Auto Sell: geen 'nooit uit deze groep'")
 P.keepItem:Fire("OnClick"); RunTimers()
 check(CFC().keep[8001] == true, "Torn Wing onthouden als 'houden' (per karakter)")
 check(P:IsShown() and P.offer.junk.e.itemID == 2589, "volgende goedkoopste: Linen Cloth")
 local linenSec = P.offer.junk.sec
-P.rows[1].junk:Fire("OnEnter")
+P.rows[1].opt:Fire("OnClick")
 check(P.keepGroup:IsShown(), "andere groep: 'nooit uit deze groep' weer zichtbaar")
 CFC().assign[2589] = nil; E("BAG_UPDATE_DELAYED"); RunTimers()
-P.rows[1].junk:Fire("OnEnter")
+P.rows[1].opt:Fire("OnClick")
 check(P.offer.junk.sec == "other" and not P.keepGroup:IsShown(), "Other: geen optie voor de hele groep")
 CFC().assign[2589] = CFC().cats[1].key; E("BAG_UPDATE_DELAYED"); RunTimers()
 -- 10. "Keep this group": niets uit de groep van het linnen, dan de ring
@@ -182,7 +182,7 @@ Auctionator = nil
 -- 16. Item dat ook in de loot ligt: die stapel niet weggooien (daar past de loot op)
 E("LOOT_CLOSED"); LOOT = { { id = 8001, qty = 1 }, { id = 9200, qty = 1 } }; E("LOOT_OPENED")
 check(P:IsShown() and P.offer.loot.id == 9200 and P.offer.junk.e.itemID ~= 8001, "Torn Wing ligt ook in de loot: die stapel wordt niet voorgesteld")
-P.rows[1].junk:Fire("OnEnter")
+P.rows[1].opt:Fire("OnClick")
 check(P.menu.itemHead.text == P.offer.junk.e.name and P.menu.groupHead.text:find("Group:"), "menu: kopje met itemnaam en groep")
 E("LOOT_CLOSED")
 
@@ -211,3 +211,26 @@ check(P:IsShown(), "volgende keer looten: weer vragen")
 E("LOOT_CLOSED")
 local ev9 = table.concat(CarefreeBagDB.events or {}, "\n")
 check(ev9:find("bags full: free slots") and ev9:find("bags full: offer: destroy"), "tassen-vol-momenten in DB.events:\n" .. ev9)
+
+-- 19. Knopje in de rij opent WoW's eigen keuzemenu (MenuUtil) als dat er is; rij groen/rood met vinkje/kruisje
+local menu = {}
+MenuUtil = { CreateContextMenu = function(owner, gen)
+  menu = { owner = owner, items = {} }
+  local root = {}
+  function root:CreateTitle(t) menu.items[#menu.items + 1] = { title = t } end
+  function root:CreateButton(t, f) menu.items[#menu.items + 1] = { text = t, fn = f } end
+  function root:CreateDivider() menu.items[#menu.items + 1] = { divider = true } end
+  gen(owner, root)
+end }
+LOOT = { { id = 9000, qty = 1 } }; E("LOOT_OPENED")
+local R = P.rows[1]
+check(R.smart and R.mark and R.bg, "slimme rij: groene achtergrond en vinkje")
+R.opt:Fire("OnClick")
+check(menu.owner == R.opt and menu.items[1].title == P.offer.junk.e.name, "WoW-menu aan het knopje, kopje = item dat weg zou gaan")
+check(not P.menu:IsShown(), "eigen menu niet nodig")
+local skipFn; for _, it in ipairs(menu.items) do if it.text == "Skip this item this time" then skipFn = it.fn end end
+local before = P.offer.junk.e.itemID
+skipFn(); RunTimers()
+check(P:IsShown() and P.offer.junk.e.itemID ~= before, "keuze uit het WoW-menu werkt: ander item voorgesteld")
+MenuUtil = nil
+E("LOOT_CLOSED")
