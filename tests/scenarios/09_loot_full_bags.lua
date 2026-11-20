@@ -187,6 +187,7 @@ check(P.menu.itemHead.text == P.offer.junk.e.name and P.menu.groupHead.text:find
 E("LOOT_CLOSED")
 
 -- 17. Twee items die niet passen: twee rijen tegelijk, elk een eigen item om weg te gooien
+CFC().keepGroups[linenSec] = nil -- linnen mag weer weg: zo zijn er twee items om weg te gooien
 LOOT = { { id = 9200, qty = 1 }, { id = 9000, qty = 1 } }; E("LOOT_OPENED")
 check(P:IsShown() and P.rows[1].offer.loot.id == 9000 and P.rows[2]:IsShown() and P.rows[2].offer.loot.id == 9200,
   "bovenaan het meest waardevolle (ring), daaronder de zijde")
