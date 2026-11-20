@@ -319,10 +319,17 @@ local function NewItemButton(i)
 		-- één stapel: WoW's splitsvenster krijgt daarom het echte aantal van de stapel.
 		-- (Niet afhankelijk van IsShiftKeyDown: die mist de eerste klik vanuit een ander venster.)
 		if self.group and self.group.rep then self.count = self.group.rep.count end
+		-- Oppakken (klik zonder iets aan de muis) bij de bank: de rest volgt als het in de bank landt.
+		if button == "LeftButton" and not CursorHasItem() and ns.BankPickup then
+			pcall(ns.BankPickup, self.group, self:GetBagID(), self:GetID())
+		end
 		if button ~= "RightButton" then return end
 		if ns.BagRightClick then pcall(ns.BagRightClick, self:GetBagID(), self:GetID()) end
 		if ns.MailAttachRest then pcall(ns.MailAttachRest, self.group, self:GetBagID(), self:GetID()) end
-		if ns.BankMoveRest then pcall(ns.BankMoveRest, self.group, self:GetBagID(), self:GetID()) end
+	end)
+	-- Slepen = ook oppakken.
+	b:HookScript("OnDragStart", function(self)
+		if ns.BankPickup then pcall(ns.BankPickup, self.group, self:GetBagID(), self:GetID()) end
 	end)
 	local origDrag = b:GetScript("OnReceiveDrag")
 	b:SetScript("OnReceiveDrag", function(self, ...)

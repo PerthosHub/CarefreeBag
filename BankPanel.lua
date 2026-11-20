@@ -567,10 +567,10 @@ ns.OnEvent("BANKFRAME_OPENED", "bank", function()
 	ns.SnapBank()
 	if ns.ViewRefresh then ns.ViewRefresh() end
 end)
--- Rechtsklik op een vakje bij de bank: WoW zet één stapel in de bank (de grootste, `g.rep`);
--- wij de andere stapels van dat vakje erachteraan, zodat alles (bijv. 5+3 = 8) naar de bank gaat.
+-- Een vakje uit CFB naar de bank slepen (Johans wens, 1.10.1): WoW verplaatst één stapel (de
+-- grootste, `g.rep`); landt die in de bank, dan zetten wij de andere stapels van dat vakje erachteraan,
+-- zodat alles (bijv. 5+3 = 8) in de bank komt. Rechtsklik en Shift-klik (splitsen) blijven gewoon WoW.
 -- Eerst bij een bankstapel met plek, anders een leeg bankvakje. Eén stapel per stap (WoW moet bijwerken).
--- Met Shift/Ctrl/Alt niet: dan doe je het zelf (Shift-klik = WoW's eigen splitsen).
 local function BankSpot(id)
 	local empty
 	for _, bag in ipairs(ns.BankBags()) do
@@ -590,21 +590,25 @@ local function BankSpot(id)
 	return empty
 end
 
-function ns.BankMoveRest(g, bag, slot)
-	if not ns.bankOpen or not ns.BankBags then return end
-	if (IsShiftKeyDown and IsShiftKeyDown()) or (IsControlKeyDown and IsControlKeyDown()) or (IsAltKeyDown and IsAltKeyDown()) then return end
-	if not g or not g.slots or #g.slots < 2 then return end
-	local rest = {}
-	for _, e in ipairs(g.slots) do
-		if not (e.bag == bag and e.slot == slot) then rest[#rest + 1] = { bag = e.bag, slot = e.slot, itemID = e.itemID } end
+local function BankCount(id)
+	local n = 0
+	for _, bag in ipairs(ns.BankBags()) do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if info and info.itemID == id then n = n + (info.stackCount or 1) end
+		end
 	end
+	return n
+end
+
+local function MoveRestToBank(g, rest)
 	local moved, steps = 0, 0
 	local function step()
 		steps = steps + 1
 		if not ns.bankOpen or CursorHasItem() or steps > 30 then return end -- noodrem
 		local it = table.remove(rest, 1)
 		if not it then
-			if moved > 0 then Log("bank: right-click moved the rest of " .. tostring(g.itemID) .. " (" .. moved .. " move(s))") end
+			if moved > 0 then Log("bank: moved the rest of " .. tostring(g.itemID) .. " (" .. moved .. " move(s))") end
 			return
 		end
 		local info = C_Container.GetContainerItemInfo(it.bag, it.slot)
@@ -624,8 +628,38 @@ function ns.BankMoveRest(g, bag, slot)
 		end
 		C_Timer.After(0.3, step)
 	end
-	-- Even wachten tot WoW zijn eigen stapel in de bank heeft gezet.
-	C_Timer.After(0.3, step)
+	step()
+end
+
+-- Vakje opgepakt (klik of slepen). Zodra het van de muis af is: kijken of het in de bank landde
+-- (bankvoorraad van dit item gegroeid en het opgepakte tasvakje leeg). Ergens anders heen of
+-- teruggelegd = niets doen. Shift (splitsen) en andere toetsen: niets doen.
+local pickup
+function ns.BankPickup(g, bag, slot)
+	if not ns.bankOpen or not ns.BankBags then return end
+	if (IsShiftKeyDown and IsShiftKeyDown()) or (IsControlKeyDown and IsControlKeyDown()) or (IsAltKeyDown and IsAltKeyDown()) then return end
+	if not g or not g.slots or #g.slots < 2 then return end
+	if pickup and pickup.bag == bag and pickup.slot == slot then return end -- klik én slepen: één keer
+	local rest = {}
+	for _, e in ipairs(g.slots) do
+		if not (e.bag == bag and e.slot == slot) then rest[#rest + 1] = { bag = e.bag, slot = e.slot, itemID = e.itemID } end
+	end
+	local me = { bag = bag, slot = slot, id = g.itemID, before = BankCount(g.itemID) }
+	pickup = me
+	local waits = 0
+	local function check()
+		if pickup ~= me then return end
+		waits = waits + 1
+		if not ns.bankOpen or waits > 100 then pickup = nil; return end -- ~30 s: laat maar
+		if CursorHasItem() then C_Timer.After(0.3, check); return end
+		local info = C_Container.GetContainerItemInfo(bag, slot)
+		if info and info.isLocked then C_Timer.After(0.3, check); return end -- WoW is nog bezig
+		pickup = nil
+		if info and info.itemID == me.id then return end -- teruggelegd of maar een deel
+		if BankCount(me.id) <= me.before then return end -- niet in de bank
+		MoveRestToBank(g, rest)
+	end
+	C_Timer.After(0.3, check)
 end
 
 -- Bij het sluiten niet meer uitlezen: dan is de bank al (deels) leeg.
