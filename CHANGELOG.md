@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.10.1
+### ✨ New
+- 📦 **Drag a slot to the bank, everything goes.** A slot with more than one stack (like 5 + 3 potions) now moves all of them when you drag it into the bank, not just one stack. Right-click and Shift-click work like normal WoW.
+- 🧪 **Drop on the same item to stack it.** Drag a potion from your bank onto the same potion in CarefreeBag and it joins that stack. What doesn't fit goes into your bags too, with at most one extra stack.
+- ⚠️ **See when an alt is out of date.** If CarefreeBag is turned off for a character, Bank & alts says so, and where to turn it on.
+
+### 🔧 Fixes
+- 🏦 **Bank & alts opens your own bank first**, also after a search.
+- 🔑 **Keys no longer show up in your bank.** The key ring was counted as part of the bank.
+- 🧙 **Class icons for all your characters.** The class of a character was never saved, so alts showed a question mark. Log in once with each alt to fix it.
+- ↔️ **Items from the bank dropped on another item** now go into a free slot instead of back to the bank.
+
 ## 1.10.0
 ### ✨ New
 - 🎒 **See how full your bags are on the backpack.** A bar in the backpack button at the bottom of your screen fills up from green to red as your bags get full, with used/total slots above it (like 40/44), just like in the CarefreeBag window. It replaces WoW's own free-space number. Reagent and profession bags do not count. You can turn it off in **Advanced settings**.
