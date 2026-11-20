@@ -62,8 +62,8 @@ check(CarefreeBagViewer.title == "Bags of Thrall Frostwolf", "titel: tassen van 
 check(table.concat(tiles(), ",") == "Cured Ham Steak,Linen Cloth", "tassen van Frostwolf: " .. table.concat(tiles(), ","))
 check(CarefreeBagViewer.note.text:find("Updated"), "toont wanneer bijgewerkt")
 check(not CarefreeBagViewer.offWarn, "CFB aan voor Frostwolf (of onbekend): geen waarschuwing")
--- CFB staat uit voor Frostwolf in WoW's AddOns-lijst (WoW kent de voornaam; 0 = uit)
-C_AddOns.GetAddOnEnableState = function(addon, who) return (addon == "CarefreeBag" and who == "Thrall") and 0 or 2 end
+-- CFB staat uit voor Frostwolf in WoW's AddOns-lijst (volledige naam, zoals Forever; 0 = uit)
+C_AddOns.GetAddOnEnableState = function(addon, who) return (addon == "CarefreeBag" and who == "Thrall Frostwolf") and 0 or 2 end
 CarefreeBagViewer.tabs.bank:Fire("OnClick")
 check(CarefreeBagViewer.offWarn and CarefreeBagViewer.offNote.shown and CarefreeBagViewer.offNote.text:find("off for this character"),
   "CFB uit voor Frostwolf: waarschuwing in het paneel")

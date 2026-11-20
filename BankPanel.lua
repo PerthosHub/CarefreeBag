@@ -59,8 +59,8 @@ end
 -- Staat CarefreeBag uit voor dit karakter (AddOns-lijst van WoW)? Dan wordt zijn snapshot nooit
 -- bijgewerkt (issue #17/#7). WoW zelf weet dat per karakter: GetAddOnEnableState
 -- (retail: C_AddOns.GetAddOnEnableState(addon, karakter); ouder: GetAddOnEnableState(karakter, addon)).
--- 0 = uit. Welke naamvorm Forever wil (voornaam of "Voornaam Achternaam") staat nog niet vast:
--- daarom alle vormen proberen; alleen "uit" als een vorm echt 0 geeft.
+-- 0 = uit. Forever wil de volledige naam ("Voornaam Achternaam"); de voornaam alleen geeft
+-- altijd 2 (in het spel getest, 2026-11-20). Naam-Realm: ook zonder realm proberen.
 local function EnableState(who)
 	if C_AddOns and C_AddOns.GetAddOnEnableState then
 		local ok, v = pcall(C_AddOns.GetAddOnEnableState, ADDON, who)
@@ -73,38 +73,15 @@ local function EnableState(who)
 	return nil
 end
 
-local function NameForms(name)
-	local forms = { name }
-	local first = name and name:match("^(%S+)%s")
-	if first then forms[#forms + 1] = first; forms[#forms + 1] = (name:gsub("%s", "-", 1)) end
-	return forms
-end
-
 function ns.AddonOffFor(key)
 	if key == ns.charKey then return false end
 	local ch = ns.DB.chars[key]
 	local name = ch and ch.snap and ch.snap.name
 	if not name then return false end
-	for _, form in ipairs(NameForms(name)) do
-		if EnableState(form) == 0 then return true end
-	end
-	return false
+	if EnableState(name) == 0 then return true end
+	local short = name:match("^([^-]+)-")
+	return short ~= nil and EnableState(short) == 0
 end
-
--- TIJDELIJK (1.10.1): laten zien wat WoW Forever teruggeeft, per karakter en naamvorm.
-ns.OnEvent("PLAYER_LOGIN", "addon state probe", function()
-	C_Timer.After(5, function()
-		for key, ch in pairs(ns.DB.chars or {}) do
-			local name = ch.snap and ch.snap.name
-			if name and not ch.legacy then
-				local parts = {}
-				for _, form in ipairs(NameForms(name)) do parts[#parts + 1] = "'" .. form .. "'=" .. tostring((EnableState(form))) end
-				parts[#parts + 1] = "nil=" .. tostring((EnableState(nil)))
-				Log("addon state " .. table.concat(parts, " "))
-			end
-		end
-	end)
-end)
 
 local function ViewTile(i)
 	local t = viewTiles[i]
