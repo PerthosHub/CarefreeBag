@@ -96,13 +96,16 @@ end
 local function BuildFill()
 	local btn = MainMenuBarBackpackButton
 	if fill or not btn then return fill end
-	-- Dunne liggende balk (4 px) onderin het icoon, binnen de rand; zelfde stijl als de balk
-	-- in het CFB-venster (Blizzard-textuur, donkere baan voor het lege deel). Johans keuze 2026-11-20.
+	-- Liggende balk (7 px) onderin het icoon, binnen de rand, met daarboven "gebruikt/totaal"
+	-- zoals in het CFB-venster; zelfde stijl als die balk (Blizzard-textuur, donkere baan voor
+	-- het lege deel). Johans keuze 2026-11-20 (4 px was te klein en slecht leesbaar).
 	local icon = btn.icon or _G["MainMenuBarBackpackButtonIconTexture"] or btn
 	local bar = CreateFrame("StatusBar", "CarefreeBagBackpackFill", btn)
-	bar:SetPoint("BOTTOMLEFT", icon, "BOTTOMLEFT", 5, 5)
-	bar:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -5, 5)
-	bar:SetHeight(4)
+	bar:SetPoint("BOTTOMLEFT", icon, "BOTTOMLEFT", 3, 3)
+	bar:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -3, 3)
+	bar:SetHeight(7)
+	bar.text = bar:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+	bar.text:SetPoint("BOTTOM", bar, "TOP", 0, 1)
 	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
 	bar:SetMinMaxValues(0, 1)
 	bar:SetValue(0)
@@ -117,16 +120,47 @@ local function BuildFill()
 	return fill
 end
 
+-- WoW's eigen tekst "(43)" vrije vakjes op de rugzak: uit zolang onze balk aan staat.
+-- Eerst WoW's eigen optie (CVar displayFreeBagSlots, "Show free bag space"); alleen als de tekst
+-- dan nog te zien is, verbergen we hem zelf (en dat staat dan één keer in de log).
+local countNoted = false
+local function FreeSlotsText(show)
+	local cur = GetCV("displayFreeBagSlots")
+	if cur ~= nil then
+		if not show and cur == "1" then
+			SetCV("displayFreeBagSlots", "0")
+			ns.DB.freeSlotsOffByUs = true
+		elseif show and ns.DB.freeSlotsOffByUs then
+			SetCV("displayFreeBagSlots", "1")
+			ns.DB.freeSlotsOffByUs = nil
+		end
+		local btn = MainMenuBarBackpackButton
+		if MainMenuBarBackpackButton_UpdateFreeSlots then pcall(MainMenuBarBackpackButton_UpdateFreeSlots)
+		elseif btn and btn.UpdateFreeSlots then pcall(btn.UpdateFreeSlots, btn) end
+	end
+	local count = MainMenuBarBackpackButtonCount or (MainMenuBarBackpackButton and MainMenuBarBackpackButton.Count)
+	if not count or not count.SetAlpha then return end
+	if show then count:SetAlpha(1); return end
+	local visible = count:IsShown() and (count:GetText() or "") ~= ""
+	count:SetAlpha(visible and 0 or 1)
+	if visible and not countNoted then
+		countNoted = true
+		Log("free bag space text: WoW option did not hide it, hidden by CarefreeBag")
+	end
+end
+
 function ns.UpdateBackpackFill()
 	local bar = BuildFill()
 	if not bar then return end
-	if not ns.DB.bagFill then bar:Hide(); return end
+	if not ns.DB.bagFill then bar:Hide(); FreeSlotsText(true); return end
 	local free, total = Count()
 	local frac = total > 0 and (total - free) / total or 0
 	bar.frac, bar.free, bar.total = frac, free, total
 	bar:SetValue(frac)
 	bar:SetStatusBarColor(ns.FillColor(frac))
+	bar.text:SetText((total - free) .. "/" .. total) -- zoals in het CFB-venster: gebruikt/totaal
 	bar:Show()
+	FreeSlotsText(false)
 end
 
 ---------------------------------------------------------------------------

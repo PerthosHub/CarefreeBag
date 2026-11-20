@@ -24,6 +24,13 @@ end
 local backpack = CreateFrame("Button", "MainMenuBarBackpackButton", UIParent)
 CVARS = {}
 local layouts = 0
+-- WoW's eigen tekst "(8)" vrije vakjes op de rugzak
+COUNT = CreateFrame("Frame", "MainMenuBarBackpackButtonCount", backpack); COUNT.text = "(8)"
+COUNT.SetAlpha = function(self, a) self.alpha = a end
+if FLAVOR ~= "classic" then
+  CVARS.displayFreeBagSlots = "1" -- de optie "Show free bag space": Blizzard volgt hem
+  rawset(_G, "MainMenuBarBackpackButton_UpdateFreeSlots", function() COUNT.text = CVARS.displayFreeBagSlots == "1" and "(8)" or "" end)
+end
 if FLAVOR == "retail" then
   NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
   Enum.BagIndex = { Backpack = 0, ReagentBag = 5 }
@@ -89,11 +96,18 @@ local fill = CarefreeBagBackpackFill
 check(fill and fill.parent == backpack, "vulbalk hangt aan de rugzakknop van WoW")
 check(fill.total == 20 and fill.free == 8, "alleen gewone vakjes: " .. tostring(fill.free) .. "/" .. tostring(fill.total))
 check(math.abs(fill.frac - 0.6) < 0.001 and fill:IsShown(), "60% vol, zichtbaar")
+check(fill.text.text == "12/20", "tekst gebruikt/totaal zoals in CFB: " .. tostring(fill.text.text))
+if FLAVOR == "classic" then
+  check(COUNT.alpha == 0, "classic (geen WoW-optie): WoW's (8) door CFB verborgen")
+else
+  check(CVARS.displayFreeBagSlots == "0" and COUNT.text == "" and COUNT.alpha == 1, "WoW's eigen optie 'free bag space' uit, niets zelf verborgen")
+end
 BAGS[2][1] = { itemID = 2589, count = 20 }
 E("BAG_UPDATE_DELAYED")
-check(fill.free == 7, "bijgewerkt na BAG_UPDATE_DELAYED")
+check(fill.free == 7 and fill.text.text == "13/20", "bijgewerkt na BAG_UPDATE_DELAYED")
 CarefreeBagDB.bagFill = false; NS.UpdateBackpackFill()
 check(not fill:IsShown(), "optie uit: vulbalk weg")
+check(COUNT.alpha == 1 and (FLAVOR == "classic" or CVARS.displayFreeBagSlots == "1"), "optie uit: WoW's (8) terug")
 CarefreeBagDB.bagFill = true; NS.UpdateBackpackFill()
 
 -- B. Standaard-UI: niet vragen, vakjes blijven staan.
