@@ -324,9 +324,13 @@ local function NewItemButton(i)
 	local origDrag = b:GetScript("OnReceiveDrag")
 	b:SetScript("OnReceiveDrag", function(self, ...)
 		if Reorder(self) then return end
-		-- Iets van buiten je tassen (bijv. wat je aan hebt): naar een vrij vakje, niet ruilen.
+		-- Iets van buiten je tassen (bijv. de bank, wat je aan hebt): op hetzelfde item = bij die
+		-- stapel erbij (issue #15), anders naar een vrij vakje, niet ruilen.
 		local id = CursorItemID()
-		if id and not FromBags(id) and StoreCursorItem(true) then return end
+		if id and not FromBags(id) then
+			if self.group and self.group.itemID == id and ns.MergeCursorInto(id, self.group.rep) then return end
+			if StoreCursorItem(true) then return end
+		end
 		if origDrag then return origDrag(self, ...) end
 	end)
 	b.multi = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
@@ -662,6 +666,25 @@ StoreCursorItem = function(quiet)
 	end
 	Log("stored cursor item " .. tostring(CursorItemID()) .. " in " .. f.bag .. ":" .. f.slot)
 	C_Container.PickupContainerItem(f.bag, f.slot)
+	return true
+end
+
+-- Item op de cursor bij een stapel van hetzelfde item leggen (zoals WoW zelf doet als je het op
+-- een stapel laat vallen). Eerst de stapel van het vakje (`prefer`), anders een andere met plek.
+-- Past niet alles, dan houdt WoW de rest op de cursor. Geen stapel met plek: false.
+function ns.MergeCursorInto(id, prefer)
+	local function room(e)
+		return e and e.itemID == id and (e.maxStack or 1) > 1 and (e.count or 1) < (e.maxStack or 1)
+	end
+	local target = room(prefer) and prefer or nil
+	if not target then
+		for _, e in ipairs(lastItems) do
+			if room(e) and not e.key then target = e; break end
+		end
+	end
+	if not target then return false end
+	Log("merged cursor item " .. id .. " into " .. target.bag .. ":" .. target.slot)
+	C_Container.PickupContainerItem(target.bag, target.slot)
 	return true
 end
 
