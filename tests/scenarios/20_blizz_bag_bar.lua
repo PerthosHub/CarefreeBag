@@ -1,6 +1,7 @@
--- flavors: classic retail
+-- flavors: classic retail forever
 -- Tassenbalk van WoW (BlizzBagBar.lua): vulbalk op de rugzakknop (alleen gewone vakjes),
--- andere tasvakjes verbergen (retail: CVar expandBagBar via het pijltje, classic: vakjes zelf),
+-- andere tasvakjes verbergen (retail: CVar expandBagBar via het pijltje; classic en Forever:
+-- vakjes zelf, Forever kent de CVar wel maar heeft geen pijltje en wel een reagent-vak),
 -- tas slepen = vakjes even terug, eenmalige vraag alleen bij een aangepaste UI.
 local function check(c, msg) if not c then error("MISLUKT [" .. FLAVOR .. "]: " .. msg, 2) end print("ok  [" .. FLAVOR .. "] " .. msg) end
 
@@ -37,9 +38,28 @@ if FLAVOR == "retail" then
 else
   for i = 0, 3 do CreateFrame("Button", "CharacterBag" .. i .. "Slot", UIParent) end
 end
+if FLAVOR == "forever" then
+  NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
+  Enum.BagIndex = { Backpack = 0, ReagentBag = 5 }
+  BAGS[5] = { n = 20 }
+  CreateFrame("Button", "CharacterReagentBag0Slot", UIParent)
+  CVARS.expandBagBar = "1" -- de CVar bestaat, het pijltje niet
+  rawset(_G, "GetCVar", function(k) return CVARS[k] end)
+  rawset(_G, "SetCVar", function(k, v) CVARS[k] = tostring(v) end)
+  ACTIVE_LAYOUT = 1
+  rawset(_G, "C_EditMode", { GetLayouts = function() return { activeLayout = ACTIVE_LAYOUT, layouts = {} } end })
+end
 local function SlotsHidden()
   if FLAVOR == "retail" then return CVARS.expandBagBar == "0" end
-  return not CharacterBag0Slot:IsShown() and not CharacterBag3Slot:IsShown()
+  local all = not CharacterBag0Slot:IsShown() and not CharacterBag3Slot:IsShown()
+  if FLAVOR == "forever" then all = all and not CharacterReagentBag0Slot:IsShown() end
+  return all
+end
+local function SlotsShown()
+  if FLAVOR == "retail" then return CVARS.expandBagBar == "1" end
+  local all = CharacterBag0Slot:IsShown() and CharacterBag3Slot:IsShown()
+  if FLAVOR == "forever" then all = all and CharacterReagentBag0Slot:IsShown() end
+  return all
 end
 
 LOADED_ADDONS = {}
@@ -66,12 +86,13 @@ check(#POPUPS == 0 and not SlotsHidden(), "standaard-UI: geen vraag, vakjes zich
 check(CFC().hideBagSlots == nil, "nog geen keuze opgeslagen")
 
 -- C. Aangepaste UI (eigen layout / balk-addon): één keer vragen; Ja = verbergen.
-if FLAVOR == "retail" then ACTIVE_LAYOUT = 3 else LOADED_ADDONS.Bartender4 = true end
+if FLAVOR == "classic" then LOADED_ADDONS.Bartender4 = true else ACTIVE_LAYOUT = 3 end
 NS.BagBarAsk()
 check(#POPUPS == 1 and POPUPS[1].which == "CAREFREEBAG_BAGBAR", "aangepaste UI: vraag gesteld")
 StaticPopupDialogs.CAREFREEBAG_BAGBAR.OnAccept()
 check(CFC().hideBagSlots == true and SlotsHidden(), "Ja: andere tasvakjes verborgen")
 if FLAVOR == "retail" then check(layouts == 1, "via WoW's eigen inklap-pijltje") end
+if FLAVOR == "forever" then check(CVARS.expandBagBar == "1", "Forever: geen pijltje, CVar niet aangeraakt") end
 NS.BagBarAsk()
 check(#POPUPS == 1, "niet nog eens vragen")
 
@@ -79,13 +100,23 @@ check(#POPUPS == 1, "niet nog eens vragen")
 CURSOR = { itemID = 2589, count = 20 }; E("CURSOR_CHANGED"); E("CURSOR_UPDATE")
 check(SlotsHidden(), "gewoon item op de cursor: vakjes blijven weg")
 CURSOR = { itemID = 4241, count = 1 }; E("CURSOR_CHANGED"); E("CURSOR_UPDATE")
-check(not SlotsHidden(), "tas op de cursor: vakjes zichtbaar")
+check(SlotsShown(), "tas op de cursor: vakjes zichtbaar")
 CURSOR = nil; E("CURSOR_CHANGED"); E("CURSOR_UPDATE"); RunTimers()
 check(SlotsHidden(), "tas losgelaten: vakjes weer weg")
-if FLAVOR == "classic" then
+if FLAVOR ~= "retail" then
   CharacterBag0Slot:Show()
-  check(not CharacterBag0Slot:IsShown(), "classic: WoW toont een vakje, wij verbergen het weer")
+  check(not CharacterBag0Slot:IsShown(), "WoW toont een vakje, wij verbergen het weer")
 end
+
+-- D2. Hoveren over een tas (item-tooltip): vakjes zichtbaar; tooltip weg = vakjes weg.
+local tipLink
+GameTooltip.GetItem = function() return tipLink and "x", tipLink end
+tipLink = "|cff|Hitem:2589|h[Linen Cloth]|h|r"; GameTooltip:Show(); NS.BagTooltip(GameTooltip)
+check(SlotsHidden(), "hover over gewoon item: vakjes blijven weg")
+tipLink = "|cff|Hitem:4241|h[Linen Bag]|h|r"; NS.BagTooltip(GameTooltip)
+check(SlotsShown(), "hover over een tas: vakjes zichtbaar")
+tipLink = nil; GameTooltip:Hide(); RunTimers()
+check(SlotsHidden(), "muis weg van de tas: vakjes weer weg")
 
 -- E. In gevecht niets aan de balk veranderen; na het gevecht wel.
 COMBAT = true

@@ -44,15 +44,18 @@ local function IsLoaded(name)
 	return IsAddOnLoaded and IsAddOnLoaded(name)
 end
 
--- Retail/Forever heeft een inklap-pijltje naast de rugzak (CVar expandBagBar).
-local function HasCollapse() return GetCV("expandBagBar") ~= nil end
+-- Retail heeft een inklap-pijltje naast de rugzak (CVar expandBagBar). Forever kent de CVar wel,
+-- maar heeft het pijltje niet (Classic-tassenbalk): daar verbergen we de vakjes zelf.
+local function HasCollapse() return BagBarExpandToggle ~= nil and GetCV("expandBagBar") ~= nil end
 
+-- De tasvakjes naast de rugzak (de sleutelring laten we staan).
 local function ClassicSlots()
 	local list = {}
 	for i = 0, NUM_BAGS - 1 do
 		local f = _G["CharacterBag" .. i .. "Slot"]
 		if f then list[#list + 1] = f end
 	end
+	if CharacterReagentBag0Slot then list[#list + 1] = CharacterReagentBag0Slot end
 	return list
 end
 
@@ -138,7 +141,7 @@ local function SetSlotsHidden(hide)
 		end
 		return
 	end
-	-- Classic: geen pijltje, dus de vakjes zelf (en weer verbergen als WoW ze toont).
+	-- Forever/Classic: geen pijltje, dus de vakjes zelf (en weer verbergen als WoW ze toont).
 	for _, f in ipairs(ClassicSlots()) do
 		if not classicHooked and f.HookScript then
 			f:HookScript("OnShow", function(self) if slotsHidden then self:Hide() end end)
@@ -146,6 +149,7 @@ local function SetSlotsHidden(hide)
 		f:SetShown(not hide)
 	end
 	classicHooked = true
+	Log("bag slots " .. (hide and "hidden" or "shown") .. " (" .. #ClassicSlots() .. " slots)")
 end
 
 -- Vanuit de opties (en de vraag): per karakter.
@@ -159,32 +163,51 @@ function ns.SetHideBagSlots(v)
 end
 
 ---------------------------------------------------------------------------
--- Tas slepen: vakjes even terug
+-- Tas slepen of erover hoveren: vakjes even terug
 ---------------------------------------------------------------------------
 
-local function CursorIsBag()
-	if not GetCursorInfo then return false end
-	local kind, id = GetCursorInfo()
-	if kind ~= "item" or not id then return false end
+local hoverBag = false -- de muis staat op een tas (tooltip van een tas zichtbaar)
+
+local function IsBag(id)
+	if not id then return false end
 	local ok, _, _, _, _, _, _, _, _, equip = pcall(C_Item.GetItemInfo, id)
 	return ok and (equip == "INVTYPE_BAG" or equip == "INVTYPE_QUIVER") or false
 end
 
-local function OnCursor()
+local function CursorIsBag()
+	if not GetCursorInfo then return false end
+	local kind, id = GetCursorInfo()
+	return kind == "item" and IsBag(id)
+end
+
+local function UpdatePeek()
 	if not WantHidden() then return end
-	if CursorIsBag() then
+	if CursorIsBag() or hoverBag then
 		if not peeking then
 			peeking = true
 			SetSlotsHidden(false)
 		end
 	elseif peeking then
-		-- even wachten: WoW (en BagSwap) handelen eerst het neerleggen af
+		-- even wachten: WoW (en BagSwap) handelen eerst het neerleggen af, en van een tas
+		-- naar een tasvakje bewegen mag de vakjes niet laten verdwijnen
 		C_Timer.After(0.3, function()
-			if peeking and not CursorIsBag() then
+			if peeking and not CursorIsBag() and not hoverBag then
 				peeking = false
 				SetSlotsHidden(true)
 			end
 		end)
+	end
+end
+
+-- Aangeroepen vanuit de item-tooltip (Data.lua): staat de muis op een tas?
+function ns.BagTooltip(tt)
+	if tt ~= GameTooltip or not tt.GetItem then return end
+	local _, link = tt:GetItem()
+	local id = link and tonumber(link:match("item:(%d+)"))
+	local bag = IsBag(id)
+	if bag ~= hoverBag then
+		hoverBag = bag
+		UpdatePeek()
 	end
 end
 
@@ -247,12 +270,18 @@ end
 function ns.SetupBagBar()
 	ns.UpdateBackpackFill()
 	if WantHidden() then SetSlotsHidden(true) end
+	if ns.HookAHTooltip then ns.HookAHTooltip() end -- item-tooltip: hoveren over een tas (ns.BagTooltip)
+	if GameTooltip and GameTooltip.HookScript then
+		GameTooltip:HookScript("OnHide", function()
+			if hoverBag then hoverBag = false; UpdatePeek() end
+		end)
+	end
 	C_Timer.After(8, function() ns.Try("bag bar question", ns.BagBarAsk) end)
 end
 
 ns.OnEvent("BAG_UPDATE_DELAYED", "backpack fill", function() ns.UpdateBackpackFill() end)
-ns.OnEvent("CURSOR_CHANGED", "bag slots", OnCursor) -- retail/Forever
-ns.OnEvent("CURSOR_UPDATE", "bag slots", OnCursor)  -- classic
+ns.OnEvent("CURSOR_CHANGED", "bag slots", UpdatePeek) -- retail/Forever
+ns.OnEvent("CURSOR_UPDATE", "bag slots", UpdatePeek)  -- classic
 ns.OnEvent("PLAYER_REGEN_ENABLED", "bag slots", function()
 	if pending ~= nil then SetSlotsHidden(pending) end
 	if ns.bagBarAskLater then ns.bagBarAskLater = nil; ns.BagBarAsk() end
