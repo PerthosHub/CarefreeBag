@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.10.2
 ### ✨ New
 - 🎒 **Bags full: see the smart choice at a glance.** Each loot item that doesn't fit gets one row, right next to that item in the loot window: the loot ➜ the item that goes, and the difference. A green row with a check mark is a smart swap, a red row with a cross is not. Click **Pick up** on the row you want. Names and prices are in the tooltip.
 - ▼ **Options per row.** The small arrow at the end of a row opens WoW's own menu: never destroy this item or group, or skip it this time.
