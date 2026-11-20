@@ -219,6 +219,8 @@ local function ReorderTarget(b)
 	local id = CursorItemID()
 	local g = b.group
 	if not id or not g or id == g.itemID or not b.secKey then return false end
+	-- Van buiten je tassen (bank, wat je aan hebt): geen volgorde, maar in je tassen leggen.
+	if not FromBags(id) then return false end
 	for _, e in ipairs(lastItems or {}) do
 		if e.itemID == id then return SectionOf(e) == b.secKey end
 	end
