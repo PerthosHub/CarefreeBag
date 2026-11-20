@@ -61,6 +61,16 @@ CarefreeBagViewer.tabs.bags:Fire("OnClick")
 check(CarefreeBagViewer.title == "Bags of Thrall Frostwolf", "titel: tassen van Frostwolf")
 check(table.concat(tiles(), ",") == "Cured Ham Steak,Linen Cloth", "tassen van Frostwolf: " .. table.concat(tiles(), ","))
 check(CarefreeBagViewer.note.text:find("Updated"), "toont wanneer bijgewerkt")
+check(not CarefreeBagViewer.offWarn, "CFB aan voor Frostwolf (of onbekend): geen waarschuwing")
+-- CFB staat uit voor Frostwolf in WoW's AddOns-lijst (WoW kent de voornaam; 0 = uit)
+C_AddOns.GetAddOnEnableState = function(addon, who) return (addon == "CarefreeBag" and who == "Thrall") and 0 or 2 end
+CarefreeBagViewer.tabs.bank:Fire("OnClick")
+check(CarefreeBagViewer.offWarn and CarefreeBagViewer.offNote.shown and CarefreeBagViewer.offNote.text:find("off for this character"),
+  "CFB uit voor Frostwolf: waarschuwing in het paneel")
+check(table.concat(tiles(), ",") == "Green Sword,Linen Cloth", "items staan er nog wel (onder de waarschuwing)")
+C_AddOns.GetAddOnEnableState = nil
+CarefreeBagViewer.tabs.bags:Fire("OnClick")
+check(not CarefreeBagViewer.offWarn and not CarefreeBagViewer.offNote.shown, "weer aan: waarschuwing weg")
 CarefreeBagFrame:Hide(); check(not CarefreeBagViewer:IsShown(), "paneel gaat dicht met de tassen")
 SlashCmdList.CAREFREEBAG("show"); CarefreeBagBankButton:Fire("OnClick"); RunTimers()
 local seen; for _, f in ipairs(ALLFRAMES) do if f.shown and type(f.text) == "string" and f.text:find("Visit a banker") then seen = true end end

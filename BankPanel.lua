@@ -56,6 +56,55 @@ local function ViewChars()
 	return list
 end
 
+-- Staat CarefreeBag uit voor dit karakter (AddOns-lijst van WoW)? Dan wordt zijn snapshot nooit
+-- bijgewerkt (issue #17/#7). WoW zelf weet dat per karakter: GetAddOnEnableState
+-- (retail: C_AddOns.GetAddOnEnableState(addon, karakter); ouder: GetAddOnEnableState(karakter, addon)).
+-- 0 = uit. Welke naamvorm Forever wil (voornaam of "Voornaam Achternaam") staat nog niet vast:
+-- daarom alle vormen proberen; alleen "uit" als een vorm echt 0 geeft.
+local function EnableState(who)
+	if C_AddOns and C_AddOns.GetAddOnEnableState then
+		local ok, v = pcall(C_AddOns.GetAddOnEnableState, ADDON, who)
+		if ok and type(v) == "number" then return v end
+	end
+	if GetAddOnEnableState then
+		local ok, v = pcall(GetAddOnEnableState, who, ADDON)
+		if ok and type(v) == "number" then return v end
+	end
+end
+
+local function NameForms(name)
+	local forms = { name }
+	local first = name and name:match("^(%S+)%s")
+	if first then forms[#forms + 1] = first; forms[#forms + 1] = (name:gsub("%s", "-", 1)) end
+	return forms
+end
+
+function ns.AddonOffFor(key)
+	if key == ns.charKey then return false end
+	local ch = ns.DB.chars[key]
+	local name = ch and ch.snap and ch.snap.name
+	if not name then return false end
+	for _, form in ipairs(NameForms(name)) do
+		if EnableState(form) == 0 then return true end
+	end
+	return false
+end
+
+-- TIJDELIJK (1.10.1): laten zien wat WoW Forever teruggeeft, per karakter en naamvorm.
+ns.OnEvent("PLAYER_LOGIN", "addon state probe", function()
+	C_Timer.After(5, function()
+		for key, ch in pairs(ns.DB.chars or {}) do
+			local name = ch.snap and ch.snap.name
+			if name and not ch.legacy then
+				local parts = {}
+				for _, form in ipairs(NameForms(name)) do parts[#parts + 1] = "'" .. form .. "'=" .. tostring(EnableState(form)) end
+				parts[#parts + 1] = "nil=" .. tostring(EnableState(nil))
+				Log("addon state " .. table.concat(parts, " "))
+			end
+		end
+	end)
+end)
+
 local function ViewTile(i)
 	local t = viewTiles[i]
 	if not t then
@@ -303,13 +352,25 @@ function ViewLayout()
 	local cols = 8 -- vast: breed genoeg voor de knoppen bovenin
 	local width = cols * (ns.TILE + GAP) - GAP
 	local y = 0
+	-- CFB staat uit voor dat karakter: zeg dat erbij, anders lijkt het alsof het klopt.
+	viewer.offWarn = not me and ns.AddonOffFor(choice.key) or nil
+	if viewer.offWarn then
+		viewer.offNote:ClearAllPoints()
+		viewer.offNote:SetPoint("TOPLEFT", viewer.content, "TOPLEFT", 0, 0)
+		viewer.offNote:SetWidth(width)
+		viewer.offNote:SetText("|cffff9900" .. T("CarefreeBag is off for this character, so this is not up to date. Turn it on under AddOns on the character select screen.") .. "|r")
+		viewer.offNote:Show()
+		y = math.ceil((viewer.offNote:GetStringHeight() or 30) + 10)
+	else
+		viewer.offNote:Hide()
+	end
 	if not rows then
 		local h = ViewHead(1)
-		h:SetPoint("TOPLEFT", viewer.content, "TOPLEFT", 0, 0)
+		h:SetPoint("TOPLEFT", viewer.content, "TOPLEFT", 0, -y)
 		h:SetWidth(width)
 		h:SetText("|cffaaaaaa" .. (choice.part == "bank" and T("Visit a banker once to see this bank here.")
 			or T("Log in with this character once to see its bags here.")) .. "|r")
-		y = 40
+		y = y + 40
 	else
 		-- Indelen met de groepen van dat karakter.
 		local bySec, order, titles = {}, {}, {}
@@ -433,6 +494,9 @@ local function BuildViewer()
 	viewer.scroll:SetPoint("TOPLEFT", viewer, "TOPLEFT", left, -76)
 	viewer.content = CreateFrame("Frame", nil, viewer.scroll)
 	viewer.scroll:SetScrollChild(viewer.content)
+	viewer.offNote = viewer.content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	viewer.offNote:SetJustifyH("LEFT")
+	viewer.offNote:Hide()
 	viewer.scroll:EnableMouseWheel(true)
 	viewer.scroll:SetScript("OnMouseWheel", function(self, delta)
 		local v = (self:GetVerticalScroll() or 0) - delta * (ns.TILE + GAP)
