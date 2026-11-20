@@ -224,6 +224,12 @@ local function SetBusy(row)
 	row.ah:SetText("")
 end
 
+-- Evaluate vanuit een timer: fout = onthouden (/cfb error) en paneel dicht, nooit blijven hangen op "Picking up...".
+local function SafeEvaluate()
+	local ok, err = pcall(Evaluate)
+	if not ok then ns.SetError("loot: " .. tostring(err)); HidePanel() end
+end
+
 -- Na het weggooien wachten tot het vakje echt vrij is, dan de loot oppakken.
 local function TryPending()
 	local p = state.pending
@@ -231,7 +237,7 @@ local function TryPending()
 	if not GetLootSlotLink or GetLootSlotLink(p.slot) ~= p.link then
 		Log("loot: slot " .. p.slot .. " changed before looting")
 		state.pending = nil
-		C_Timer.After(0.1, Evaluate) -- de rest, of het paneel dicht
+		C_Timer.After(0.1, SafeEvaluate) -- de rest, of het paneel dicht
 		return
 	end
 	local _, free = Scan()
@@ -245,7 +251,7 @@ local function TryPending()
 	state.pending = nil
 	Log(("loot: LootSlot(%d) %s, room=%s, tries=%d"):format(p.slot, Short(p.link), tostring(room), p.tries))
 	LootSlot(p.slot)
-	C_Timer.After(0.3, Evaluate) -- de overige rijen
+	C_Timer.After(0.3, SafeEvaluate) -- de overige rijen
 end
 
 -- Klik op "Pick up" in een rij (een echte klik: anders weigert WoW het weggooien).
@@ -269,10 +275,15 @@ local function Swap(row)
 end
 
 -- Opties bij het item dat weg zou gaan (knopje ▼ in de rij): nooit / nu niet, voor het item of de hele groep.
-local function MenuChoice(what, row)
+-- expect: het item waarvoor het menu openging (WoW-menu); is de rij intussen veranderd, dan niets doen.
+local function MenuChoice(what, row, expect)
 	row = row or (panel and (panel.menuRow or panel.rows[1]))
 	local o = row and row.offer
 	if not o or panel.busy then return end
+	if expect and not (o.junk.e.bag == expect.bag and o.junk.e.slot == expect.slot and o.junk.e.itemID == expect.itemID) then
+		Log("loot: menu choice ignored, the row changed")
+		return
+	end
 	local e, sec = o.junk.e, o.junk.sec
 	if what == "keepItem" then
 		Kept()[e.itemID] = true
@@ -355,14 +366,16 @@ local function ShowMenu(row)
 	local groupOk = o.junk.sec ~= "grey" and o.junk.sec ~= "other"
 	-- Eerst WoW's eigen keuzemenu (zoals rechtsklik op een speler); bestaat dat niet, dan ons eigen menu.
 	if MenuUtil and MenuUtil.CreateContextMenu then
+		local e = o.junk.e -- het item van dit menu; verandert de rij intussen, dan doet een keuze niets
+		local function Pick(key) return function() MenuChoice(key, row, e) end end
 		local ok = pcall(MenuUtil.CreateContextMenu, row.opt, function(_, root)
-			root:CreateTitle(o.junk.e.name or "?")
-			root:CreateButton(T("Never destroy this item"), function() MenuChoice("keepItem", row) end)
-			root:CreateButton(T("Skip this item this time"), function() MenuChoice("skipItem", row) end)
+			root:CreateTitle(e.name or "?")
+			root:CreateButton(T("Never destroy this item"), Pick("keepItem"))
+			root:CreateButton(T("Skip this item this time"), Pick("skipItem"))
 			root:CreateDivider()
 			root:CreateTitle(T("Group: %s"):format(GroupName(o.junk.sec)))
-			if groupOk then root:CreateButton(T("Never destroy anything from this group"), function() MenuChoice("keepGroup", row) end) end
-			root:CreateButton(T("Skip this group this time"), function() MenuChoice("skipGroup", row) end)
+			if groupOk then root:CreateButton(T("Never destroy anything from this group"), Pick("keepGroup")) end
+			root:CreateButton(T("Skip this group this time"), Pick("skipGroup"))
 		end)
 		if ok then return end
 	end
@@ -567,12 +580,15 @@ local function Place(n)
 	-- Hoogte van elk loot-item, gemeten vanaf de bovenkant van het lootvenster (in de maat van het paneel).
 	local ui = UIParent:GetEffectiveScale() or 1
 	local ys, aligned = {}, true
+	local height = (L[4] - L[2]) / k
 	for i, r in ipairs(panel.rows) do
 		if r.offer then
 			local b = LootButtonFor(r.offer.loot.slot)
 			local _, cy = b and b:GetCenter()
 			if not cy then aligned = false; break end
 			ys[i] = (cy * (b:GetEffectiveScale() or 1) / ui - L[4]) / k
+			-- niet onder de titel en niet over "Leave all": dan toch onder elkaar
+			if ys[i] > -(30 + ROW_H / 2) or ys[i] < -(height - 52 - ROW_H / 2) then aligned = false; break end
 		end
 	end
 	local a, b = useLeft and "TOPRIGHT" or "TOPLEFT", useLeft and "TOPLEFT" or "TOPRIGHT"
@@ -663,8 +679,8 @@ Evaluate = function()
 		if junk then
 			used[junk.e.bag .. ":" .. junk.e.slot] = true
 			offers[#offers + 1] = { loot = l, junk = junk }
-			ns.Note("bags full", ("offer: destroy %s (%d copper) for %s (%d copper)"):format(tostring(junk.e.itemID), junk.value or 0,
-				Short(l.link), l.value or 0))
+			ns.Note("bags full", ("offer: destroy %s (%d copper) for %s (%s)"):format(tostring(junk.e.itemID), junk.value or 0,
+				Short(l.link), l.quest and "quest" or (math.floor(l.value or 0) .. " copper")))
 		else
 			ns.Note("bags full", "no offer for " .. Short(l.link) .. ": nothing cheaper to destroy")
 		end

@@ -58,14 +58,16 @@ end
 -- Belangrijke momenten (clams, tassen vol, geblokkeerd door WoW, fouten) apart bewaren in
 -- DB.events (laatste 200), zodat ze later nog terug te lezen zijn, ook als het gewone log al
 -- is doorgeschoven (Johan kan niet altijd meteen uitzoeken wat er gebeurde). Staat ook in het log.
--- Dezelfde regel binnen 10 s maar één keer.
-local lastNote = {}
+-- Dezelfde regel binnen 10 s maar één keer (ook als er andere regels tussen zitten,
+-- bijv. twee aanbiedingen bij volle tassen die bij elke tas-update terugkomen).
+local recentNotes = {}
 function ns.Note(kind, msg)
 	if not ns.DB then return end
 	local line = kind .. ": " .. tostring(msg)
 	local now = GetTime and GetTime() or 0
-	if lastNote.line == line and now - (lastNote.t or 0) < 10 then return end
-	lastNote.line, lastNote.t = line, now
+	if recentNotes[line] and now - recentNotes[line] < 10 then return end
+	for l, t in pairs(recentNotes) do if now - t >= 10 then recentNotes[l] = nil end end
+	recentNotes[line] = now
 	ns.Log(line)
 	ns.DB.events = ns.DB.events or {}
 	local stamp = date and date("%d-%m %H:%M:%S") or tostring(now)

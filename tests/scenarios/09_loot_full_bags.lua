@@ -229,8 +229,20 @@ check(R.smart and R.mark and R.bg, "slimme rij: groene achtergrond en vinkje")
 R.opt:Fire("OnClick")
 check(menu.owner == R.opt and menu.items[1].title == P.offer.junk.e.name, "WoW-menu aan het knopje, kopje = item dat weg zou gaan")
 check(not P.menu:IsShown(), "eigen menu niet nodig")
-local skipFn; for _, it in ipairs(menu.items) do if it.text == "Skip this item this time" then skipFn = it.fn end end
+local skipFn, keepFn
+for _, it in ipairs(menu.items) do
+  if it.text == "Skip this item this time" then skipFn = it.fn end
+  if it.text == "Never destroy this item" then keepFn = it.fn end
+end
 local before = P.offer.junk.e.itemID
+-- rij verandert terwijl het menu open is: een keuze geldt niet voor het nieuwe item
+CFC().keep[before] = true; E("BAG_UPDATE_DELAYED"); RunTimers()
+local other = P.offer.junk.e.itemID
+check(other ~= before, "rij heeft nu een ander item")
+keepFn(); RunTimers()
+check(not CFC().keep[other], "keuze uit een oud menu raakt het nieuwe item niet")
+CFC().keep[before] = nil; E("BAG_UPDATE_DELAYED"); RunTimers()
+check(P.offer.junk.e.itemID == before, "terug naar het eerste item")
 skipFn(); RunTimers()
 check(P:IsShown() and P.offer.junk.e.itemID ~= before, "keuze uit het WoW-menu werkt: ander item voorgesteld")
 MenuUtil = nil
