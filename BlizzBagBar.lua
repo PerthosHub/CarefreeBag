@@ -1,6 +1,6 @@
 -- CarefreeBag: BlizzBagBar.lua
 -- De tassenbalk van WoW zelf (issue #4, deel B):
---  * vulbalk óp de echte rugzakknop: van onder naar boven, groen -> rood (alleen gewone vakjes;
+--  * dunne vulbalk onderin de echte rugzakknop: links -> rechts, groen -> rood (alleen gewone vakjes;
 --    reagent-tas en beroepstassen tellen niet mee). Optie DB.bagFill, standaard aan.
 --  * de andere tasvakjes verbergen (per karakter: ch.hideBagSlots) zolang het CFB-venster dicht is;
 --    tassen open = hele balk zichtbaar. Retail: WoW's eigen inklap-pijltje (CVar expandBagBar).
@@ -96,15 +96,21 @@ end
 local function BuildFill()
 	local btn = MainMenuBarBackpackButton
 	if fill or not btn then return fill end
+	-- Dunne liggende balk (4 px) onderin het icoon, binnen de rand; zelfde stijl als de balk
+	-- in het CFB-venster (Blizzard-textuur, donkere baan voor het lege deel). Johans keuze 2026-11-20.
 	local icon = btn.icon or _G["MainMenuBarBackpackButtonIconTexture"] or btn
 	local bar = CreateFrame("StatusBar", "CarefreeBagBackpackFill", btn)
-	bar:SetPoint("TOPLEFT", icon, "TOPLEFT", 3, -3)
-	bar:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -3, 3)
-	bar:SetOrientation("VERTICAL")
-	bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	bar:SetPoint("BOTTOMLEFT", icon, "BOTTOMLEFT", 5, 5)
+	bar:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -5, 5)
+	bar:SetHeight(4)
+	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
 	bar:SetMinMaxValues(0, 1)
 	bar:SetValue(0)
-	bar:SetAlpha(0.45)
+	-- donkere baan, 1 px groter: werkt meteen als dunne rand
+	bar.bg = bar:CreateTexture(nil, "BACKGROUND")
+	bar.bg:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
+	bar.bg:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 1, -1)
+	bar.bg:SetColorTexture(0, 0, 0, 0.7)
 	bar:EnableMouse(false) -- klikken en tooltip blijven van de rugzakknop
 	if btn.GetFrameLevel and btn:GetFrameLevel() then bar:SetFrameLevel(btn:GetFrameLevel() + 1) end
 	fill = bar
