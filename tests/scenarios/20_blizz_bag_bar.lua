@@ -151,6 +151,28 @@ if FLAVOR == "retail" then CVARS.expandBagBar = "0" else for i = 0, 3 do _G["Cha
 NS.BagBarAsk()
 check(#POPUPS == 1 and CFC().hideBagSlots == true, "al ingeklapt: geen vraag, onthouden als verborgen")
 
+-- H. Alleen terugzetten wat wij verborgen (review): een sleutelring die WoW zelf verborg, blijft weg.
+NS.SetHideBagSlots(false)
+if FLAVOR ~= "retail" then
+  for i = 0, 3 do _G["CharacterBag" .. i .. "Slot"]:Show() end -- stap F verborg ze "zelf"
+  KeyRingButton:Hide() -- bijv. geen sleutels: WoW verbergt de knop zelf
+  NS.SetHideBagSlots(true)
+  check(not CharacterBag0Slot:IsShown(), "verborgen")
+  SlashCmdList.CAREFREEBAG("show")
+  check(CharacterBag0Slot:IsShown() and not KeyRingButton:IsShown(), "CFB open: tassen terug, door WoW verborgen sleutelring blijft weg")
+  CarefreeBagFrame:Hide()
+else
+  -- retail: de ingeklapte CVar blijft bewaard; wíj klapten hem in, dus niet "al ingeklapt" voor een ander karakter
+  NS.SetHideBagSlots(true)
+  check(CVARS.expandBagBar == "0" and CarefreeBagDB.bagBarCollapsedByUs == true, "retail: onthouden dat wij inklapten")
+  local before = #POPUPS
+  CFC().hideBagSlots = nil
+  NS.BagBarAsk()
+  check(#POPUPS == before + 1, "door ons ingeklapt telt niet als 'al ingeklapt': wel vragen")
+  NS.SetHideBagSlots(false)
+  check(CVARS.expandBagBar == "1" and CarefreeBagDB.bagBarCollapsedByUs == nil, "uitgeklapt, vlag weg")
+end
+
 -- G. Opties: twee vinkjes in Advanced.
 local labels = {}
 for _, o in ipairs(ALLFRAMES) do if o.text and o.text ~= "" then labels[o.text] = true end end

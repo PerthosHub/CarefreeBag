@@ -16,7 +16,7 @@ local NUM_BAGS = NUM_BAG_SLOTS or 4 -- gewone tasvakken 1 t/m 4 (0 = rugzak); re
 local BAR_ADDONS = { "Bartender4", "Dominos", "ElvUI", "Tukui", "NDui", "RealUI", "SpartanUI", "LUI", "KkthnxUI", "GW2_UI" }
 
 local fill          -- de vulbalk op de rugzakknop
-local slotsHidden = false -- nu verborgen door ons
+local slotsHidden = false -- nu verborgen door ons (bij het opstarten: zie SetupBagBar)
 local pending = nil -- in gevecht gevraagd: na het gevecht toepassen (true/false)
 
 ---------------------------------------------------------------------------
@@ -127,33 +127,39 @@ end
 -- Andere tasvakjes verbergen
 ---------------------------------------------------------------------------
 
-local classicHooked = false
+-- Wat wij verborgen hebben, en hoe: alleen dat zetten we terug (nooit iets wat WoW of een
+-- andere addon zelf verborg, bijv. een lege sleutelring of ElvUI's tassen).
+local mode = nil         -- nil = niets verborgen, "cvar" = met het pijltje, "frames" = zelf
+local hiddenByUs = {}    -- [frame] = true: door ons verborgen
+local hooked = {}        -- [frame] = true: OnShow-hook gezet
 
 -- Forever: de vakjes zitten in BagsBar, die zelf de randen tekent (plaatje UI-HUD-ActionBar-Frame)
 -- en per vakje een naamloos kind-frame met de zwarte achtergrond heeft (gezien in Johans log,
 -- 2026-11-20). Die maken we onzichtbaar met alpha (niet Hide), zodat Edit Mode en de layout
 -- van WoW er niet van in de war raken. Alleen kind-frames zonder naam, zichtbaar en zo groot als
 -- een vakje: het Edit Mode-selectiekader (verborgen) en de rugzak blijven met rust.
-local art -- { region of frame, ... }, één keer verzameld
+local art -- { region of frame, ... }, verzameld zodra er iets gevonden is
+local NONE = {}
 local function BarArt()
 	if art then return art end
-	art = {}
 	local bar = BagsBar
-	if not bar or not CharacterBag0Slot or not CharacterBag0Slot.GetParent then return art end
+	if not bar or not CharacterBag0Slot or not CharacterBag0Slot.GetParent then return NONE end
 	-- alleen als de vakjes echt in deze balk zitten (direct of via BagSlotCluster)
 	local p, inBar = CharacterBag0Slot:GetParent(), false
 	for _ = 1, 3 do
 		if p == bar then inBar = true end
 		p = p and p.GetParent and p:GetParent()
 	end
-	if not inBar then return art end
-	for _, r in ipairs({ bar:GetRegions() }) do art[#art + 1] = r end
+	if not inBar then return NONE end
+	local list = {}
+	for _, r in ipairs({ bar:GetRegions() }) do list[#list + 1] = r end
 	for _, c in ipairs({ bar:GetChildren() }) do
 		local named = c.GetName and c:GetName()
 		local w = c.GetWidth and c:GetWidth() or 0
-		if not named and c:IsShown() and w > 0 and w <= 64 then art[#art + 1] = c end
+		if not named and c:IsShown() and w > 0 and w <= 64 then list[#list + 1] = c end
 	end
-	return art
+	if #list > 0 then art = list end -- leeg = later opnieuw proberen
+	return list
 end
 
 local function SetBarArt(show)
@@ -171,8 +177,11 @@ local function SetSlotsHidden(hide, quiet)
 		return
 	end
 	pending = nil
+	if hide == slotsHidden then return end
 	slotsHidden = hide
-	if HasCollapse() then
+	-- Terugzetten gaat altijd op dezelfde manier als het verbergen.
+	local how = hide and (HasCollapse() and "cvar" or "frames") or mode
+	if how == "cvar" then
 		if not quiet then Log("bag slots " .. (hide and "collapsed" or "expanded") .. " with the arrow") end
 		local want = hide and "0" or "1"
 		if GetCV("expandBagBar") ~= want then
@@ -184,18 +193,33 @@ local function SetSlotsHidden(hide, quiet)
 				if BagsBar and BagsBar.Layout then pcall(BagsBar.Layout, BagsBar) end
 			end
 		end
-		return
-	end
-	-- Forever/Classic: geen pijltje, dus de vakjes zelf (en weer verbergen als WoW ze toont).
-	for _, f in ipairs(ClassicSlots()) do
-		if not classicHooked and f.HookScript then
-			f:HookScript("OnShow", function(self) if slotsHidden then self:Hide() end end)
+		-- De CVar blijft bewaard (ook voor andere karakters): onthouden dat wíj hem inklapten.
+		ns.DB.bagBarCollapsedByUs = hide or nil
+	elseif how == "frames" then
+		-- Forever/Classic: geen werkend pijltje, dus de vakjes zelf (en weer verbergen als WoW ze toont).
+		local n = 0
+		if hide then
+			for _, f in ipairs(ClassicSlots()) do
+				if f:IsShown() then
+					if not hooked[f] and f.HookScript then
+						hooked[f] = true
+						f:HookScript("OnShow", function(self) if hiddenByUs[self] then self:Hide() end end)
+					end
+					hiddenByUs[f] = true
+					f:Hide()
+					n = n + 1
+				end
+			end
+		else
+			local list = {}
+			for f in pairs(hiddenByUs) do list[#list + 1] = f end
+			wipe(hiddenByUs)
+			for _, f in ipairs(list) do f:Show(); n = n + 1 end
 		end
-		f:SetShown(not hide)
+		local nArt = SetBarArt(not hide)
+		if not quiet then Log("bag slots " .. (hide and "hidden" or "shown") .. " (" .. n .. " frames, " .. nArt .. " art)") end
 	end
-	classicHooked = true
-	local nArt = SetBarArt(not hide)
-	if not quiet then Log("bag slots " .. (hide and "hidden" or "shown") .. " (" .. #ClassicSlots() .. " frames, " .. nArt .. " art)") end
+	mode = hide and how or nil
 end
 
 -- Hoe hoort de balk nu te staan? Verborgen alleen als je dat gekozen hebt, CFB aan staat en
@@ -220,10 +244,11 @@ end
 -- Eenmalige vraag per karakter
 ---------------------------------------------------------------------------
 
+-- Al ingeklapt/verborgen door jou of een andere addon (niet door ons).
 local function AlreadyCollapsed()
-	if HasCollapse() then return GetCV("expandBagBar") == "0" end
+	if HasCollapse() then return GetCV("expandBagBar") == "0" and not ns.DB.bagBarCollapsedByUs end
 	local slots = ClassicSlots()
-	return #slots > 0 and not slots[1]:IsShown()
+	return #slots > 0 and not slots[1]:IsShown() and not hiddenByUs[slots[1]]
 end
 
 -- Heb je je UI al aangepast? Eigen Edit Mode-layout of een balk-addon.
@@ -274,6 +299,15 @@ end
 
 function ns.SetupBagBar()
 	ns.UpdateBackpackFill()
+	-- Retail: de CVar blijft na uitloggen staan. Klapten wij hem in (ook bij een ander karakter),
+	-- dan begint deze sessie als "verborgen door ons", zodat we hem weer uitklappen als het moet.
+	if ns.DB.bagBarCollapsedByUs then
+		if HasCollapse() and GetCV("expandBagBar") == "0" then
+			slotsHidden, mode = true, "cvar"
+		else
+			ns.DB.bagBarCollapsedByUs = nil
+		end
+	end
 	ns.UpdateBagSlots()
 	-- CFB open = tassen en sleutelring zichtbaar, dicht = alleen de rugzak
 	if ns.main and ns.main.HookScript then
