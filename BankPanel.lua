@@ -567,6 +567,67 @@ ns.OnEvent("BANKFRAME_OPENED", "bank", function()
 	ns.SnapBank()
 	if ns.ViewRefresh then ns.ViewRefresh() end
 end)
+-- Rechtsklik op een vakje bij de bank: WoW zet één stapel in de bank (de grootste, `g.rep`);
+-- wij de andere stapels van dat vakje erachteraan, zodat alles (bijv. 5+3 = 8) naar de bank gaat.
+-- Eerst bij een bankstapel met plek, anders een leeg bankvakje. Eén stapel per stap (WoW moet bijwerken).
+-- Met Shift/Ctrl/Alt niet: dan doe je het zelf (Shift-klik = WoW's eigen splitsen).
+local function BankSpot(id)
+	local empty
+	for _, bag in ipairs(ns.BankBags()) do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if not info then
+				if not empty then
+					local okF, _, family = pcall(C_Container.GetContainerNumFreeSlots, bag)
+					if not okF or (family or 0) == 0 then empty = { bag = bag, slot = slot } end
+				end
+			elseif info.itemID == id and not info.isLocked then
+				local okS, max = pcall(function() return select(8, C_Item.GetItemInfo(id)) end)
+				if okS and max and (info.stackCount or 1) < max then return { bag = bag, slot = slot } end
+			end
+		end
+	end
+	return empty
+end
+
+function ns.BankMoveRest(g, bag, slot)
+	if not ns.bankOpen or not ns.BankBags then return end
+	if (IsShiftKeyDown and IsShiftKeyDown()) or (IsControlKeyDown and IsControlKeyDown()) or (IsAltKeyDown and IsAltKeyDown()) then return end
+	if not g or not g.slots or #g.slots < 2 then return end
+	local rest = {}
+	for _, e in ipairs(g.slots) do
+		if not (e.bag == bag and e.slot == slot) then rest[#rest + 1] = { bag = e.bag, slot = e.slot, itemID = e.itemID } end
+	end
+	local moved, steps = 0, 0
+	local function step()
+		steps = steps + 1
+		if not ns.bankOpen or CursorHasItem() or steps > 30 then return end -- noodrem
+		local it = table.remove(rest, 1)
+		if not it then
+			if moved > 0 then Log("bank: right-click moved the rest of " .. tostring(g.itemID) .. " (" .. moved .. " move(s))") end
+			return
+		end
+		local info = C_Container.GetContainerItemInfo(it.bag, it.slot)
+		if info and info.itemID == it.itemID then
+			if info.isLocked then
+				table.insert(rest, 1, it) -- WoW is nog bezig: straks opnieuw
+			else
+				local spot = BankSpot(it.itemID)
+				if not spot then Log("bank: no room for the rest of " .. tostring(it.itemID)); return end
+				C_Container.PickupContainerItem(it.bag, it.slot)
+				C_Container.PickupContainerItem(spot.bag, spot.slot)
+				-- bankstapel vol geraakt: wat over is terug in hetzelfde tasvakje (WoW doet dat soms zelf)
+				if CursorHasItem() then C_Container.PickupContainerItem(it.bag, it.slot) end
+				moved = moved + 1
+				table.insert(rest, 1, it) -- nog iets over in dit vakje? dan de volgende stap opnieuw
+			end
+		end
+		C_Timer.After(0.3, step)
+	end
+	-- Even wachten tot WoW zijn eigen stapel in de bank heeft gezet.
+	C_Timer.After(0.3, step)
+end
+
 -- Bij het sluiten niet meer uitlezen: dan is de bank al (deels) leeg.
 ns.OnEvent("BANKFRAME_CLOSED", "bank", function() ns.bankOpen = false end)
 local function BankChanged()

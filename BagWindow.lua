@@ -322,6 +322,7 @@ local function NewItemButton(i)
 		if button ~= "RightButton" then return end
 		if ns.BagRightClick then pcall(ns.BagRightClick, self:GetBagID(), self:GetID()) end
 		if ns.MailAttachRest then pcall(ns.MailAttachRest, self.group, self:GetBagID(), self:GetID()) end
+		if ns.BankMoveRest then pcall(ns.BankMoveRest, self.group, self:GetBagID(), self:GetID()) end
 	end)
 	local origDrag = b:GetScript("OnReceiveDrag")
 	b:SetScript("OnReceiveDrag", function(self, ...)
@@ -671,9 +672,54 @@ StoreCursorItem = function(quiet)
 	return true
 end
 
+-- Bank open en het item op de cursor komt uit de bank: welk bankvakje (dat staat op slot)?
+local function BankSource(id)
+	if not ns.bankOpen or not ns.BankBags then return nil end
+	for _, bag in ipairs(ns.BankBags()) do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			if info and info.itemID == id and info.isLocked then return { bag = bag, slot = slot } end
+		end
+	end
+end
+
+-- Een stapel van dit item in je tassen met plek (vers uitgelezen).
+local function BagStackWithRoom(id)
+	for _, e in ipairs(ns.Scan()) do
+		if e.itemID == id and not e.key and (e.maxStack or 1) > 1 and (e.count or 1) < (e.maxStack or 1)
+			and not (e.info and e.info.isLocked) then return e end
+	end
+end
+
+-- Paste niet alles bij de stapel (bijv. 3 op een stapel van 4 met max 5)? Dan de rest ook naar je
+-- tassen: eerst bij een andere stapel met plek, anders één vrij vakje (zo hooguit één stapel erbij).
+-- WoW laat de rest op de cursor of in het bankvakje; allebei afhandelen. Even wachten per stap.
+local function PlaceRest(id, src, tries)
+	if tries <= 0 then return end
+	C_Timer.After(0.3, function()
+		if CursorHasItem() then
+			if CursorItemID() ~= id then return end
+		else
+			if not src or not ns.bankOpen then return end
+			local info = C_Container.GetContainerItemInfo(src.bag, src.slot)
+			if not (info and info.itemID == id) then return end -- alles is mee
+			if info.isLocked then PlaceRest(id, src, tries - 1); return end
+			C_Container.PickupContainerItem(src.bag, src.slot)
+		end
+		local e = BagStackWithRoom(id)
+		if e then
+			Log("rest of " .. id .. " -> stack " .. e.bag .. ":" .. e.slot)
+			C_Container.PickupContainerItem(e.bag, e.slot)
+			PlaceRest(id, src, tries - 1)
+		elseif not StoreCursorItem() then
+			ClearCursor() -- geen plek: terug waar het vandaan kwam
+		end
+	end)
+end
+
 -- Item op de cursor bij een stapel van hetzelfde item leggen (zoals WoW zelf doet als je het op
 -- een stapel laat vallen). Eerst de stapel van het vakje (`prefer`), anders een andere met plek.
--- Past niet alles, dan houdt WoW de rest op de cursor. Geen stapel met plek: false.
+-- Past niet alles, dan gaat de rest daarna ook naar je tassen (PlaceRest). Geen stapel met plek: false.
 function ns.MergeCursorInto(id, prefer)
 	local function room(e)
 		return e and e.itemID == id and (e.maxStack or 1) > 1 and (e.count or 1) < (e.maxStack or 1)
@@ -685,8 +731,10 @@ function ns.MergeCursorInto(id, prefer)
 		end
 	end
 	if not target then return false end
+	local src = BankSource(id)
 	Log("merged cursor item " .. id .. " into " .. target.bag .. ":" .. target.slot)
 	C_Container.PickupContainerItem(target.bag, target.slot)
+	PlaceRest(id, src, 4)
 	return true
 end
 

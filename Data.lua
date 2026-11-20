@@ -227,6 +227,8 @@ local function BankBags()
 	return ids
 end
 
+ns.BankBags = BankBags -- ook voor slepen naar/van de bank (BagWindow.lua, BankPanel.lua)
+
 local function ScanBags(bags)
 	local items = {}
 	for _, bag in ipairs(bags) do
