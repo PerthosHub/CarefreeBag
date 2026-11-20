@@ -37,13 +37,16 @@ if FLAVOR == "retail" then
   rawset(_G, "C_EditMode", { GetLayouts = function() return { activeLayout = ACTIVE_LAYOUT, layouts = {} } end })
 else
   for i = 0, 3 do CreateFrame("Button", "CharacterBag" .. i .. "Slot", UIParent) end
+  CreateFrame("Button", "KeyRingButton", UIParent) -- sleutelring: gaat mee weg
 end
 if FLAVOR == "forever" then
   NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
   Enum.BagIndex = { Backpack = 0, ReagentBag = 5 }
   BAGS[5] = { n = 20 }
   CreateFrame("Button", "CharacterReagentBag0Slot", UIParent)
-  CVARS.expandBagBar = "1" -- de CVar bestaat, het pijltje niet
+  CVARS.expandBagBar = "1" -- de CVar bestaat, het pijltje-frame ook, maar onzichtbaar
+  local toggle = CreateFrame("Button", "BagBarExpandToggle", UIParent); toggle.shown = false
+  toggle.Click = function() CVARS.expandBagBar = (CVARS.expandBagBar == "1") and "0" or "1" end
   rawset(_G, "GetCVar", function(k) return CVARS[k] end)
   rawset(_G, "SetCVar", function(k, v) CVARS[k] = tostring(v) end)
   ACTIVE_LAYOUT = 1
@@ -51,13 +54,13 @@ if FLAVOR == "forever" then
 end
 local function SlotsHidden()
   if FLAVOR == "retail" then return CVARS.expandBagBar == "0" end
-  local all = not CharacterBag0Slot:IsShown() and not CharacterBag3Slot:IsShown()
+  local all = not CharacterBag0Slot:IsShown() and not CharacterBag3Slot:IsShown() and not KeyRingButton:IsShown()
   if FLAVOR == "forever" then all = all and not CharacterReagentBag0Slot:IsShown() end
   return all
 end
 local function SlotsShown()
   if FLAVOR == "retail" then return CVARS.expandBagBar == "1" end
-  local all = CharacterBag0Slot:IsShown() and CharacterBag3Slot:IsShown()
+  local all = CharacterBag0Slot:IsShown() and CharacterBag3Slot:IsShown() and KeyRingButton:IsShown()
   if FLAVOR == "forever" then all = all and CharacterReagentBag0Slot:IsShown() end
   return all
 end
@@ -92,7 +95,8 @@ check(#POPUPS == 1 and POPUPS[1].which == "CAREFREEBAG_BAGBAR", "aangepaste UI: 
 StaticPopupDialogs.CAREFREEBAG_BAGBAR.OnAccept()
 check(CFC().hideBagSlots == true and SlotsHidden(), "Ja: andere tasvakjes verborgen")
 if FLAVOR == "retail" then check(layouts == 1, "via WoW's eigen inklap-pijltje") end
-if FLAVOR == "forever" then check(CVARS.expandBagBar == "1", "Forever: geen pijltje, CVar niet aangeraakt") end
+if FLAVOR == "forever" then check(CVARS.expandBagBar == "1", "Forever: onzichtbaar pijltje niet gebruikt, vakjes zelf verborgen") end
+if FLAVOR ~= "retail" then check(not KeyRingButton:IsShown(), "sleutelring ook weg") end
 NS.BagBarAsk()
 check(#POPUPS == 1, "niet nog eens vragen")
 

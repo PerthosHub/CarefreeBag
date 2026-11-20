@@ -44,11 +44,16 @@ local function IsLoaded(name)
 	return IsAddOnLoaded and IsAddOnLoaded(name)
 end
 
--- Retail heeft een inklap-pijltje naast de rugzak (CVar expandBagBar). Forever kent de CVar wel,
--- maar heeft het pijltje niet (Classic-tassenbalk): daar verbergen we de vakjes zelf.
-local function HasCollapse() return BagBarExpandToggle ~= nil and GetCV("expandBagBar") ~= nil end
+-- Retail heeft een inklap-pijltje naast de rugzak (CVar expandBagBar). Forever kent de CVar en
+-- het frame misschien wel, maar toont het pijltje niet (Classic-tassenbalk): alleen een
+-- zichtbaar pijltje telt, anders verbergen we de vakjes zelf.
+local function HasCollapse()
+	local t = BagBarExpandToggle
+	return t ~= nil and t.IsVisible ~= nil and t:IsVisible() and GetCV("expandBagBar") ~= nil
+end
 
--- De tasvakjes naast de rugzak (de sleutelring laten we staan).
+-- De tasvakjes naast de rugzak, plus het reagent-vak en de sleutelring
+-- (sleutels zie je in CFB als de groep Keys aan staat).
 local function ClassicSlots()
 	local list = {}
 	for i = 0, NUM_BAGS - 1 do
@@ -56,6 +61,7 @@ local function ClassicSlots()
 		if f then list[#list + 1] = f end
 	end
 	if CharacterReagentBag0Slot then list[#list + 1] = CharacterReagentBag0Slot end
+	if KeyRingButton then list[#list + 1] = KeyRingButton end
 	return list
 end
 
@@ -124,11 +130,16 @@ end
 
 local classicHooked = false
 
-local function SetSlotsHidden(hide)
-	if InCombatLockdown() then pending = hide; return end
+local function SetSlotsHidden(hide, quiet)
+	if InCombatLockdown() then
+		pending = hide
+		if not quiet then Log("bag slots: wait for end of combat") end
+		return
+	end
 	pending = nil
 	slotsHidden = hide
 	if HasCollapse() then
+		if not quiet then Log("bag slots " .. (hide and "collapsed" or "expanded") .. " with the arrow") end
 		local want = hide and "0" or "1"
 		if GetCV("expandBagBar") ~= want then
 			-- Eerst WoW's eigen pijltje: precies wat er gebeurt als jij erop klikt.
@@ -149,7 +160,7 @@ local function SetSlotsHidden(hide)
 		f:SetShown(not hide)
 	end
 	classicHooked = true
-	Log("bag slots " .. (hide and "hidden" or "shown") .. " (" .. #ClassicSlots() .. " slots)")
+	if not quiet then Log("bag slots " .. (hide and "hidden" or "shown") .. " (" .. #ClassicSlots() .. " frames)") end
 end
 
 -- Vanuit de opties (en de vraag): per karakter.
@@ -185,7 +196,7 @@ local function UpdatePeek()
 	if CursorIsBag() or hoverBag then
 		if not peeking then
 			peeking = true
-			SetSlotsHidden(false)
+			SetSlotsHidden(false, true)
 		end
 	elseif peeking then
 		-- even wachten: WoW (en BagSwap) handelen eerst het neerleggen af, en van een tas
@@ -193,7 +204,7 @@ local function UpdatePeek()
 		C_Timer.After(0.3, function()
 			if peeking and not CursorIsBag() and not hoverBag then
 				peeking = false
-				SetSlotsHidden(true)
+				SetSlotsHidden(true, true)
 			end
 		end)
 	end
