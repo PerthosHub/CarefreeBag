@@ -27,6 +27,7 @@ Chores.lua
 Mail.lua
 Loot.lua
 BagSwap.lua
+BlizzBagBar.lua
 QuestItems.lua
 QuestStart.lua
 QuestReminder.lua

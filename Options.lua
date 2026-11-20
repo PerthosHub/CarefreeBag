@@ -194,6 +194,21 @@ local function BuildAdvanced()
 			if ns.UpdateMailPanel then ns.UpdateMailPanel() end
 		end)
 	y = y - ROW_H
+	-- Tassenbalk van WoW zelf (BlizzBagBar.lua)
+	config.fillCb = AddCheck(adv, 4, y, T("Fill bar on the backpack"),
+		T("The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."),
+		function() return ns.DB.bagFill end, function(v)
+			ns.DB.bagFill = v
+			Log("backpack fill bar: " .. tostring(v))
+			if ns.UpdateBackpackFill then ns.UpdateBackpackFill() end
+		end)
+	y = y - ROW_H
+	config.slotsCb = AddCheck(adv, 4, y, T("Hide the other bag slots"),
+		T("Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."),
+		function() local ch = ns.CharEntry(); return ch and ch.hideBagSlots == true end, function(v)
+			if ns.SetHideBagSlots then ns.SetHideBagSlots(v) end
+		end)
+	y = y - ROW_H
 	config.advH = -y
 	adv:SetSize(CW - 2 * ns.PAD, config.advH)
 end

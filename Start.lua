@@ -25,6 +25,7 @@ ns.OnEvent("PLAYER_LOGIN", "login", function()
 	Try("settings", ns.RegisterSettings)
 	Try("bags", HookBags)
 	Try("bag swap", ns.SetupBagSwap)
+	Try("bag bar", ns.SetupBagBar)
 	C_Timer.After(3, function() ns.ScheduleBagCheck() end)
 	C_Timer.After(2, function() Try("other bags", CheckOtherBags) end)
 	ns.mail.step = false

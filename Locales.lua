@@ -4,6 +4,11 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["Fill bar on the backpack"] = "Vulbalk op de rugzak",
+	["The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."] = "De rugzakknop onderin je scherm loopt vol van groen naar rood naarmate je tassen voller worden. Reagent- en beroepstassen tellen niet mee.",
+	["Hide the other bag slots"] = "Andere tasvakjes verbergen",
+	["Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."] = "Alleen de rugzak blijft staan. De tasvakjes komen terug zolang je een tas sleept. Alleen voor dit karakter.",
+	["CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots? They come back while you drag a bag. You can change this in the options."] = "CarefreeBag laat op de rugzakknop zien hoe vol je tassen zijn. De andere tasvakjes verbergen? Ze komen terug zolang je een tas sleept. Je kunt dit aanpassen in de opties.",
 	["Sell at a vendor."] = "Verkopen bij de vendor.",
 	["Grey items. Sold at a vendor."] = "Grijze items. Verkocht bij de vendor.",
 	["always kept"] = "altijd houden",
@@ -262,6 +267,11 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["Fill bar on the backpack"] = "Füllbalken auf dem Rucksack",
+	["The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."] = "Der Rucksack-Knopf unten am Bildschirm füllt sich von Grün nach Rot, je voller deine Taschen werden. Reagenzien- und Berufstaschen zählen nicht mit.",
+	["Hide the other bag slots"] = "Andere Taschenplätze ausblenden",
+	["Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."] = "Nur der Rucksack bleibt. Die Taschenplätze kommen zurück, solange du eine Tasche ziehst. Nur für diesen Charakter.",
+	["CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots? They come back while you drag a bag. You can change this in the options."] = "CarefreeBag zeigt auf dem Rucksack-Knopf, wie voll deine Taschen sind. Die anderen Taschenplätze ausblenden? Sie kommen zurück, solange du eine Tasche ziehst. Du kannst das in den Optionen ändern.",
 	["Sell at a vendor."] = "Beim Händler verkaufen.",
 	["Grey items. Sold at a vendor."] = "Graue Gegenstände. Werden beim Händler verkauft.",
 	["always kept"] = "immer behalten",
@@ -521,6 +531,11 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Fill bar on the backpack"] = "Barre de remplissage sur le sac à dos",
+	["The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."] = "Le bouton du sac à dos en bas de l'écran se remplit du vert au rouge à mesure que tes sacs se remplissent. Les sacs de composants et de métier ne comptent pas.",
+	["Hide the other bag slots"] = "Masquer les autres emplacements de sac",
+	["Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."] = "Seul le sac à dos reste. Les emplacements de sac reviennent pendant que tu fais glisser un sac. Uniquement pour ce personnage.",
+	["CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots? They come back while you drag a bag. You can change this in the options."] = "CarefreeBag montre sur le bouton du sac à dos à quel point tes sacs sont pleins. Masquer les autres emplacements de sac ? Ils reviennent pendant que tu fais glisser un sac. Tu peux changer cela dans les options.",
 	["Sell at a vendor."] = "Vendre chez le marchand.",
 	["Grey items. Sold at a vendor."] = "Objets gris. Vendus chez le marchand.",
 	["always kept"] = "toujours gardé",
@@ -780,6 +795,11 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Fill bar on the backpack"] = "Barra de llenado en la mochila",
+	["The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."] = "El botón de la mochila en la parte inferior de la pantalla se llena de verde a rojo a medida que se llenan tus bolsas. Las bolsas de componentes y de profesión no cuentan.",
+	["Hide the other bag slots"] = "Ocultar las otras ranuras de bolsa",
+	["Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."] = "Solo queda la mochila. Las ranuras de bolsa vuelven mientras arrastras una bolsa. Solo para este personaje.",
+	["CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots? They come back while you drag a bag. You can change this in the options."] = "CarefreeBag muestra en el botón de la mochila lo llenas que están tus bolsas. ¿Ocultar las otras ranuras de bolsa? Vuelven mientras arrastras una bolsa. Puedes cambiarlo en las opciones.",
 	["Sell at a vendor."] = "Vender al vendedor.",
 	["Grey items. Sold at a vendor."] = "Objetos grises. Se venden al vendedor.",
 	["always kept"] = "siempre guardado",
@@ -1039,6 +1059,11 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Fill bar on the backpack"] = "Barra de preenchimento na mochila",
+	["The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."] = "O botão da mochila na parte de baixo da tela enche de verde a vermelho conforme suas bolsas ficam cheias. Bolsas de reagentes e de profissão não contam.",
+	["Hide the other bag slots"] = "Ocultar os outros espaços de bolsa",
+	["Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."] = "Só a mochila fica. Os espaços de bolsa voltam enquanto você arrasta uma bolsa. Só para este personagem.",
+	["CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots? They come back while you drag a bag. You can change this in the options."] = "O CarefreeBag mostra no botão da mochila o quanto suas bolsas estão cheias. Ocultar os outros espaços de bolsa? Eles voltam enquanto você arrasta uma bolsa. Você pode mudar isso nas opções.",
 	["Sell at a vendor."] = "Vender no vendedor.",
 	["Grey items. Sold at a vendor."] = "Itens cinza. Vendidos no vendedor.",
 	["always kept"] = "sempre guardado",
@@ -1298,6 +1323,11 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Fill bar on the backpack"] = "Barra di riempimento sullo zaino",
+	["The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."] = "Il pulsante dello zaino in basso sullo schermo si riempie dal verde al rosso man mano che le borse si riempiono. Le borse dei reagenti e delle professioni non contano.",
+	["Hide the other bag slots"] = "Nascondi gli altri spazi borsa",
+	["Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."] = "Resta solo lo zaino. Gli spazi borsa tornano mentre trascini una borsa. Solo per questo personaggio.",
+	["CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots? They come back while you drag a bag. You can change this in the options."] = "CarefreeBag mostra sul pulsante dello zaino quanto sono piene le tue borse. Nascondere gli altri spazi borsa? Tornano mentre trascini una borsa. Puoi cambiarlo nelle opzioni.",
 	["Sell at a vendor."] = "Vendi al mercante.",
 	["Grey items. Sold at a vendor."] = "Oggetti grigi. Venduti al mercante.",
 	["always kept"] = "sempre tenuto",
@@ -1557,6 +1587,11 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Fill bar on the backpack"] = "Шкала заполнения на рюкзаке",
+	["The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."] = "Кнопка рюкзака внизу экрана заполняется от зелёного к красному по мере заполнения сумок. Сумки для реагентов и профессий не учитываются.",
+	["Hide the other bag slots"] = "Скрыть остальные ячейки сумок",
+	["Only the backpack stays. The bag slots come back while you drag a bag. Only for this character."] = "Остаётся только рюкзак. Ячейки сумок возвращаются, пока вы перетаскиваете сумку. Только для этого персонажа.",
+	["CarefreeBag shows how full your bags are on the backpack button. Hide the other bag slots? They come back while you drag a bag. You can change this in the options."] = "CarefreeBag показывает на кнопке рюкзака, насколько заполнены сумки. Скрыть остальные ячейки сумок? Они возвращаются, пока вы перетаскиваете сумку. Это можно изменить в настройках.",
 	["Sell at a vendor."] = "Продавать торговцу.",
 	["Grey items. Sold at a vendor."] = "Серые предметы. Продаются торговцу.",
 	["always kept"] = "всегда хранить",

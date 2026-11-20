@@ -1030,15 +1030,18 @@ local function KeepHeaderInPlace()
 	end
 end
 
--- Vulbalk: vloeiend van groen naar oranje naar rood.
+-- Kleur van een vulbalk: vloeiend van groen naar oranje naar rood (ook voor de rugzakknop, BlizzBagBar.lua).
+function ns.FillColor(frac)
+	if frac < 0.6 then return 0.30, 0.80, 0.40 end
+	if frac < 0.85 then local t = (frac - 0.6) / 0.25; return 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t end
+	local t = math.min(1, (frac - 0.85) / 0.15)
+	return 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t
+end
+
 local function FillBar(b, usedN, totalN)
 	local frac = totalN > 0 and usedN / totalN or 0
 	b:SetValue(frac)
-	local r, g, bl
-	if frac < 0.6 then r, g, bl = 0.30, 0.80, 0.40
-	elseif frac < 0.85 then local t = (frac - 0.6) / 0.25; r, g, bl = 0.30 + 0.70 * t, 0.80 - 0.10 * t, 0.40 - 0.30 * t
-	else local t = math.min(1, (frac - 0.85) / 0.15); r, g, bl = 1.00 - 0.10 * t, 0.70 - 0.50 * t, 0.10 + 0.05 * t end
-	b:SetStatusBarColor(r, g, bl)
+	b:SetStatusBarColor(ns.FillColor(frac))
 	b.text:SetText(usedN .. "/" .. totalN)
 end
 
