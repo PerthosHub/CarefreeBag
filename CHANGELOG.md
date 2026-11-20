@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.10.0 (not released yet)
+## 1.10.0
 ### ✨ New
 - 🎒 **See how full your bags are on the backpack.** A bar in the backpack button at the bottom of your screen fills up from green to red as your bags get full, with used/total slots above it (like 40/44), just like in the CarefreeBag window. It replaces WoW's own free-space number. Reagent and profession bags do not count. You can turn it off in **Advanced settings**.
 - 🙈 **Only one bag icon.** Hide the other bag slots and the key ring while your bags are closed. Open your bags and the whole bag bar is back. If you have moved your interface around, CarefreeBag asks once per character. Change it any time in **Advanced settings**.
