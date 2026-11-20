@@ -2,8 +2,9 @@
 
 ## Unreleased
 ### ✨ New
-- 🎒 **Bags full: see what you pick up and what goes.** The panel now shows both items with their icon: the loot on top (Pick up), the item that makes room below it (Destroy).
-- ⏭️ **More loot that doesn't fit? It goes straight on.** After you choose, the panel stays open and shows the next item from the same loot, with "Item 2 of 3" at the top.
+- 🎒 **Bags full: see the smart choice at a glance.** Each loot item that doesn't fit gets one row: the loot ➜ the item that goes, and the difference in green (smart) or red (not smart). Click **Pick up** on the row you want. Names and prices are in the tooltip.
+- ⏭️ **All loot at once.** More items that don't fit? You see them all, each with its own item to destroy. After a pick-up, the other rows stay. **Leave all** closes the panel.
+- ❗ **Quest loot** shows a green "Quest" and is always worth picking up.
 - 📒 **Clams and full bags are logged** with the time, so problems can be looked at later.
 
 ## 1.10.1

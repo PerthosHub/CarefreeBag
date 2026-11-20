@@ -44,21 +44,22 @@ LOOT = { { id = 2589, qty = 2 }, { id = 9000, qty = 1 } }
 E("LOOT_OPENED")
 local P = NS.lootPanel
 check(P and P:IsShown(), "tassen vol + loot past niet: paneel open")
-check(P.offer.loot.slot == 2 and P.offer.junk.e.itemID == 8000, "biedt ring aan tegen goedkoopste stapel (Broken Fang)")
-check(P.offer.loot.value == 500 and P.junkRow.value.text == "15c", "waarde: loot 500c, in de tas 15c")
-check(P.lootRow.name.text:find("Shiny Ring", 1, true) and P.lootRow.label.text:find("Pick up"), "bovenste rij: oppakken, de ring: " .. tostring(P.lootRow.name.text))
-check(P.lootRow.value.text == "500c", "waarde bij de loot: 500c")
-check(P.junkRow.name.text:find("Broken Fang") and P.junkRow.name.text:find("x3"), "stapel met aantal: Broken Fang x3")
-check(P.junkRow.label.text:find("Destroy"), "onderste rij: weggooien")
-check(P.more.text == "Item 1 of 2", "twee items passen niet: Item 1 of 2 (" .. tostring(P.more.text) .. ")")
-check(P.verdict.text:find("485c") and P.verdict.text:find("more"), "loot is 485c meer waard")
-check(P.advice == "pickup" and P.swap.green and not P.skip.green, "advies oppakken: Destroy & pick up groen, Leave it niet")
-check(P.swap.text == "Destroy & pick up" and P.skip.text == "Leave it", "knoppen heten Destroy & pick up en Leave it")
+local R1, R2 = P.rows[1], P.rows[2]
+check(P.offer.loot.slot == 2 and P.offer.junk.e.itemID == 8000, "rij 1: ring tegen goedkoopste stapel (Broken Fang)")
+check(R1.offer.loot.value == 500 and R1.offer.junk.value == 15, "waarde: loot 500c, in de tas 15c")
+check(R1.junk.count.text == 3, "aantal op het weg-icoon: 3")
+check(R1.diff.text:find("+485c", 1, true) and R1.diff.text:find("33ff33"), "rij 1: groen +485c (" .. tostring(R1.diff.text) .. ")")
+check(R1.advice == "pickup" and R1.btn.green and R1.btn.text == "Pick up", "rij 1: knop Pick up, groen")
+check(R2:IsShown() and R2.offer.loot.id == 2589 and R2.offer.junk.e.itemID == 8001, "rij 2 tegelijk zichtbaar: linnen tegen Torn Wing (ander item)")
+check(R2.diff.text:find("-30c", 1, true) and R2.diff.text:find("ff5555") and not R2.btn.green, "rij 2: rood -30c, knop rood")
+check(not P.rows[3]:IsShown(), "geen derde rij")
+check(P.skip.text == "Leave all", "onderaan: Leave all")
 
--- 2. Klik: weggooien en looten
-P.swap:Fire("OnClick")
-check(P:IsShown() and P.busy and P.verdict.text:find("Picking up") and P.swap.enabled == false, "tijdens het oppakken blijft het paneel open (knoppen even uit)")
-P.swap:Fire("OnClick") -- dubbelklik: niet nog iets weggooien
+-- 2. Klik op Pick up in rij 1: weggooien en looten
+R1.btn:Fire("OnClick")
+check(P:IsShown() and P.busy and R1.diff.text:find("Picking up") and R1.btn.enabled == false and R2.btn.enabled == false, "tijdens het oppakken blijft het paneel open (knoppen even uit)")
+R1.btn:Fire("OnClick") -- dubbelklik: niet nog iets weggooien
+R2.btn:Fire("OnClick")
 RunTimers()
 check(#DELETED == 1 and DELETED[1] == 8000, "Broken Fang weggegooid (één keer)")
 check(LOOTED[1] == 9000, "ring opgepakt")
@@ -67,13 +68,12 @@ local said = false; for _, l in ipairs(LOG) do if l:find("Destroyed") and l:find
 check(said, "melding in de chat")
 
 -- 3. Linnen past nog steeds niet; nu is Torn Wing (50c) de goedkoopste en de loot minder waard
-check(P:IsShown() and P.offer.loot.slot == 1 and P.offer.junk.e.itemID == 8001, "meteen door: linnen tegen Torn Wing")
-check(P.more.text == "Item 2 of 2" and P.lootRow.name.text:find("Linen Cloth") and not P.busy and P.swap.enabled, "Item 2 of 2, knoppen weer aan")
-check(P.verdict.text:find("30c") and P.verdict.text:find("less"), "loot is 30c minder waard")
-check(P.advice == "leave" and P.skip.green and not P.swap.green, "advies laten liggen: Leave it groen")
+check(P:IsShown() and P.offer.loot.slot == 1 and P.offer.junk.e.itemID == 8001, "meteen door: linnen tegen Torn Wing staat nu bovenaan")
+check(not P.rows[2]:IsShown() and not P.busy and R1.btn.enabled, "nog één rij, knoppen weer aan")
+check(R1.advice == "leave" and not R1.btn.green and R1.diff.text:find("-30c", 1, true), "advies: niet slim (rood -30c)")
 check(P.offer.junk.e.itemID ~= 6948, "hearthstone (geen waarde) nooit voorgesteld")
 
--- 4. Overslaan: blijft dicht tot de loot dicht is
+-- 4. Leave all: blijft dicht tot de loot dicht is
 P.skip:Fire("OnClick"); RunTimers()
 check(not P:IsShown(), "overslaan: paneel dicht")
 E("LOOT_SLOT_CLEARED"); RunTimers()
@@ -84,7 +84,7 @@ check(#DELETED == 1, "na overslaan niets weggegooid")
 -- 5. Questloot: altijd de moeite waard
 LOOT = { { id = 9100, qty = 1 } }
 E("LOOT_OPENED")
-check(P:IsShown() and P.advice == "pickup" and P.verdict.text:find("quest item"), "questloot: altijd oppakken")
+check(P:IsShown() and P.advice == "pickup" and P.rows[1].diff.text:find("Quest") and P.rows[1].btn.green, "questloot: altijd oppakken (groen Quest)")
 E("LOOT_CLOSED")
 check(not P:IsShown(), "loot dicht: paneel dicht")
 
@@ -101,7 +101,7 @@ BAGS[0][3].count = 18
 LOOT = { { id = 2589, qty = 2 } }
 E("LOOT_OPENED")
 check(not P:IsShown(), "past bij een stapel (18+2): geen paneel")
-check(table.concat(CarefreeBagDB.events or {}, "\n"):find("no offer, loot slot 1: Linen Cloth id 2589 x2, type 1, locked false, quest nil, left false, fits true", 1, true),
+check(table.concat(CarefreeBagDB.events or {}, "\n"):find("no offer, loot slot 1: Linen Cloth id 2589 x2, type 1, locked false, quest nil, fits true", 1, true),
   "geen paneel bij volle tassen: reden per loot-vak in DB.events")
 E("LOOT_CLOSED")
 
@@ -112,18 +112,17 @@ E("UI_ERROR_MESSAGE", 3, "Inventory is full.")
 check(P:IsShown(), "foutmelding 'tassen vol' opent het paneel")
 
 -- 9. "Keep this item": Torn Wing nooit meer, meteen het volgende goedkoopste item
-check(P.offer.junk.e.itemID == 8001 and P.junkRow.label.text:find("Auto Sell"), "groepsnaam bij het goedkoopste item (Auto Sell)")
-check(not P.menu:IsShown(), "opties pas zichtbaar bij hover")
-P.junkRow:Fire("OnEnter")
-check(P.menu:IsShown() and not P.keepGroup:IsShown() and P.skipGroup:IsShown(), "hover: opties; Auto Sell: geen 'nooit uit deze groep'")
+check(P.offer.junk.e.itemID == 8001 and not P.menu:IsShown(), "goedkoopste: Torn Wing; opties pas zichtbaar bij hover")
+P.rows[1].junk:Fire("OnEnter")
+check(P.menu:IsShown() and P.menu.groupHead.text:find("Auto Sell") and not P.keepGroup:IsShown() and P.skipGroup:IsShown(), "hover: opties met groepsnaam; Auto Sell: geen 'nooit uit deze groep'")
 P.keepItem:Fire("OnClick"); RunTimers()
 check(CFC().keep[8001] == true, "Torn Wing onthouden als 'houden' (per karakter)")
 check(P:IsShown() and P.offer.junk.e.itemID == 2589, "volgende goedkoopste: Linen Cloth")
 local linenSec = P.offer.junk.sec
-P.junkRow:Fire("OnEnter")
+P.rows[1].junk:Fire("OnEnter")
 check(P.keepGroup:IsShown(), "andere groep: 'nooit uit deze groep' weer zichtbaar")
 CFC().assign[2589] = nil; E("BAG_UPDATE_DELAYED"); RunTimers()
-P.junkRow:Fire("OnEnter")
+P.rows[1].junk:Fire("OnEnter")
 check(P.offer.junk.sec == "other" and not P.keepGroup:IsShown(), "Other: geen optie voor de hele groep")
 CFC().assign[2589] = CFC().cats[1].key; E("BAG_UPDATE_DELAYED"); RunTimers()
 -- 10. "Keep this group": niets uit de groep van het linnen, dan de ring
@@ -183,17 +182,19 @@ Auctionator = nil
 -- 16. Item dat ook in de loot ligt: die stapel niet weggooien (daar past de loot op)
 E("LOOT_CLOSED"); LOOT = { { id = 8001, qty = 1 }, { id = 9200, qty = 1 } }; E("LOOT_OPENED")
 check(P:IsShown() and P.offer.loot.id == 9200 and P.offer.junk.e.itemID ~= 8001, "Torn Wing ligt ook in de loot: die stapel wordt niet voorgesteld")
-P.junkRow:Fire("OnEnter")
+P.rows[1].junk:Fire("OnEnter")
 check(P.menu.itemHead.text == P.offer.junk.e.name and P.menu.groupHead.text:find("Group:"), "menu: kopje met itemnaam en groep")
 E("LOOT_CLOSED")
 
--- 17. Twee items die niet passen: Leave it bij het eerste, dan meteen het tweede
-LOOT = { { id = 9000, qty = 1 }, { id = 9200, qty = 1 } }; E("LOOT_OPENED")
-check(P:IsShown() and P.offer.loot.id == 9000, "eerst het meest waardevolle: de ring")
+-- 17. Twee items die niet passen: twee rijen tegelijk, elk een eigen item om weg te gooien
+LOOT = { { id = 9200, qty = 1 }, { id = 9000, qty = 1 } }; E("LOOT_OPENED")
+check(P:IsShown() and P.rows[1].offer.loot.id == 9000 and P.rows[2]:IsShown() and P.rows[2].offer.loot.id == 9200,
+  "bovenaan het meest waardevolle (ring), daaronder de zijde")
+check(P.rows[1].offer.junk.e ~= P.rows[2].offer.junk.e, "elke rij een ander item om weg te gooien")
 P.skip:Fire("OnClick"); RunTimers()
-check(P:IsShown() and P.offer.loot.id == 9200, "Leave it: door naar het tweede item (zijde)")
-P.skip:Fire("OnClick"); RunTimers()
-check(not P:IsShown(), "ook die laten liggen: paneel dicht")
+check(not P:IsShown(), "Leave all: paneel dicht")
+E("BAG_UPDATE_DELAYED"); RunTimers()
+check(not P:IsShown(), "Leave all: komt niet terug zolang de loot open is")
 E("LOOT_CLOSED"); E("LOOT_OPENED")
 check(P:IsShown() and P.offer.loot.id == 9000, "lootvenster opnieuw open: weer vragen")
 E("LOOT_CLOSED")
