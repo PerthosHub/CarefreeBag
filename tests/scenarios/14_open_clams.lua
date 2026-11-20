@@ -48,3 +48,6 @@ check(#OPENED == 2, "optie uit: niet geopend")
 SlashCmdList.CAREFREEBAG(""); RunTimers()
 check(CarefreeBagConfig.clamCb, "vinkje 'Open clams automatically' in de opties")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))
+-- Belangrijke momenten apart bewaard (DB.events), met tijd: later terug te lezen.
+local ev = table.concat(CarefreeBagDB.events or {}, "\n")
+check(ev:find("clam: open 5524") and ev:find("waits: vendor") and ev:find("waits: combat") and ev:find("login: v"), "clam-pogingen en wachtredenen in DB.events:\n" .. ev)

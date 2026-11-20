@@ -198,3 +198,5 @@ check(not P:IsShown(), "kruisje: komt niet terug na tas-update of 'Inventory is 
 E("LOOT_CLOSED"); E("LOOT_OPENED")
 check(P:IsShown(), "volgende keer looten: weer vragen")
 E("LOOT_CLOSED")
+local ev9 = table.concat(CarefreeBagDB.events or {}, "\n")
+check(ev9:find("bags full: free slots") and ev9:find("bags full: offer: destroy"), "tassen-vol-momenten in DB.events:\n" .. ev9)
