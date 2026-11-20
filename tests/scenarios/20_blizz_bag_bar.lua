@@ -51,6 +51,18 @@ if FLAVOR == "forever" then
   rawset(_G, "SetCVar", function(k, v) CVARS[k] = tostring(v) end)
   ACTIVE_LAYOUT = 1
   rawset(_G, "C_EditMode", { GetLayouts = function() return { activeLayout = ACTIVE_LAYOUT, layouts = {} } end })
+  -- BagsBar: randen (plaatje) + naamloze achtergrond per vakje + verborgen selectiekader
+  local bar = CreateFrame("Frame", "BagsBar", UIParent)
+  local cluster = CreateFrame("Frame", "BagSlotCluster", bar)
+  FRAME_TEX = CreateFrame("Frame"); BG1 = CreateFrame("Frame"); BG1.w = 44
+  SELECTION = CreateFrame("Frame"); SELECTION.w = 314; SELECTION.shown = false
+  local alpha = function(self, a) self.alpha = a end
+  for _, o in ipairs({ FRAME_TEX, BG1, SELECTION, backpack }) do o.SetAlpha = alpha end
+  bar.GetRegions = function() return FRAME_TEX end
+  bar.GetChildren = function() return SELECTION, backpack, cluster, BG1 end
+  backpack.w = 44
+  CharacterBag0Slot.GetParent = function() return cluster end
+  cluster.GetParent = function() return bar end
 end
 local function SlotsHidden()
   if FLAVOR == "retail" then return CVARS.expandBagBar == "0" end
@@ -97,6 +109,10 @@ check(CFC().hideBagSlots == true and SlotsHidden(), "Ja: andere tasvakjes verbor
 if FLAVOR == "retail" then check(layouts == 1, "via WoW's eigen inklap-pijltje") end
 if FLAVOR == "forever" then check(CVARS.expandBagBar == "1", "Forever: onzichtbaar pijltje niet gebruikt, vakjes zelf verborgen") end
 if FLAVOR ~= "retail" then check(not KeyRingButton:IsShown(), "sleutelring ook weg") end
+if FLAVOR == "forever" then
+  check(FRAME_TEX.alpha == 0 and BG1.alpha == 0, "Forever: randen en zwarte achtergrond onzichtbaar")
+  check(SELECTION.alpha == nil and backpack.alpha == nil, "selectiekader en rugzak niet aangeraakt")
+end
 NS.BagBarAsk()
 check(#POPUPS == 1, "niet nog eens vragen")
 
@@ -119,6 +135,7 @@ tipLink = "|cff|Hitem:2589|h[Linen Cloth]|h|r"; GameTooltip:Show(); NS.BagToolti
 check(SlotsHidden(), "hover over gewoon item: vakjes blijven weg")
 tipLink = "|cff|Hitem:4241|h[Linen Bag]|h|r"; NS.BagTooltip(GameTooltip)
 check(SlotsShown(), "hover over een tas: vakjes zichtbaar")
+if FLAVOR == "forever" then check(BG1.alpha == 1 and FRAME_TEX.alpha == 1, "achtergrond ook terug") end
 tipLink = nil; GameTooltip:Hide(); RunTimers()
 check(SlotsHidden(), "muis weg van de tas: vakjes weer weg")
 

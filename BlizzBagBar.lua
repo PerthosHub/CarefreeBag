@@ -130,6 +130,41 @@ end
 
 local classicHooked = false
 
+-- Forever: de vakjes zitten in BagsBar, die zelf de randen tekent (plaatje UI-HUD-ActionBar-Frame)
+-- en per vakje een naamloos kind-frame met de zwarte achtergrond heeft (gezien in Johans log,
+-- 2026-11-20). Die maken we onzichtbaar met alpha (niet Hide), zodat Edit Mode en de layout
+-- van WoW er niet van in de war raken. Alleen kind-frames zonder naam, zichtbaar en zo groot als
+-- een vakje: het Edit Mode-selectiekader (verborgen) en de rugzak blijven met rust.
+local art -- { region of frame, ... }, één keer verzameld
+local function BarArt()
+	if art then return art end
+	art = {}
+	local bar = BagsBar
+	if not bar or not CharacterBag0Slot or not CharacterBag0Slot.GetParent then return art end
+	-- alleen als de vakjes echt in deze balk zitten (direct of via BagSlotCluster)
+	local p, inBar = CharacterBag0Slot:GetParent(), false
+	for _ = 1, 3 do
+		if p == bar then inBar = true end
+		p = p and p.GetParent and p:GetParent()
+	end
+	if not inBar then return art end
+	for _, r in ipairs({ bar:GetRegions() }) do art[#art + 1] = r end
+	for _, c in ipairs({ bar:GetChildren() }) do
+		local named = c.GetName and c:GetName()
+		local w = c.GetWidth and c:GetWidth() or 0
+		if not named and c:IsShown() and w > 0 and w <= 64 then art[#art + 1] = c end
+	end
+	return art
+end
+
+local function SetBarArt(show)
+	local list = BarArt()
+	for _, o in ipairs(list) do
+		if o.SetAlpha then o:SetAlpha(show and 1 or 0) end
+	end
+	return #list
+end
+
 local function SetSlotsHidden(hide, quiet)
 	if InCombatLockdown() then
 		pending = hide
@@ -160,7 +195,8 @@ local function SetSlotsHidden(hide, quiet)
 		f:SetShown(not hide)
 	end
 	classicHooked = true
-	if not quiet then Log("bag slots " .. (hide and "hidden" or "shown") .. " (" .. #ClassicSlots() .. " frames)") end
+	local nArt = SetBarArt(not hide)
+	if not quiet then Log("bag slots " .. (hide and "hidden" or "shown") .. " (" .. #ClassicSlots() .. " frames, " .. nArt .. " art)") end
 end
 
 -- Vanuit de opties (en de vraag): per karakter.
