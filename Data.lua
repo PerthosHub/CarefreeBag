@@ -200,6 +200,11 @@ end
 -- nieuwe banktabbladen (retail). We nemen alleen wat echt vakjes heeft.
 local function BankBags()
 	local ids, seen = {}, {}
+	-- Nooit je eigen tassen of de sleutelring meetellen als bank (issue #16: op Forever
+	-- is de sleutelring vak 6, net als de eerste "banktas" LAST_BAG + 1; sleutels stonden dan ook bij de bank).
+	for bag = 0, LAST_BAG do seen[bag] = true end
+	local ring = KEYRING_CONTAINER or (Enum and Enum.BagIndex and Enum.BagIndex.Keyring)
+	if ring then seen[ring] = true end
 	local function add(id)
 		if id and not seen[id] then
 			seen[id] = true
@@ -208,7 +213,14 @@ local function BankBags()
 		end
 	end
 	add(BANK_CONTAINER or (Enum and Enum.BagIndex and Enum.BagIndex.Bank) or -1)
-	for i = 1, (NUM_BANKBAGSLOTS or 0) do add(LAST_BAG + i) end
+	-- Banktassen: liefst de namen uit WoW zelf (BankBag_1..7); anders tellen vanaf de laatste tas,
+	-- en één verder als de sleutelring daartussen zit.
+	local nBank = NUM_BANKBAGSLOTS or 0
+	local shift = (ring and ring > LAST_BAG and ring <= LAST_BAG + nBank) and 1 or 0
+	for i = 1, nBank do
+		local named = Enum and Enum.BagIndex and Enum.BagIndex["BankBag_" .. i]
+		add(named or (LAST_BAG + i + shift))
+	end
 	if Enum and Enum.BagIndex then
 		for i = 1, 12 do add(Enum.BagIndex["CharacterBankTab_" .. i]) end
 	end
@@ -233,8 +245,12 @@ local function MySnap()
 	if not ch then return nil end
 	ch.snap = ch.snap or {}
 	ch.snap.name = MyFullName()
-	local _, class = UnitClass and UnitClass("player")
-	ch.snap.class = class
+	-- Let op: `UnitClass and UnitClass(...)` geeft maar één waarde terug (de klassenaam),
+	-- dan bleef de klasse altijd leeg (issue #17). Daarom select(2, ...).
+	if UnitClass then
+		local okC, class = pcall(function() return select(2, UnitClass("player")) end)
+		if okC and class then ch.snap.class = class end
+	end
 	-- goud van dit karakter, voor het bankpaneel (per karakter en alles samen)
 	local okM, m = pcall(GetMoney)
 	if okM and type(m) == "number" then ch.snap.money = m end
@@ -266,7 +282,8 @@ function ns.SnapBank()
 	for _, id in ipairs(ids) do slots = slots + (C_Container.GetContainerNumSlots(id) or 0) end
 	s.bankFree, s.bankSlots = math.max(0, slots - #raw), slots -- vrije vakjes, voor het bankpaneel
 	if not s.bank or #s.bank ~= #list then
-		Log(("snapshot: bank %d items (containers %s)"):format(#list, table.concat(ids, ",")))
+		Log(("snapshot: bank %d items (containers %s; keyring %s)"):format(#list, table.concat(ids, ","),
+			tostring(KEYRING_CONTAINER or (Enum and Enum.BagIndex and Enum.BagIndex.Keyring))))
 	end
 	s.bank, s.bankTime = list, time and time() or nil
 	ownerIndex = nil
