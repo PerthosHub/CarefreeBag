@@ -70,6 +70,7 @@ local function EnableState(who)
 		local ok, v = pcall(GetAddOnEnableState, who, ADDON)
 		if ok and type(v) == "number" then return v end
 	end
+	return nil
 end
 
 local function NameForms(name)
@@ -97,8 +98,8 @@ ns.OnEvent("PLAYER_LOGIN", "addon state probe", function()
 			local name = ch.snap and ch.snap.name
 			if name and not ch.legacy then
 				local parts = {}
-				for _, form in ipairs(NameForms(name)) do parts[#parts + 1] = "'" .. form .. "'=" .. tostring(EnableState(form)) end
-				parts[#parts + 1] = "nil=" .. tostring(EnableState(nil))
+				for _, form in ipairs(NameForms(name)) do parts[#parts + 1] = "'" .. form .. "'=" .. tostring((EnableState(form))) end
+				parts[#parts + 1] = "nil=" .. tostring((EnableState(nil)))
 				Log("addon state " .. table.concat(parts, " "))
 			end
 		end
