@@ -35,6 +35,7 @@ ERR_INV_FULL = "Inventory is full."
 
 local NS = {}
 LoadAddon(NS)
+MenuUtil = nil -- eerst ons eigen menu (terugval); stap 19 test het WoW-menu
 local function E(ev, ...) DRIVER:Fire("OnEvent", ev, ...) ; RunTimers() end
 E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); RunTimers()
 CFC().assign[2589] = CFC().cats[1].key -- linnen in een eigen groep (Consumables), niet in Other
