@@ -209,6 +209,7 @@ local function RemoveFromChatFrames()
 end
 
 local lastHello = -math.huge
+local helloQueued = false
 local function Hello()
 	lastHello = Now()
 	SendChannel("H|" .. tostring(MyFullName()))
@@ -296,11 +297,12 @@ local sendPending = false
 local collector = nil -- afzender van de laatste geldige "H": alleen zijn "A" telt
 local function SendPacket()
 	if not Sharing() or sendPending then return end
+	-- Nooit vaker dan om de RESEND_AFTER (ook een nieuw pakketje niet): elke ping laat de maker
+	-- "H" roepen, en dan zou iedereen in het kanaal tegelijk versturen.
+	if Now() - lastSend < RESEND_AFTER then return end
 	if not ns.DB.statsOutbox then
 		if not ns.StatsPending() then return end
 		MakeOutbox()
-	elseif Now() - lastSend < RESEND_AFTER then
-		return
 	end
 	lastSend = Now()
 	local box = ns.DB.statsOutbox
@@ -376,7 +378,13 @@ local function OnCollector(msg, sender)
 			online[sender] = true
 			Dev(T("%s is online (sharing, v%s)"):format(sender, seq or "?"))
 		end
-		if Now() - lastHello >= HELLO_MIN then Hello() end
+		-- Net nog "H" geroepen? Dan één keer opnieuw zodra de 30 s om zijn (deze speler miste hem).
+		local wait = HELLO_MIN - (Now() - lastHello)
+		if wait <= 0 then Hello()
+		elseif not helloQueued then
+			helloQueued = true
+			C_Timer.After(wait, function() helloQueued = false; Hello() end)
+		end
 	elseif kind == "Y" then
 		Dev(T("%s said yes (v%s)"):format(sender, seq or "?"))
 	elseif kind == "S" and seq then
@@ -453,7 +461,7 @@ function ns.SetStatsShare(v)
 		Join()
 	else
 		-- Uit = niets meer bewaren of versturen, en het kanaal uit.
-		ns.DB.stats, ns.DB.statsOutbox, sessionStart = nil, nil, nil
+		ns.DB.stats, ns.DB.statsOutbox, ns.DB.statsID, sessionStart = nil, nil, nil, nil
 		if joined and not IsCollector() then
 			joined = false
 			if LeaveChannelByName then pcall(LeaveChannelByName, CHANNEL_NAME) end

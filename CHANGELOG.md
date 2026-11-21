@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.12.2
+### 🔧 Fixes
+- 📉 **Fewer background messages.** Shared stats are sent at most once every few minutes, even when many players log in.
+- 🗑️ **Turning off stats deletes everything.** Also the random number that identified your stats.
+
 ## 1.12.1
 ### 🔧 Fixes
 - ✂️ **Shorter question about sharing stats.** Easier to read at a glance.

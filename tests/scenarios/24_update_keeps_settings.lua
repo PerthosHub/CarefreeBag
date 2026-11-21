@@ -21,7 +21,9 @@ local function SAVED()
   return {
     lang = "nl", enabled = true, lastVersion = "1.10.1", autoSell = true, autoSellAsked = true,
     mailAlwaysAuto = false, keysOffDone = true, showSort = true, maxCols = 10, autoBags = false,
-    bagFill = true, lootPanel = false, fixedOn = { boe = false, quest = true, keys = true, grey = true },
+    bagFill = true, lootPanel = false, mailSubject = false,
+    statsShare = true, statsID = "abc123", statsDevShow = false, collected = { x1 = { opens = 7 } }, statsReceived = { packets = 3 },
+    fixedOn = { boe = false, quest = true, keys = true, grey = true },
     cats = { { key = "consum", preset = "consum" }, { key = "prof", preset = "prof" }, { key = "gear", preset = "gear" } },
     chars = {
       [ME] = {
@@ -60,6 +62,10 @@ local function KeptAll(NS, label)
   check(db.lang == "nl" and db.autoSell == true and db.autoSellAsked == true and db.mailAlwaysAuto == false, label .. ": taal en Auto Sell blijven")
   check(db.showSort == true and db.maxCols == 10 and db.autoBags == false and db.lootPanel == false, label .. ": opties blijven")
   check(db.fixedOn.boe == false and db.fixedOn.keys == true, label .. ": vaste groepen aan/uit blijven")
+  check(db.mailSubject == false, label .. ": onderwerp-optie blijft")
+  check(db.statsShare == true and db.statsID == "abc123" and db.statsDevShow == false, label .. ": stats-keuze blijft (geen nieuwe vraag)")
+  check(db.collected.x1.opens == 7 and db.statsReceived.packets == 3, label .. ": ontvangen stats blijven")
+  check(not asked("CAREFREEBAG_STATS"), label .. ": stats-vraag niet opnieuw")
   check(db.chars[ALT] and db.chars[ALT].snap.name == "Thrall Stormrage", label .. ": ander karakter blijft")
   local sec = NS.SectionOf({ itemID = 2589, classID = 7, subclassID = 0, quality = 1 })
   check(sec == "drinks", label .. ": Linen Cloth staat in Drinks, niet in Other: " .. tostring(sec))
