@@ -3,7 +3,7 @@
 ## 1.12.1
 ### 🔧 Fixes
 - ✂️ **Shorter question about sharing stats.** Easier to read at a glance.
-- 🤝 **Sharing stats works for Horde and Alliance.** Stats now travel through the hidden channel, not through whispers.
+- 🤝 **Sharing stats no longer uses whispers.** Whispers can't go between Horde and Alliance, so stats now travel through the hidden channel.
 
 ## 1.12.0
 ### ✨ New
