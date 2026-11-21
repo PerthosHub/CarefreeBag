@@ -1,17 +1,21 @@
 -- CarefreeBag: Stats.lua
--- Gebruiksstatistieken (alleen met toestemming): bij de start één vriendelijke vraag.
+-- Gebruiksstatistieken (alleen met toestemming): bij de start één korte vraag.
 -- Ja = CarefreeBag telt lokaal (logins, tassen open, speeltijd, mails, fouten) en stuurt dat
 -- op de achtergrond naar de maker zodra die online is; na ontvangst wordt het hier gewist.
 --
 -- Hoe het gaat (alleen in het spel, addons kunnen niet naar internet):
 --   * Iedereen die "ja" zei en de maker zitten in een verborgen kanaal (CHANNEL_NAME).
---   * De maker (verzamelaar) roept "H|<naam>" in het kanaal bij inloggen en elke 15 min.
---     Een speler die later inlogt roept "P" (ping); de maker antwoordt met "H" per whisper.
---   * Na "H" fluistert de speler zijn pakketje: "S|seq|velden", "E|seq|aantal|fout" (max 5),
---     "X|seq|aantal E". De maker bewaart het en antwoordt "A|seq"; dan wist de speler het.
+--     Alles gaat via dat kanaal, geen whispers: op Forever zijn Horde en Alliance gescheiden
+--     (whispers komen daar niet over), en er zijn geen servers meer, alleen één grote
+--     server per regelset (Normal, PvP, RP).
+--   * Maker roept "H|<naam>" bij inloggen, elke 15 min en na een ping (max. 1× per 30 s).
+--   * Speler roept na het joinen "P|versie" (online), na "ja" ook "Y|versie" (net toegestemd).
+--   * Na een geldige "H" stuurt de speler zijn pakketje: "S|seq|velden", "E|seq|aantal|fout"
+--     (max 5), "X|seq|aantal E". De maker bewaart het en roept "A|seq"; dan wist de speler het.
 --   * Geen "A" = het pakketje blijft bewaard tot de volgende keer (niets gaat verloren).
--- Wie de maker is: een hash van de volledige naam (geen namen in de code), en de afzender
--- die WoW meegeeft moet met dezelfde voornaam beginnen.
+--   * 1.12.0 stuurde per whisper; de maker leest dat nog steeds (soort bericht maakt niet uit).
+-- Wie de maker is: een hash van de volledige naam (geen namen in de code), en de voornaam
+-- van de afzender die WoW meegeeft moet precies gelijk zijn.
 -- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
 local ADDON, ns = ...
 -- uit eerdere bestanden:
@@ -21,6 +25,7 @@ local PREFIX = "CFBStats"
 local CHANNEL_NAME = "CFBStats"
 local CHANNEL_PASS = "cfb4stats"
 local HELLO_EVERY = 15 * 60 -- maker: zo vaak "ik ben er" in het kanaal
+local HELLO_MIN = 30 -- maker: niet vaker dan dit antwoorden op pings
 local RESEND_AFTER = 5 * 60 -- speler: niet vaker dan dit hetzelfde pakketje opnieuw
 local MAX_ERRORS = 5
 
@@ -100,20 +105,64 @@ function ns.StatsError(msg)
 end
 
 ---------------------------------------------------------------------------
+-- Dev-venster (alleen voor de maker): wie is online, wie zei ja, wat kwam binnen
+---------------------------------------------------------------------------
+
+local devLines = {}
+local online = {} -- [afzender] = true (deze sessie gezien)
+local joined = false
+local ChannelNumber -- vooruit
+
+local function CountKeys(t) local n = 0; for _ in pairs(t or {}) do n = n + 1 end; return n end
+
+local function DevUpdate()
+	local f = ns.statsDev
+	if not f then return end
+	local ch = ChannelNumber() and ("#" .. ChannelNumber()) or T("not joined")
+	local head = T("Channel: %s · online now: %d · players: %d"):format(ch, CountKeys(online), CountKeys(ns.DB.collected))
+	local body = #devLines > 0 and table.concat(devLines, "\n") or ("|cff888888" .. T("Waiting for players...") .. "|r")
+	f.text:SetText("|cffffd100" .. head .. "|r\n\n" .. body)
+	f:SetHeight(math.max(110, f.text:GetStringHeight() + 50))
+end
+
+local function BuildDev()
+	if ns.statsDev or not ns.NewWindow then return end
+	local f = ns.NewWindow("CarefreeBagStatsDev", T("CarefreeBag stats (dev)"), 340, 110)
+	f:SetPoint("TOP", UIParent, "TOP", 0, -120)
+	f:SetScript("OnDragStop", f.StopMovingOrSizing)
+	f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	f.text:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -30)
+	f.text:SetWidth(308)
+	f.text:SetJustifyH("LEFT")
+	ns.statsDev = f
+end
+
+-- Regel in het dev-venster (en de log), venster zichtbaar maken.
+local function Dev(msg)
+	if not IsCollector() then return end
+	table.insert(devLines, 1, (date and date("%H:%M ") or "") .. msg)
+	while #devLines > 10 do table.remove(devLines) end
+	ns.Note("stats", msg)
+	BuildDev()
+	if ns.statsDev then ns.statsDev:Show(); DevUpdate() end
+end
+
+function ns.StatsDevShow()
+	BuildDev()
+	if ns.statsDev then ns.statsDev:Show(); DevUpdate() end
+end
+
+---------------------------------------------------------------------------
 -- Verborgen kanaal en berichten
 ---------------------------------------------------------------------------
 
-local joined = false
-local whispered = {} -- [naam] = tijd: "speler is offline" van WoW niet in de chat tonen
-
-local function ChannelNumber()
+ChannelNumber = function()
 	if not GetChannelName then return nil end
 	local id = GetChannelName(CHANNEL_NAME)
 	return (id and id > 0) and id or nil
 end
 
 local function Send(msg, kind, target)
-	if kind == "WHISPER" then whispered[target] = Now() end
 	local ok, res = pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, kind, target)
 	-- retail geeft een resultaatcode (0 = gelukt); afgeremd of geweigerd = in de log
 	if not ok or (type(res) == "number" and res ~= 0) or res == false then
@@ -137,15 +186,6 @@ local function HideFromChat()
 	for _, ev in ipairs({ "CHAT_MSG_CHANNEL_NOTICE", "CHAT_MSG_CHANNEL_NOTICE_USER", "CHAT_MSG_CHANNEL_JOIN", "CHAT_MSG_CHANNEL_LEAVE" }) do
 		pcall(ChatFrame_AddMessageEventFilter, ev, notice)
 	end
-	-- "No player named X is currently playing" vlak na onze eigen whisper niet tonen.
-	pcall(ChatFrame_AddMessageEventFilter, "CHAT_MSG_SYSTEM", function(_, _, msg)
-		if type(msg) ~= "string" then return false end
-		for name, t in pairs(whispered) do
-			if Now() - t > 10 then whispered[name] = nil
-			elseif msg:find(name, 1, true) or msg:find((name:match("^[^-]+") or name), 1, true) then return true end
-		end
-		return false
-	end)
 end
 
 local function RemoveFromChatFrames()
@@ -156,7 +196,11 @@ local function RemoveFromChatFrames()
 	end
 end
 
-local Hello -- vooruit
+local lastHello = -math.huge
+local function Hello()
+	lastHello = Now()
+	SendChannel("H|" .. tostring(MyFullName()))
+end
 
 -- Maker: af en toe laten weten dat je er bent (voor wie de ping miste).
 local looping = false
@@ -166,6 +210,7 @@ local function HelloLoop()
 	C_Timer.After(HELLO_EVERY, HelloLoop)
 end
 
+local justAgreed = false
 local function Join()
 	if joined or not Supported() then return end
 	if not (IsCollector() or Sharing()) then return end
@@ -182,9 +227,13 @@ local function Join()
 		RemoveFromChatFrames()
 		ns.Note("stats", "channel " .. tostring(ChannelNumber()) .. (IsCollector() and " (collector)" or " (sharing)"))
 		if IsCollector() then
+			ns.StatsDevShow()
 			Hello()
 			if not looping then looping = true; C_Timer.After(HELLO_EVERY, HelloLoop) end
-		elseif ns.DB.statsOutbox or ns.StatsPending() then SendChannel("P") end
+		else
+			if justAgreed then justAgreed = false; SendChannel("Y|" .. tostring(ns.VERSION)) end
+			SendChannel("P|" .. tostring(ns.VERSION))
+		end
 	end
 	C_Timer.After(2, Ready)
 end
@@ -232,7 +281,8 @@ end
 
 local lastSend = -math.huge
 local sendPending = false
-local function SendTo(collector)
+local collector = nil -- afzender van de laatste geldige "H": alleen zijn "A" telt
+local function SendPacket()
 	if not Sharing() or sendPending then return end
 	if not ns.DB.statsOutbox then
 		if not ns.StatsPending() then return end
@@ -248,13 +298,13 @@ local function SendTo(collector)
 	for i, line in ipairs(box.lines) do
 		C_Timer.After(0.5 * i, function()
 			if not Sharing() then sendPending = false; return end -- net uitgezet: niets meer versturen
-			Send(line, "WHISPER", collector)
+			SendChannel(line)
 			if i == #box.lines then sendPending = false end
 		end)
 	end
 end
 
--- Is dit "H" echt van de maker? Hash van de genoemde naam, en dezelfde voornaam als de afzender.
+-- Is dit "H" echt van de maker? Hash van de genoemde naam, en precies dezelfde voornaam als de afzender.
 local function ValidHello(claimed, sender)
 	if not claimed or claimed == "" or not ns.STATS_COLLECTORS[ns.NameHash(claimed)] then return false end
 	local first = (claimed:match("^[^%s%-]+") or ""):lower()
@@ -264,11 +314,6 @@ end
 ---------------------------------------------------------------------------
 -- Maker: ontvangen en bewaren
 ---------------------------------------------------------------------------
-
-Hello = function(target)
-	local msg = "H|" .. tostring(MyFullName())
-	if target then Send(msg, "WHISPER", target) else SendChannel(msg) end
-end
 
 local incoming = {} -- [afzender] = { seq, fields, errors }
 
@@ -287,14 +332,12 @@ local function Store(sender, box)
 	local id = f.id or sender
 	local r = ns.DB.collected[id]
 	if not r then
-		local n = 0
-		for _ in pairs(ns.DB.collected) do n = n + 1 end
-		if n >= 5000 then ns.Note("stats", "collected is full, ignored " .. sender); return end
+		if CountKeys(ns.DB.collected) >= 5000 then ns.Note("stats", "collected is full, ignored " .. sender); return false end
 		r = { first = Today(), logins = 0, opens = 0, minutes = 0, mails = 0, days = 0, errors = {}, seqs = {} }
 		ns.DB.collected[id] = r
 	end
 	r.seqs = r.seqs or {}
-	for _, s in ipairs(r.seqs) do if s == box.seq then return end end -- al eerder ontvangen (ons "A" kwam niet aan)
+	for _, s in ipairs(r.seqs) do if s == box.seq then return false end end -- al eerder ontvangen (ons "A" kwam niet aan)
 	table.insert(r.seqs, box.seq)
 	while #r.seqs > 20 do table.remove(r.seqs, 1) end
 	r.name, r.last, r.version, r.client, r.locale, r.lang, r.since, r.chars =
@@ -305,6 +348,7 @@ local function Store(sender, box)
 	for _, e in ipairs(box.errors) do
 		r.errors[e.msg] = (r.errors[e.msg] or 0) + e.n
 	end
+	return true
 end
 
 local function OnCollector(msg, sender)
@@ -312,7 +356,13 @@ local function OnCollector(msg, sender)
 	for p in (msg .. "|"):gmatch("(.-)|") do parts[#parts + 1] = p end
 	local kind, seq = parts[1], parts[2]
 	if kind == "P" then
-		Hello(sender)
+		if not online[sender] then
+			online[sender] = true
+			Dev(T("%s is online (sharing, v%s)"):format(sender, seq or "?"))
+		end
+		if Now() - lastHello >= HELLO_MIN then Hello() end
+	elseif kind == "Y" then
+		Dev(T("%s said yes (v%s)"):format(sender, seq or "?"))
 	elseif kind == "S" and seq then
 		incoming[sender] = { seq = seq, fields = Fields(parts), errors = {} }
 	elseif kind == "E" and incoming[sender] and incoming[sender].seq == seq then
@@ -322,11 +372,16 @@ local function OnCollector(msg, sender)
 		local box = incoming[sender]
 		incoming[sender] = nil
 		if #box.errors ~= (tonumber(parts[3]) or -1) then
-			ns.Note("stats", "incomplete packet from " .. sender)
+			Dev(T("Incomplete data from %s"):format(sender))
 			return
 		end
-		Store(sender, box)
-		Send("A|" .. seq, "WHISPER", sender)
+		if Store(sender, box) then
+			local nE = 0
+			for _, e in ipairs(box.errors) do nE = nE + e.n end
+			Dev(T("Data from %s: %d logins, %d bag opens, %d errors"):format(sender,
+				tonumber(box.fields.li) or 0, tonumber(box.fields.o) or 0, nE))
+		end
+		SendChannel("A|" .. seq)
 		Log("stats: received from " .. sender)
 	end
 end
@@ -338,9 +393,10 @@ local function OnSharer(msg, sender)
 			ns.Note("stats", "ignored hello from " .. tostring(sender))
 			return
 		end
+		collector = sender
 		-- Na een rondroep in het kanaal niet iedereen tegelijk: even wachten.
-		C_Timer.After(1 + math.random() * 20, function() SendTo(sender) end)
-	elseif kind == "A" then
+		C_Timer.After(1 + math.random() * 20, SendPacket)
+	elseif kind == "A" and sender == collector then
 		local box = ns.DB.statsOutbox
 		if box and box.seq == rest then
 			ns.DB.statsOutbox = nil
@@ -357,13 +413,13 @@ ns.OnEvent("CHAT_MSG_ADDON", "stats", function(_, prefix, msg, _, sender)
 end)
 
 ---------------------------------------------------------------------------
--- De vraag bij de start
+-- De vraag bij de start: kort, wat heb jij eraan, en ja zeggen
 ---------------------------------------------------------------------------
 
 function ns.StatsInvite()
-	return "|cffffd100" .. T("CarefreeBag is brand new, and you can help!") .. "|r\n\n"
-		.. T("Would you allow us to read stats like errors and how often you use CarefreeBag? Then we can fix bugs and release patches much faster. This would help enormously!")
-		.. "\n\n|cffaaaaaa" .. T("It all happens in the background and has no downside for you at all. Only your character name is shared, nothing personal. You can change this anytime in the options.") .. "|r"
+	return "|cffffd100" .. T("CarefreeBag is brand new and gets better every day, with your help!") .. "|r\n\n"
+		.. T("Share errors and usage stats, and we can fix bugs much faster.")
+		.. "\n\n|cffaaaaaa" .. T("Runs in the background, nothing changes for you. Your character name is sent along. Change it anytime in the options.") .. "|r"
 end
 
 function ns.SetStatsShare(v)
@@ -372,6 +428,7 @@ function ns.SetStatsShare(v)
 	if v then
 		sessionStart = Now()
 		CountDay()
+		justAgreed = true
 		Join()
 	else
 		-- Uit = niets meer bewaren of versturen, en het kanaal uit.
@@ -391,7 +448,7 @@ local function Ask()
 	asked = true
 	StaticPopupDialogs["CAREFREEBAG_STATS"] = {
 		text = ns.StatsInvite(),
-		button1 = T("Sure, no problem"),
+		button1 = T("Sure, I like quick bug fixes"),
 		button2 = T("No, rather not"),
 		OnAccept = function() ns.SetStatsShare(true); Print(T("Thank you!")) end,
 		OnCancel = function(_, _, reason) if reason == "clicked" then ns.SetStatsShare(false) end end,
@@ -405,6 +462,7 @@ end
 ---------------------------------------------------------------------------
 
 function ns.StatsReport()
+	if IsCollector() then ns.StatsDevShow() end
 	local all = ns.DB.collected
 	if not all or not next(all) then Print(T("No usage stats received yet.")); return end
 	local players, active, t = 0, 0, { logins = 0, opens = 0, minutes = 0, mails = 0 }
@@ -457,4 +515,3 @@ end)
 
 ns.OnEvent("MAIL_SEND_SUCCESS", "stats", function() Count("mails") end)
 ns.OnEvent("PLAYER_LOGOUT", "stats", AddMinutes)
-

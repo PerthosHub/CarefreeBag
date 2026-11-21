@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.12.1
+### 🔧 Fixes
+- ✂️ **Shorter question about sharing stats.** Easier to read at a glance.
+- 🤝 **Sharing stats works for Horde and Alliance.** Stats now travel through the hidden channel, not through whispers.
+
 ## 1.12.0
 ### ✨ New
 - 🙌 **Help make CarefreeBag better.** CarefreeBag is brand new. Once, it asks if it may share stats like errors and how often you use it with the developer, so bugs get fixed faster. Only if you say yes. It all happens in the background, you won't notice anything, and you can turn it off anytime in Advanced settings ("Help improve CarefreeBag").

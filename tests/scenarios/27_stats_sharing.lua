@@ -1,6 +1,7 @@
 local function check(c, msg) if not c then error("MISLUKT: " .. msg, 2) end print("ok  " .. msg) end
 -- Gebruiksstatistieken, kant van de speler: vraag bij de start, niets zonder toestemming,
--- tellen, alleen naar de echte maker sturen, wissen na "ontvangen", uitzetten = alles weg.
+-- tellen, alleen naar de echte maker sturen (via het kanaal), wissen na "ontvangen",
+-- uitzetten = alles weg.
 ITEMS = { [2589] = { name = "Linen Cloth", quality = 1, stack = 20, bind = 0, icon = 4, price = 10 } }
 BAGS[0] = { n = 16, [1] = { itemID = 2589, count = 5 } }
 LOADED_ADDONS = {}
@@ -11,12 +12,13 @@ C_ChatInfo = {
   RegisterAddonMessagePrefix = function(p) PREFIX_REG = p end,
   SendAddonMessage = function(p, m, k, t) ADDONMSG[#ADDONMSG + 1] = { p = p, m = m, k = k, t = t } end,
 }
-function JoinTemporaryChannel(n) JOINED = n end
+function JoinTemporaryChannel(n, pass) JOINED = n; JOIN_PASS = pass end
 function GetChannelName(n) if n == JOINED then return 5 end return 0 end
 function LeaveChannelByName(n) if n == JOINED then JOINED = nil end end
 local NS = LoadAddon({})
 local function E(ev, ...) DRIVER:Fire("OnEvent", ev, ...); RunTimers() end
-local function Whispers(to) local r = {}; for _, x in ipairs(ADDONMSG) do if x.k == "WHISPER" and x.t == to then r[#r + 1] = x.m end end; return r end
+local function Chan(pat) local r = {}; for _, x in ipairs(ADDONMSG) do if x.k == "CHANNEL" and x.t == 5 and x.m:find(pat) then r[#r + 1] = x.m end end; return r end
+local function Whispers() local n = 0; for _, x in ipairs(ADDONMSG) do if x.k == "WHISPER" then n = n + 1 end end; return n end
 
 check(NS.NameHash("Thrall Frostwolf") == 2411278354, "naam-hash gelijk aan die van het hulpscript (" .. NS.NameHash("Thrall Frostwolf") .. ")")
 check(NS.NameHash("THRALL frostwolf") == NS.NameHash("thrall frostwolf"), "hash zonder verschil in hoofdletters")
@@ -26,15 +28,17 @@ E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); E("PLAYER_ENTERING_WORLD", 
 local asked = false
 for _, p in ipairs(POPUPS) do if p.which == "CAREFREEBAG_STATS" then asked = true end end
 check(asked, "bij de start de vraag")
-check(StaticPopupDialogs.CAREFREEBAG_STATS.text:find("brand new"), "vraag: 'brand new'")
-check(StaticPopupDialogs.CAREFREEBAG_STATS.button1 == "Sure, no problem" and StaticPopupDialogs.CAREFREEBAG_STATS.button2 == "No, rather not", "knoppen")
-check(not JOINED, "geen toestemming: geen kanaal")
+local dlg = StaticPopupDialogs.CAREFREEBAG_STATS
+check(dlg.text:find("gets better every day") and dlg.text:find("fix bugs much faster"), "vraag: wat heb jij eraan")
+check(dlg.button1 == "Sure, I like quick bug fixes" and dlg.button2 == "No, rather not", "knoppen")
+check(not JOINED and #ADDONMSG == 0, "geen toestemming: geen kanaal, niets verstuurd")
 check(CarefreeBagDB.stats == nil and CarefreeBagDB.statsShare == nil, "geen toestemming: niets geteld")
 
 -- Ja
-StaticPopupDialogs.CAREFREEBAG_STATS.OnAccept(); RunTimers()
+dlg.OnAccept(); RunTimers()
 check(CarefreeBagDB.statsShare == true, "toestemming bewaard")
-check(JOINED == "CFBStats" and PREFIX_REG == "CFBStats", "verborgen kanaal en prefix")
+check(JOINED == "CFBStats" and JOIN_PASS == "cfb4stats" and PREFIX_REG == "CFBStats", "verborgen kanaal met wachtwoord en prefix")
+check(#Chan("^Y|") == 1 and #Chan("^P|") == 1, "maker hoort 'net ja gezegd' en 'online'")
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
 check(CarefreeBagDB.stats.opens == 2, "tassen open geteld: " .. tostring(CarefreeBagDB.stats.opens))
@@ -44,40 +48,41 @@ NS.SetError("Interface/AddOns/CarefreeBag/Loot.lua:10: boom")
 NS.SetError("Interface/AddOns/CarefreeBag/Loot.lua:10: boom")
 check(CarefreeBagDB.stats.errors["Loot.lua:10: boom"] == 2, "fout geteld, zonder pad")
 
--- Nep-maker: andere voornaam dan de naam in het bericht
+-- Nep-makers
 NS.STATS_COLLECTORS[NS.NameHash("Perthos Test")] = true
 E("CHAT_MSG_ADDON", "CFBStats", "H|Perthos Test", "CHANNEL", "Evil-Realm"); RunTimers()
-check(#Whispers("Evil-Realm") == 0, "niets naar een nep-maker")
 E("CHAT_MSG_ADDON", "CFBStats", "H|Perthos Test", "CHANNEL", "Perthosian-Realm"); RunTimers()
-check(#Whispers("Perthosian-Realm") == 0, "voornaam die er alleen mee begint telt niet")
--- Onbekende naam
 E("CHAT_MSG_ADDON", "CFBStats", "H|Someone Else", "CHANNEL", "Someone-Realm"); RunTimers()
-check(#Whispers("Someone-Realm") == 0, "niets naar een onbekende")
+check(#Chan("^S|") == 0, "niets naar een nep-maker (andere voornaam, langere voornaam, onbekende naam)")
 
 -- Echte maker
 E("CHAT_MSG_ADDON", "CFBStats", "H|Perthos Test", "CHANNEL", "Perthos-Realm"); RunTimers()
-local w = Whispers("Perthos-Realm")
-check(#w == 3, "drie regels naar de maker: " .. #w)
-check(w[1]:find("^S|%d+|") and w[1]:find("|o=2|") and w[1]:find("|id=%x+|") and w[1]:find("|c=16001|"), "S-regel met tellers: " .. tostring(w[1]))
-check(w[2]:find("^E|%d+|2|Loot.lua:10: boom$"), "E-regel: " .. tostring(w[2]))
-check(w[3]:find("^X|%d+|1$"), "X-regel: " .. tostring(w[3]))
-local seq = w[1]:match("^S|(%d+)|")
+local S, Er, X = Chan("^S|"), Chan("^E|"), Chan("^X|")
+check(#S == 1 and #Er == 1 and #X == 1, "pakketje in het kanaal: S, E, X")
+check(S[1]:find("|o=2|") and S[1]:find("|id=%x+|") and S[1]:find("|c=16001|") and S[1]:find("|li=1|"), "S-regel met tellers: " .. tostring(S[1]))
+check(Er[1]:find("^E|%d+|2|Loot.lua:10: boom$"), "E-regel: " .. tostring(Er[1]))
+check(X[1]:find("^X|%d+|1$"), "X-regel: " .. tostring(X[1]))
+check(Whispers() == 0, "geen whispers (Horde en Alliance kunnen elkaar niet fluisteren)")
+local seq = S[1]:match("^S|(%d+)|")
 check(CarefreeBagDB.statsOutbox and CarefreeBagDB.statsOutbox.seq == seq, "pakketje bewaard tot ontvangen")
 check(CarefreeBagDB.stats.opens == 0 and next(CarefreeBagDB.stats.errors) == nil, "tellers weer op nul")
 
 -- Nog een "H" voordat het bevestigd is: niet meteen opnieuw (pas na 5 minuten)
-E("CHAT_MSG_ADDON", "CFBStats", "H|Perthos Test", "WHISPER", "Perthos-Realm"); RunTimers()
-check(#Whispers("Perthos-Realm") == 3, "niet meteen opnieuw versturen")
+E("CHAT_MSG_ADDON", "CFBStats", "H|Perthos Test", "CHANNEL", "Perthos-Realm"); RunTimers()
+check(#Chan("^S|") == 1, "niet meteen opnieuw versturen")
 
--- Ontvangen: weg bij de speler
-E("CHAT_MSG_ADDON", "CFBStats", "A|999", "WHISPER", "Perthos-Realm")
+-- Ontvangen: weg bij de speler, maar alleen als het van de maker komt
+E("CHAT_MSG_ADDON", "CFBStats", "A|999", "CHANNEL", "Perthos-Realm")
 check(CarefreeBagDB.statsOutbox, "verkeerd volgnummer: blijft bewaard")
-E("CHAT_MSG_ADDON", "CFBStats", "A|" .. seq, "WHISPER", "Perthos-Realm")
-check(CarefreeBagDB.statsOutbox == nil, "bevestigd: gewist")
+E("CHAT_MSG_ADDON", "CFBStats", "A|" .. seq, "CHANNEL", "Evil-Realm")
+check(CarefreeBagDB.statsOutbox, "bevestiging van iemand anders telt niet")
+E("CHAT_MSG_ADDON", "CFBStats", "A|" .. seq, "CHANNEL", "Perthos-Realm")
+check(CarefreeBagDB.statsOutbox == nil, "bevestigd door de maker: gewist")
 
 -- Opties: vinkje
 SlashCmdList.CAREFREEBAG(""); RunTimers()
 check(CarefreeBagConfig.statsCb, "vinkje 'Help improve CarefreeBag' in de opties")
+check(CarefreeBagStatsDev == nil, "speler krijgt geen dev-venster")
 
 -- Uit: niets meer bewaren, kanaal uit
 NS.SetStatsShare(false)
