@@ -22,7 +22,7 @@ check(NS.NameHash("Thrall Frostwolf") == 2411278354, "naam-hash gelijk aan die v
 check(NS.NameHash("THRALL frostwolf") == NS.NameHash("thrall frostwolf"), "hash zonder verschil in hoofdletters")
 
 CarefreeBagDB = { lang = "en", autoBags = false }
-E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); RunTimers()
+E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); E("PLAYER_ENTERING_WORLD", true); RunTimers()
 local asked = false
 for _, p in ipairs(POPUPS) do if p.which == "CAREFREEBAG_STATS" then asked = true end end
 check(asked, "bij de start de vraag")
@@ -38,6 +38,8 @@ check(JOINED == "CFBStats" and PREFIX_REG == "CFBStats", "verborgen kanaal en pr
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
 check(CarefreeBagDB.stats.opens == 2, "tassen open geteld: " .. tostring(CarefreeBagDB.stats.opens))
+E("PLAYER_ENTERING_WORLD", false); E("PLAYER_ENTERING_WORLD", true)
+check(CarefreeBagDB.stats.logins == 1, "/reload telt niet als login, echt inloggen wel")
 NS.SetError("Interface/AddOns/CarefreeBag/Loot.lua:10: boom")
 NS.SetError("Interface/AddOns/CarefreeBag/Loot.lua:10: boom")
 check(CarefreeBagDB.stats.errors["Loot.lua:10: boom"] == 2, "fout geteld, zonder pad")
@@ -46,6 +48,8 @@ check(CarefreeBagDB.stats.errors["Loot.lua:10: boom"] == 2, "fout geteld, zonder
 NS.STATS_COLLECTORS[NS.NameHash("Perthos Test")] = true
 E("CHAT_MSG_ADDON", "CFBStats", "H|Perthos Test", "CHANNEL", "Evil-Realm"); RunTimers()
 check(#Whispers("Evil-Realm") == 0, "niets naar een nep-maker")
+E("CHAT_MSG_ADDON", "CFBStats", "H|Perthos Test", "CHANNEL", "Perthosian-Realm"); RunTimers()
+check(#Whispers("Perthosian-Realm") == 0, "voornaam die er alleen mee begint telt niet")
 -- Onbekende naam
 E("CHAT_MSG_ADDON", "CFBStats", "H|Someone Else", "CHANNEL", "Someone-Realm"); RunTimers()
 check(#Whispers("Someone-Realm") == 0, "niets naar een onbekende")

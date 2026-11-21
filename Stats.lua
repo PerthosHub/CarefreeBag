@@ -19,6 +19,7 @@ local Log, MyFullName, Print, T = ns.Log, ns.MyFullName, ns.Print, ns.T
 
 local PREFIX = "CFBStats"
 local CHANNEL_NAME = "CFBStats"
+local CHANNEL_PASS = "cfb4stats"
 local HELLO_EVERY = 15 * 60 -- maker: zo vaak "ik ben er" in het kanaal
 local RESEND_AFTER = 5 * 60 -- speler: niet vaker dan dit hetzelfde pakketje opnieuw
 local MAX_ERRORS = 5
@@ -113,8 +114,11 @@ end
 
 local function Send(msg, kind, target)
 	if kind == "WHISPER" then whispered[target] = Now() end
-	local ok, err = pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, kind, target)
-	if not ok then ns.Note("stats", "send failed: " .. tostring(err)) end
+	local ok, res = pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, kind, target)
+	-- retail geeft een resultaatcode (0 = gelukt); afgeremd of geweigerd = in de log
+	if not ok or (type(res) == "number" and res ~= 0) or res == false then
+		ns.Note("stats", "send " .. msg:sub(1, 1) .. " " .. kind .. " failed: " .. tostring(res))
+	end
 end
 
 local function SendChannel(msg)
@@ -169,15 +173,20 @@ local function Join()
 	HideFromChat()
 	if C_ChatInfo.RegisterAddonMessagePrefix then pcall(C_ChatInfo.RegisterAddonMessagePrefix, PREFIX) end
 	local join = JoinTemporaryChannel or JoinChannelByName
-	if join then pcall(join, CHANNEL_NAME) end
-	C_Timer.After(2, function()
+	-- Wachtwoord: niet geheim (staat in de code), maar zo kan niet iedereen het kanaal zomaar joinen.
+	if join then pcall(join, CHANNEL_NAME, CHANNEL_PASS) end
+	local tries = 0
+	local function Ready()
+		tries = tries + 1
+		if not ChannelNumber() and tries < 4 then C_Timer.After(5, Ready); return end -- kanaal nog niet klaar
 		RemoveFromChatFrames()
 		ns.Note("stats", "channel " .. tostring(ChannelNumber()) .. (IsCollector() and " (collector)" or " (sharing)"))
 		if IsCollector() then
 			Hello()
 			if not looping then looping = true; C_Timer.After(HELLO_EVERY, HelloLoop) end
 		elseif ns.DB.statsOutbox or ns.StatsPending() then SendChannel("P") end
-	end)
+	end
+	C_Timer.After(2, Ready)
 end
 ns.StatsJoin = Join
 
@@ -238,6 +247,7 @@ local function SendTo(collector)
 	-- rustig na elkaar (WoW remt addon-berichten af)
 	for i, line in ipairs(box.lines) do
 		C_Timer.After(0.5 * i, function()
+			if not Sharing() then sendPending = false; return end -- net uitgezet: niets meer versturen
 			Send(line, "WHISPER", collector)
 			if i == #box.lines then sendPending = false end
 		end)
@@ -248,7 +258,7 @@ end
 local function ValidHello(claimed, sender)
 	if not claimed or claimed == "" or not ns.STATS_COLLECTORS[ns.NameHash(claimed)] then return false end
 	local first = (claimed:match("^[^%s%-]+") or ""):lower()
-	return first ~= "" and (sender or ""):lower():sub(1, #first) == first
+	return first ~= "" and ((sender or ""):match("^[^%s%-]+") or ""):lower() == first
 end
 
 ---------------------------------------------------------------------------
@@ -277,12 +287,16 @@ local function Store(sender, box)
 	local id = f.id or sender
 	local r = ns.DB.collected[id]
 	if not r then
+		local n = 0
+		for _ in pairs(ns.DB.collected) do n = n + 1 end
+		if n >= 5000 then ns.Note("stats", "collected is full, ignored " .. sender); return end
 		r = { first = Today(), logins = 0, opens = 0, minutes = 0, mails = 0, days = 0, errors = {}, seqs = {} }
 		ns.DB.collected[id] = r
 	end
 	r.seqs = r.seqs or {}
-	if r.seqs[box.seq] then return end -- al eerder ontvangen (ons "A" kwam niet aan)
-	r.seqs[box.seq] = true
+	for _, s in ipairs(r.seqs) do if s == box.seq then return end end -- al eerder ontvangen (ons "A" kwam niet aan)
+	table.insert(r.seqs, box.seq)
+	while #r.seqs > 20 do table.remove(r.seqs, 1) end
 	r.name, r.last, r.version, r.client, r.locale, r.lang, r.since, r.chars =
 		sender, Today(), f.v, f.c, f.l, f.lang, f.s, tonumber(f.ch)
 	for _, k in ipairs({ { "logins", "li" }, { "opens", "o" }, { "minutes", "m" }, { "mails", "ma" }, { "days", "d" } }) do
@@ -349,7 +363,7 @@ end)
 function ns.StatsInvite()
 	return "|cffffd100" .. T("CarefreeBag is brand new, and you can help!") .. "|r\n\n"
 		.. T("Would you allow us to read stats like errors and how often you use CarefreeBag? Then we can fix bugs and release patches much faster. This would help enormously!")
-		.. "\n\n|cffaaaaaa" .. T("It all happens in the background and has no downside for you at all. Only your character name is visible to the developer. You can change this anytime in the options.") .. "|r"
+		.. "\n\n|cffaaaaaa" .. T("It all happens in the background and has no downside for you at all. Only your character name is shared, nothing personal. You can change this anytime in the options.") .. "|r"
 end
 
 function ns.SetStatsShare(v)
@@ -420,11 +434,17 @@ end
 -- Events
 ---------------------------------------------------------------------------
 
+-- Alleen echt inloggen telt als login, niet /reload.
+ns.OnEvent("PLAYER_ENTERING_WORLD", "stats", function(_, isInitialLogin)
+	if isInitialLogin and Sharing() then
+		local s = Stats()
+		s.logins = (s.logins or 0) + 1
+	end
+end)
+
 ns.OnEvent("PLAYER_LOGIN", "stats", function()
 	if Sharing() then
 		sessionStart = Now()
-		local s = Stats()
-		s.logins = (s.logins or 0) + 1
 		CountDay()
 	end
 	-- Tassen open tellen (het venster bestaat pas na de login van Start.lua).
