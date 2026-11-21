@@ -259,20 +259,84 @@ end
 -- één lijst voor het hele account (DB.assign); elk karakter begint met een kopie daarvan.
 -- Bekijk je de tassen of bank van een ander karakter, dan wijst viewKey even naar dat
 -- karakter: zo gebruiken we dezelfde groepen-indeling zonder iets dubbel te bouwen.
+-- WoW geeft de realmnaam soms niet: GetRealmName() = "" (Forever, 2026-11-21: beide
+-- karakters kregen een nieuwe sleutel "Naam-", dus groepen van het sjabloon, alles in Other
+-- en de eerste-keer-vragen opnieuw). Zonder realm maken we dus nooit een nieuwe sleutel,
+-- maar zoeken we je bestaande gegevens (bij meerdere realms: de laatst bekende realm,
+-- anders de nieuwste tassen-snapshot).
+local function FindOwnEntry(full)
+	local pre = full .. "-"
+	local best, bestT
+	for k, c in pairs(ns.DB.chars) do
+		if #k > #pre and k:sub(1, #pre) == pre and not c.legacy then
+			if ns.DB.lastRealm and k == pre .. ns.DB.lastRealm then return k end
+			local t = c.snap and c.snap.bagsTime or 0
+			if not best or t > bestT then best, bestT = k, t end
+		end
+	end
+	return best
+end
+
+-- Herstel na die fout: gegevens onder "Naam-" (zonder realm) terug onder de echte sleutel.
+-- Bestond die al, dan blijft alles daarvan (jouw groepen); alleen nieuwere tassen/bank-
+-- snapshots nemen we over.
+local function RepairEmptyRealm(full, key)
+	local badKey = full .. "-"
+	local bad = ns.DB.chars[badKey]
+	if not bad or bad.legacy or badKey == key then return end
+	local good = ns.DB.chars[key]
+	if not good then
+		ns.DB.chars[key] = bad
+	elseif bad.snap then
+		good.snap = good.snap or {}
+		local b, g = bad.snap, good.snap
+		for _, part in ipairs({ { "bagsTime", "bags", "bagsFree", "bagsSlots", "money" }, { "bankTime", "bank", "bankFree", "bankSlots" } }) do
+			if b[part[2]] and (b[part[1]] or 0) > (g[part[1]] or 0) then
+				for _, f in ipairs(part) do g[f] = b[f] end
+			end
+		end
+		g.name, g.class = g.name or b.name, g.class or b.class
+	end
+	ns.DB.chars[badKey] = nil
+	ns.Note("realm", "settings found under '" .. badKey .. "' moved back to '" .. key .. "'")
+end
+
+local warnedNoRealm
+-- Sleutel van dit karakter; de tweede waarde zegt of hij zeker is (dan onthouden we hem).
+local function ResolveKey(name)
+	-- Forever: twee karakters kunnen dezelfde voornaam hebben (Thrall Frostwolf en
+	-- Thrall Stormrage). Daarom de volledige naam als sleutel.
+	local full = ns.MyFullName() or name
+	local realm = GetRealmName and GetRealmName() or ""
+	if realm ~= "" then
+		ns.DB.lastRealm = realm
+		local key = full .. "-" .. realm
+		RepairEmptyRealm(full, key)
+		return key, true, full
+	end
+	local key = FindOwnEntry(full) or (ns.DB.lastRealm and (full .. "-" .. ns.DB.lastRealm))
+	if not key then return full .. "-", true, full end -- nog nooit een realm gezien: zoals vroeger
+	if not warnedNoRealm then
+		warnedNoRealm = true
+		ns.Note("realm", "WoW gave no realm name; using '" .. key .. "'")
+	end
+	return key, false, full
+end
+
 function ns.CharEntry()
 	if ns.viewKey and ns.DB.chars[ns.viewKey] then return ns.DB.chars[ns.viewKey] end
-	if not ns.charKey then
+	local key = ns.charKey
+	if not key or ns.charKeyUnsure then -- zonder realm: elke keer opnieuw kijken tot WoW hem wel geeft
 		local name = UnitName and UnitName("player")
 		if not name or name == "" or name == UNKNOWNOBJECT then return nil end
-		local realm = "-" .. ((GetRealmName and GetRealmName()) or "")
-		-- Forever: twee karakters kunnen dezelfde voornaam hebben (Thrall Frostwolf en
-		-- Thrall Stormrage). Daarom de volledige naam als sleutel.
-		local full = ns.MyFullName() or name
-		ns.charKey = full .. realm
+		local sure, full
+		key, sure, full = ResolveKey(name)
+		ns.charKey, ns.charKeyUnsure = key, not sure
+		local realm = key:sub(#full + 1) -- "-Realm"
 		-- Tot 1.5.0 was de sleutel alleen de voornaam; die gedeelde gegevens kopiëren we
 		-- (zonder de onthouden tassen/bank, want die waren van wie het laatst inlogde).
 		local old = ns.DB.chars[name .. realm]
-		if full ~= name and old and not ns.DB.chars[ns.charKey] then
+		if full ~= name and old and not ns.DB.chars[key] then
 			local function copy(t) local n = {}; for k, v in pairs(t or {}) do n[k] = type(v) == "table" and copy(v) or v end; return n end
 			-- Wie het laatst inlogde, heeft de groepen het laatst aangepast: die houdt ze.
 			-- De anderen beginnen weer met de groepen van vóór 1.3.0 (de accountlijst).
@@ -281,15 +345,15 @@ function ns.CharEntry()
 			local ch = copy(old)
 			ch.snap, ch.legacy, ch.lastName = nil, nil, nil
 			if owner and owner ~= full then ch.cats, ch.order, ch.sort, ch.collapsed = nil, nil, nil, nil end
-			ns.DB.chars[ns.charKey] = ch
+			ns.DB.chars[key] = ch
 			old.snap, old.legacy = nil, true -- oude sleutel: niet meer tonen als karakter
 		end
 	end
-	local ch = ns.DB.chars[ns.charKey]
+	local ch = ns.DB.chars[key]
 	if not ch then
 		ch = { assign = {} }
 		for id, k in pairs(ns.DB.assign or {}) do ch.assign[id] = k end
-		ns.DB.chars[ns.charKey] = ch
+		ns.DB.chars[key] = ch
 	end
 	if not ch.hidden then -- verbergen geldt per karakter; begin met de oude lijst
 		ch.hidden = {}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.10.3
+### 🔧 Fixes
+- 🛟 **Your groups no longer reset after logging in.** Sometimes WoW doesn't tell addons your realm right away. CarefreeBag then started over: all items in Other and the first-time questions again. It now finds your own settings, and puts back the ones that were split off.
+
 ## 1.10.2
 ### ✨ New
 - 🎒 **Bags full: see the smart choice at a glance.** Each loot item that doesn't fit gets one row, right next to that item in the loot window: the loot ➜ the item that goes, and the difference. A green row with a check mark is a smart swap, a red row with a cross is not. Click **Pick up** on the row you want. Names and prices are in the tooltip.
