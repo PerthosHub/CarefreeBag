@@ -278,8 +278,8 @@ local function FindOwnEntry(full)
 end
 
 -- Herstel na die fout: gegevens onder "Naam-" (zonder realm) terug onder de echte sleutel.
--- Bestond die al, dan blijft alles daarvan (jouw groepen); alleen nieuwere tassen/bank-
--- snapshots nemen we over.
+-- Bestond die al, dan blijft alles daarvan (jouw groepen); erbij komen alleen wat nog niet
+-- bestond (gesleept naar een groep die je echt hebt, verborgen, bewaard) en nieuwere snapshots.
 local function RepairEmptyRealm(full, key)
 	local badKey = full .. "-"
 	local bad = ns.DB.chars[badKey]
@@ -287,7 +287,22 @@ local function RepairEmptyRealm(full, key)
 	local good = ns.DB.chars[key]
 	if not good then
 		ns.DB.chars[key] = bad
-	elseif bad.snap then
+	else
+		-- wat je tijdens de fout sleepte/bewaarde: erbij, als het nog niet bestond
+		local groups = { grey = true, other = true, quest = true, boe = true, keys = true }
+		for _, c in ipairs(good.cats or {}) do groups[c.key] = true end
+		good.assign = good.assign or {}
+		for id, k in pairs(bad.assign or {}) do
+			if good.assign[id] == nil and groups[k] then good.assign[id] = k end
+		end
+		for _, f in ipairs({ "hidden", "keep", "questKeep", "questSnooze" }) do
+			if bad[f] then
+				good[f] = good[f] or {}
+				for id, v in pairs(bad[f]) do if good[f][id] == nil then good[f][id] = v end end
+			end
+		end
+	end
+	if good and bad.snap then
 		good.snap = good.snap or {}
 		local b, g = bad.snap, good.snap
 		for _, part in ipairs({ { "bagsTime", "bags", "bagsFree", "bagsSlots", "money" }, { "bankTime", "bank", "bankFree", "bankSlots" } }) do
@@ -314,8 +329,10 @@ local function ResolveKey(name)
 		RepairEmptyRealm(full, key)
 		return key, true, full
 	end
-	local key = FindOwnEntry(full) or (ns.DB.lastRealm and (full .. "-" .. ns.DB.lastRealm))
-	if not key then return full .. "-", true, full end -- nog nooit een realm gezien: zoals vroeger
+	local key = FindOwnEntry(full)
+	-- Nog geen gegevens (nieuw karakter, of nog nooit een realm gezien): "Naam-" zoals vroeger.
+	-- Geeft WoW later de realm wel, dan zet RepairEmptyRealm het onder de echte sleutel.
+	if not key then return full .. "-", not ns.DB.lastRealm, full end
 	if not warnedNoRealm then
 		warnedNoRealm = true
 		ns.Note("realm", "WoW gave no realm name; using '" .. key .. "'")
@@ -326,7 +343,10 @@ end
 function ns.CharEntry()
 	if ns.viewKey and ns.DB.chars[ns.viewKey] then return ns.DB.chars[ns.viewKey] end
 	local key = ns.charKey
-	if not key or ns.charKeyUnsure then -- zonder realm: elke keer opnieuw kijken tot WoW hem wel geeft
+	local now = GetTime and GetTime() or 0
+	-- zonder realm: om de seconde opnieuw kijken tot WoW hem wel geeft
+	if not key or (ns.charKeyUnsure and math.abs(now - (ns.charKeyTime or -10)) >= 1) then
+		ns.charKeyTime = now
 		local name = UnitName and UnitName("player")
 		if not name or name == "" or name == UNKNOWNOBJECT then return nil end
 		local sure, full

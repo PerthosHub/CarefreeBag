@@ -56,7 +56,7 @@ local function KeptAll(NS, label)
   check(ch.order[1] == "drinks" and ch.collapsed.craft, label .. ": volgorde en ingeklapt blijven")
   check(ch.hidden[1234] and ch.keep[4599] and ch.panelSide == "left", label .. ": verborgen/bewaard/paneelkant blijven")
   check(ch.hideBagSlots == true and not asked("CAREFREEBAG_BAGBAR"), label .. ": tassenbalk-vraag niet opnieuw")
-  check(#ch.snap.bank == 1, label .. ": onthouden bank blijft")
+  check(ch.snap.bank and #ch.snap.bank >= 1, label .. ": onthouden bank blijft")
   check(db.lang == "nl" and db.autoSell == true and db.autoSellAsked == true and db.mailAlwaysAuto == false, label .. ": taal en Auto Sell blijven")
   check(db.showSort == true and db.maxCols == 10 and db.autoBags == false and db.lootPanel == false, label .. ": opties blijven")
   check(db.fixedOn.boe == false and db.fixedOn.keys == true, label .. ": vaste groepen aan/uit blijven")
@@ -81,17 +81,29 @@ KeptAll(Load(), "geen realm, oude gegevens")
 
 -- 4. Herstel: de fout is al gebeurd (sleutel "Naam-" met sjabloongroepen en een nieuwere snapshot)
 CarefreeBagDB = SAVED()
-CarefreeBagDB.chars["Thrall Frostwolf-"] = { assign = {}, cats = { { key = "consum", preset = "consum" } }, hideBagSlots = true,
-  snap = { name = "Thrall Frostwolf", bags = { { id = 4599, n = 5 } }, bagsTime = 2000 } }
+CarefreeBagDB.chars["Thrall Frostwolf-"] = { cats = { { key = "consum", preset = "consum" } }, hideBagSlots = true,
+  assign = { [5555] = "drinks", [6666] = "consum", [2589] = "consum" }, keep = { [7777] = true },
+  snap = { name = "Thrall Frostwolf", bags = {}, bagsTime = 1, bank = { { id = 2589, n = 3 }, { id = 4599, n = 1 } }, bankTime = 2000 } }
+CarefreeBagDB.chars["Thrall Stormrage-"] = { assign = {}, cats = {}, snap = { name = "Thrall Stormrage", bags = {}, bagsTime = 3000 } }
 REALM = "Some Realm 1 PvE"
 local NS = Load()
-KeptAll(NS, "herstel")
-check(#CarefreeBagDB.chars[ME].snap.bags >= 1 and CarefreeBagDB.chars[ME].snap.bagsTime >= 2000, "herstel: nieuwere tassen-snapshot overgenomen")
-check(#CarefreeBagDB.chars[ME].snap.bank == 1, "herstel: oudere bank blijft (die stond niet onder de foute sleutel)")
+local ch = CarefreeBagDB.chars[ME]
+check(ch.snap.bank and #ch.snap.bank == 2 and ch.snap.bankTime == 2000, "herstel: nieuwere bank-snapshot overgenomen")
+check(ch.assign[5555] == "drinks" and ch.keep[7777], "herstel: tijdens de fout gesleept/bewaard (naar een eigen groep) blijft")
+check(ch.assign[6666] == nil and ch.assign[2589] == "drinks", "herstel: niets naar sjabloongroepen, eigen indeling wint")
+check(CarefreeBagDB.chars["Thrall Stormrage-"], "herstel: Stormrage (zelfde voornaam) wacht tot hij zelf inlogt")
+ch.assign[5555], ch.keep[7777] = nil, nil
 
--- 5. Nieuw karakter zonder realm, terwijl de realm al eens bekend was: geen sleutel zonder realm
-CarefreeBagDB = SAVED(); CarefreeBagDB.lastRealm = "Some Realm 1 PvE"
+KeptAll(NS, "herstel")
+
+-- 5. Nieuw karakter zonder realm, terwijl de realm al eens bekend was: tijdelijk "Naam-",
+-- met realm daarna onder de echte sleutel (nooit onder een geraden realm)
+CarefreeBagDB = SAVED(); CarefreeBagDB.lastRealm = "Other Realm"
 CarefreeBagDB.chars[ME] = nil
 REALM = ""
 NS = Load()
-check(NS.charKey == ME and not CarefreeBagDB.chars["Thrall Frostwolf-"], "nieuw karakter zonder realm: sleutel met de laatst bekende realm (" .. keys() .. ")")
+check(NS.charKey == "Thrall Frostwolf-" and not CarefreeBagDB.chars["Thrall Frostwolf-Other Realm"], "nieuw karakter zonder realm: niet onder een geraden realm (" .. keys() .. ")")
+CarefreeBagDB.chars["Thrall Frostwolf-"].hideBagSlots = false
+REALM = "Some Realm 1 PvE"
+NS = Load()
+check(NS.charKey == ME and not CarefreeBagDB.chars["Thrall Frostwolf-"] and CarefreeBagDB.chars[ME].hideBagSlots == false, "daarna met realm: verhuisd naar de echte sleutel (" .. keys() .. ")")
