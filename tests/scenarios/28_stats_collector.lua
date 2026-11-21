@@ -26,7 +26,7 @@ for _, p in ipairs(POPUPS) do check(p.which ~= "CAREFREEBAG_STATS", "maker krijg
 check(JOINED == "CFBStats", "maker zit in het kanaal")
 check(Find("^H|Thrall Frostwolf$"), "maker meldt zich in het kanaal")
 check(CarefreeBagStatsDev and CarefreeBagStatsDev:IsShown(), "dev-venster zichtbaar")
-check(Dev():find("Channel: #5") and Dev():find("Waiting for players"), "dev-venster: kanaal en wachten: " .. Dev())
+check(Dev():find("Channel: #5") and Dev():find("Waiting for players") and Dev():find("All time: 0 packets") and Dev():find("Last data: never"), "dev-venster: kanaal, totaal en wachten: " .. Dev())
 
 E("CHAT_MSG_ADDON", "CFBStats", "Y|1.12.1", "CHANNEL", "Bob-Realm")
 check(Dev():find("Bob%-Realm said yes %(v1.12.1%)"), "dev-venster: ja gezegd")
@@ -46,6 +46,13 @@ check(r.version == "1.12.1" and r.name == "Bob-Realm" and r.chars == 2, "versie,
 check(r.errors["Loot.lua:10: a|b"] == 2, "fout bewaard (ook met | erin)")
 check(Find("^A|111$"), "bevestigd in het kanaal")
 check(Dev():find("Data from Bob%-Realm: 3 logins, 7 bag opens, 2 errors") and Dev():find("players: 1"), "dev-venster: data binnen: " .. Dev())
+check(Dev():find("All time: 1 packets, 3 logins, 7 bag opens, 0 hours played, 2 errors") and not Dev():find("Last data: never"), "dev-venster: totaal van alles: " .. Dev())
+
+-- Weggeklikt en er komt data binnen: venster weer open
+CarefreeBagStatsDev:Hide()
+E("CHAT_MSG_ADDON", "CFBStats", "S|112|id=abc123|v=1.12.1|d=0|li=0|o=0|m=0|ma=0|ch=2", "CHANNEL", "Bob-Realm")
+E("CHAT_MSG_ADDON", "CFBStats", "X|112|0", "CHANNEL", "Bob-Realm")
+check(CarefreeBagStatsDev:IsShown() and Dev():find("All time: 2 packets"), "weggeklikt: nieuwe data opent het venster weer")
 
 -- Dubbel (ons A kwam niet aan): opnieuw bevestigen, niet dubbel tellen
 ADDONMSG = {}

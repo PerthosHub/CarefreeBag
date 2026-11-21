@@ -120,8 +120,18 @@ local function DevUpdate()
 	if not f then return end
 	local ch = ChannelNumber() and ("#" .. ChannelNumber()) or T("not joined")
 	local head = T("Channel: %s · online now: %d · players: %d"):format(ch, CountKeys(online), CountKeys(ns.DB.collected))
+	-- Alles wat ooit binnenkwam (alle sessies), niet alleen deze sessie
+	local t = { logins = 0, opens = 0, minutes = 0, errors = 0 }
+	for _, r in pairs(ns.DB.collected or {}) do
+		t.logins, t.opens, t.minutes = t.logins + (r.logins or 0), t.opens + (r.opens or 0), t.minutes + (r.minutes or 0)
+		for _, n in pairs(r.errors or {}) do t.errors = t.errors + n end
+	end
+	local rec = ns.DB.statsReceived or {}
+	local total = T("All time: %d packets, %d logins, %d bag opens, %d hours played, %d errors"):format(
+		rec.packets or 0, t.logins, t.opens, math.floor(t.minutes / 60), t.errors)
+	local last = T("Last data: %s"):format(rec.last or T("never"))
 	local body = #devLines > 0 and table.concat(devLines, "\n") or ("|cff888888" .. T("Waiting for players...") .. "|r")
-	f.text:SetText("|cffffd100" .. head .. "|r\n\n" .. body)
+	f.text:SetText("|cffffd100" .. head .. "|r\n" .. total .. "\n|cff888888" .. last .. "|r\n\n" .. body)
 	f:SetHeight(math.max(110, f.text:GetStringHeight() + 50))
 end
 
@@ -350,6 +360,10 @@ local function Store(sender, box)
 	for _, e in ipairs(box.errors) do
 		r.errors[e.msg] = (r.errors[e.msg] or 0) + e.n
 	end
+	local rec = ns.DB.statsReceived or { packets = 0 }
+	ns.DB.statsReceived = rec
+	rec.packets = (rec.packets or 0) + 1
+	rec.last = date and date("%d-%m %H:%M") or "?"
 	return true
 end
 
