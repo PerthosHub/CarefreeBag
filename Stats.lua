@@ -93,6 +93,16 @@ local function CountDay()
 	if s.lastDay ~= today then s.lastDay = today; s.days = (s.days or 0) + 1 end
 end
 
+-- Teller per functie (aangeroepen vanuit Loot/Chores/Mail/BankPanel/BagWindow/BagSwap):
+-- ls/lp/ll = Bags full-paneel getoond/Pick up/Leave all, sl/sg = Auto Sell keer/koper,
+-- cm = mail naar alts via CFB, bk = Bank & alts, sr = zoeken, dr = naar een groep gesleept, sw = tas gewisseld.
+function ns.StatsCount(key, n)
+	if not Sharing() then return end
+	local s = Stats()
+	s.f = s.f or {}
+	s.f[key] = (s.f[key] or 0) + (n or 1)
+end
+
 -- Aangeroepen door ns.SetError (Core.lua).
 function ns.StatsError(msg)
 	if not Sharing() then return end
@@ -115,6 +125,43 @@ local ChannelNumber -- vooruit
 
 local function CountKeys(t) local n = 0; for _ in pairs(t or {}) do n = n + 1 end; return n end
 
+-- Overzicht van opties en functies over alle spelers (dev-venster en /cfb stats).
+-- Namen van de opties = de vinkjes in de opties (al vertaald); Auto Sell is een vaste naam.
+local OPTION_NAMES = {
+	{ "as", "Auto Sell" }, { "ab", "Equip better bags automatically" }, { "lp", "Bags full: offer to make room" },
+	{ "oc", "Open clams automatically" }, { "ms", "Fill in the mail subject" }, { "bf", "Fill bar on the backpack" },
+	{ "hb", "Hide the other bag slots" }, { "mq", "Always mail without asking" },
+}
+local function Overview()
+	local withOpts, on, groups, other, f = 0, {}, 0, 0, {}
+	for _, r in pairs(ns.DB.collected or {}) do
+		if r.opts then
+			withOpts = withOpts + 1
+			for _, o in ipairs(OPTION_NAMES) do if r.opts[o[1]] == "1" then on[o[1]] = (on[o[1]] or 0) + 1 end end
+			groups = groups + (tonumber(r.opts.g) or 0)
+			if (tonumber(r.opts.ob) or 0) > 0 then other = other + 1 end
+		end
+		for k, v in pairs(r.f or {}) do f[k] = (f[k] or 0) + v end
+	end
+	if withOpts == 0 then return nil end
+	local list = {}
+	for _, o in ipairs(OPTION_NAMES) do
+		local name = o[2] == "Auto Sell" and o[2] or T(o[2])
+		list[#list + 1] = ("%s %d/%d"):format(name, on[o[1]] or 0, withOpts)
+	end
+	local money = tostring(f.sg or 0)
+	if GetCoinText then
+		local ok, m = pcall(GetCoinText, f.sg or 0, " ")
+		if ok and m then money = m end
+	end
+	return {
+		T("Options on: %s"):format(table.concat(list, ", ")),
+		T("Features used: bags full panel %d (picked up %d, left all %d), Auto Sell %d (%s), CFB mail %d, Bank & alts %d, searches %d, items dragged %d, bags swapped %d"):format(
+			f.ls or 0, f.lp or 0, f.ll or 0, f.sl or 0, tostring(money), f.cm or 0, f.bk or 0, f.sr or 0, f.dr or 0, f.sw or 0),
+		T("Groups per player: %.1f on average, other bag addon: %d players"):format(groups / withOpts, other),
+	}
+end
+
 local function DevUpdate()
 	local f = ns.statsDev
 	if not f then return end
@@ -131,7 +178,9 @@ local function DevUpdate()
 		rec.packets or 0, t.logins, t.opens, math.floor(t.minutes / 60), t.errors)
 	local last = T("Last data: %s"):format(rec.last or T("never"))
 	local body = #devLines > 0 and table.concat(devLines, "\n") or ("|cff888888" .. T("Waiting for players...") .. "|r")
-	f.text:SetText("|cffffd100" .. head .. "|r\n" .. total .. "\n|cff888888" .. last .. "|r\n\n" .. body)
+	local ov = Overview()
+	local extra = ov and ("\n\n|cff66ccff" .. table.concat(ov, "\n") .. "|r") or ""
+	f.text:SetText("|cffffd100" .. head .. "|r\n" .. total .. "\n|cff888888" .. last .. "|r" .. extra .. "\n\n" .. body)
 	f:SetHeight(math.max(110, f.text:GetStringHeight() + 50))
 end
 
@@ -260,6 +309,22 @@ function ns.StatsPending()
 	local s = ns.DB.stats
 	if not s then return false end
 	return (s.logins or 0) + (s.opens or 0) + (s.minutes or 0) + (s.mails or 0) > 0 or next(s.errors or {}) ~= nil
+		or next(s.f or {}) ~= nil
+end
+
+local FEATURES = { "ls", "lp", "ll", "sl", "sg", "cm", "bk", "sr", "dr", "sw" }
+
+-- Welke opties aan staan (1/0) en hoeveel eigen groepen, en andere tassen-addons.
+local function OptionsLine(seq)
+	local db = ns.DB
+	local ch = ns.CharEntry and ns.CharEntry()
+	local function b(v) return v and "1" or "0" end
+	local nOther = 0
+	if ns.OtherBagsLoaded then local ok, n = pcall(ns.OtherBagsLoaded); nOther = ok and n or 0 end
+	return table.concat({ "O", seq, "as=" .. b(db.autoSell), "ab=" .. b(db.autoBags), "lp=" .. b(db.lootPanel ~= false),
+		"oc=" .. b(db.autoOpenClams), "ms=" .. b(db.mailSubject ~= false), "bf=" .. b(db.bagFill),
+		"hb=" .. b(ch and ch.hideBagSlots), "mq=" .. b(db.mailAlwaysAuto), "en=" .. b(db.enabled),
+		"g=" .. #((ch and ch.cats) or {}), "ob=" .. nOther }, "|")
 end
 
 local function CharCount()
@@ -278,6 +343,10 @@ local function MakeOutbox()
 		"l=" .. tostring(GetLocale and GetLocale() or "?"), "lang=" .. tostring(ns.DB.lang), "s=" .. tostring(s.since),
 		"d=" .. (s.days or 0), "li=" .. (s.logins or 0), "o=" .. (s.opens or 0), "m=" .. (s.minutes or 0),
 		"ma=" .. (s.mails or 0), "ch=" .. CharCount() }, "|") }
+	lines[#lines + 1] = OptionsLine(seq)
+	local fl = { "F", seq }
+	for _, k in ipairs(FEATURES) do fl[#fl + 1] = k .. "=" .. ((s.f or {})[k] or 0) end
+	lines[#lines + 1] = table.concat(fl, "|")
 	local errs = {}
 	for msg, n in pairs(s.errors or {}) do errs[#errs + 1] = { msg = msg, n = n } end
 	table.sort(errs, function(a, b) return a.n > b.n end)
@@ -288,7 +357,7 @@ local function MakeOutbox()
 	end
 	lines[#lines + 1] = "X|" .. seq .. "|" .. nE
 	ns.DB.statsOutbox = { seq = seq, lines = lines }
-	s.logins, s.opens, s.minutes, s.mails, s.days, s.errors = 0, 0, 0, 0, 0, {}
+	s.logins, s.opens, s.minutes, s.mails, s.days, s.errors, s.f = 0, 0, 0, 0, 0, {}, {}
 	s.lastDay = Today() -- vandaag is al geteld
 end
 
@@ -362,6 +431,11 @@ local function Store(sender, box)
 	for _, e in ipairs(box.errors) do
 		r.errors[e.msg] = (r.errors[e.msg] or 0) + e.n
 	end
+	if box.opts then r.opts = box.opts end -- laatste stand telt
+	if box.feat then
+		r.f = r.f or {}
+		for k, v in pairs(box.feat) do r.f[k] = (r.f[k] or 0) + (tonumber(v) or 0) end
+	end
 	local rec = ns.DB.statsReceived or { packets = 0 }
 	ns.DB.statsReceived = rec
 	rec.packets = (rec.packets or 0) + 1
@@ -389,6 +463,10 @@ local function OnCollector(msg, sender)
 		Dev(T("%s said yes (v%s)"):format(sender, seq or "?"))
 	elseif kind == "S" and seq then
 		incoming[sender] = { seq = seq, fields = Fields(parts), errors = {} }
+	elseif kind == "O" and incoming[sender] and incoming[sender].seq == seq then
+		incoming[sender].opts = Fields(parts) -- opties aan/uit (vanaf 1.12.2)
+	elseif kind == "F" and incoming[sender] and incoming[sender].seq == seq then
+		incoming[sender].feat = Fields(parts) -- tellers per functie (vanaf 1.12.2)
 	elseif kind == "E" and incoming[sender] and incoming[sender].seq == seq then
 		local text = msg:match("^E|[^|]*|[^|]*|(.*)$") or ""
 		table.insert(incoming[sender].errors, { n = tonumber(parts[3]) or 1, msg = text })
@@ -448,7 +526,7 @@ end
 
 -- Volledige uitleg (hover bij het vinkje in de opties): wat er gaat, hoe, en dat de naam meegaat.
 function ns.StatsDetails()
-	return T("Sends errors and how you use CarefreeBag (logins, bags opened, play time, mails) to the developer through a hidden in-game channel. Your character name is sent along, like with any in-game message. Turn it off and everything saved is deleted.")
+	return T("Sends errors, which options you use and how you use CarefreeBag (logins, bags opened, play time, mails, features) to the developer through a hidden in-game channel. Your character name is sent along, like with any in-game message. Turn it off and everything saved is deleted.")
 end
 
 function ns.SetStatsShare(v)
@@ -513,6 +591,7 @@ function ns.StatsReport()
 	local list = {}
 	for msg, n in pairs(errors) do list[#list + 1] = { msg = msg, n = n } end
 	table.sort(list, function(a, b) return a.n > b.n end)
+	for _, line in ipairs(Overview() or {}) do print("  " .. line) end
 	if #list > 0 then print("  " .. T("Most seen errors:")) end
 	for i = 1, math.min(5, #list) do print("    " .. list[i].n .. "x " .. list[i].msg) end
 end

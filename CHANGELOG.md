@@ -1,6 +1,9 @@
 # Changelog
 
 ## 1.12.2
+### ✨ New
+- 📊 **Shared stats now include which options you use and which features.** Only if you already said yes. This tells us what to improve first. Nothing is asked again.
+
 ### 🔧 Fixes
 - 📉 **Fewer background messages.** Shared stats are sent at most once every few minutes, even when many players log in.
 - 🗑️ **Turning off stats deletes everything.** Also the random number that identified your stats.

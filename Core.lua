@@ -3,7 +3,7 @@
 -- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
 local ADDON, ns = ...
 
-ns.VERSION = "1.12.1"
+ns.VERSION = "1.12.2"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")

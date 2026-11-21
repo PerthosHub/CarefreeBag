@@ -36,7 +36,11 @@ check(Dev():find("Bob%-Realm is online %(sharing, v1.12.1%)") and Dev():find("on
 local function Packet(seq, withError, kind)
   kind = kind or "CHANNEL"
   E("CHAT_MSG_ADDON", "CFBStats", "S|" .. seq .. "|id=abc123|v=1.12.1|c=16001|l=enUS|lang=en|s=2026-11-21|d=2|li=3|o=7|m=50|ma=1|ch=2", kind, "Bob-Realm")
-  if withError then E("CHAT_MSG_ADDON", "CFBStats", "E|" .. seq .. "|2|Loot.lua:10: a|b", kind, "Bob-Realm") end
+  if withError then
+    E("CHAT_MSG_ADDON", "CFBStats", "O|" .. seq .. "|as=1|ab=0|lp=1|oc=1|ms=1|bf=1|hb=0|mq=1|en=1|g=4|ob=1", kind, "Bob-Realm")
+    E("CHAT_MSG_ADDON", "CFBStats", "F|" .. seq .. "|ls=2|lp=1|ll=1|sl=3|sg=1500|cm=4|bk=5|sr=6|dr=7|sw=1", kind, "Bob-Realm")
+    E("CHAT_MSG_ADDON", "CFBStats", "E|" .. seq .. "|2|Loot.lua:10: a|b", kind, "Bob-Realm")
+  end
   E("CHAT_MSG_ADDON", "CFBStats", "X|" .. seq .. "|1", kind, "Bob-Realm")
 end
 Packet("111", true)
@@ -44,6 +48,8 @@ local r = CarefreeBagDB.collected and CarefreeBagDB.collected.abc123
 check(r and r.opens == 7 and r.logins == 3 and r.minutes == 50 and r.mails == 1 and r.days == 2, "pakketje bewaard")
 check(r.version == "1.12.1" and r.name == "Bob-Realm" and r.chars == 2, "versie, afzender, karakters")
 check(r.errors["Loot.lua:10: a|b"] == 2, "fout bewaard (ook met | erin)")
+check(r.opts and r.opts.as == "1" and r.opts.ab == "0" and r.f and r.f.dr == 7 and r.f.sg == 1500, "opties en tellers bewaard")
+check(Dev():find("Options on: Auto Sell 1/1, Equip better bags automatically 0/1") and Dev():find("items dragged 7") and Dev():find("4.0 on average, other bag addon: 1 players"), "dev-venster: overzicht opties en functies: " .. Dev())
 check(Find("^A|111$"), "bevestigd in het kanaal")
 check(Dev():find("Data from Bob%-Realm: 3 logins, 7 bag opens, 2 errors") and Dev():find("players: 1"), "dev-venster: data binnen: " .. Dev())
 check(Dev():find("All time: 1 packets, 3 logins, 7 bag opens, 0 hours played, 2 errors") and not Dev():find("Last data: never"), "dev-venster: totaal van alles: " .. Dev())

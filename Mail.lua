@@ -152,6 +152,7 @@ local REPORT_SECONDS = 5
 -- Na elke gelukte mail: onthouden wat er naar wie ging (dit mailboxbezoek).
 function ns.MailSent(c)
 	if not c then return end
+	if ns.StatsCount then ns.StatsCount("cm") end -- gebruiksstatistieken (Stats.lua)
 	ns.mail.report = ns.mail.report or {}
 	local r
 	for _, x in ipairs(ns.mail.report) do if x.cat == c.cat and x.to == c.to then r = x end end

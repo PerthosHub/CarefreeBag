@@ -83,6 +83,7 @@ function ns.SellStop(reason)
 		local money = GetMoneyString and GetMoneyString(sell.value, true) or tostring(sell.value)
 		Print(T("Auto Sell: sold %d item(s) for %s."):format(sell.n, money) .. (sell.n > 12 and T(" Note: Buyback only keeps the last 12.") or ""))
 		Log("auto sell: " .. sell.n .. " item(s), " .. sell.value .. " copper" .. (reason and (" (" .. reason .. ")") or ""))
+		if ns.StatsCount then ns.StatsCount("sl"); ns.StatsCount("sg", sell.value) end -- gebruiksstatistieken (Stats.lua)
 	end
 	ns.Refresh()
 end

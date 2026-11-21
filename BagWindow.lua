@@ -592,6 +592,7 @@ local function DropOn(sectionKey)
 		Assign()[id] = sectionKey
 	end
 	Log("dropped " .. id .. " -> " .. sectionKey)
+	if ns.StatsCount then ns.StatsCount("dr") end -- gebruiksstatistieken (Stats.lua)
 	-- Uit je tassen: terug naar zijn eigen vakje. Van ergens anders: in een vrij vakje leggen.
 	if not (outside and StoreCursorItem()) then ClearCursor() end
 	-- Niet opnieuw sorteren (Johan, 2026-11-21): het item komt achteraan in de groep waar je

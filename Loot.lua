@@ -270,6 +270,7 @@ local function Swap(row)
 	Print(T("Destroyed %s to make room for %s."):format(what, o.loot.link))
 	ns.Note("bags full", ("destroyed %s (%d copper) for %s"):format(tostring(e.itemID), o.junk.value, Short(o.loot.link)))
 	state.pending = { slot = o.loot.slot, link = o.loot.link, id = o.loot.id, reagent = o.loot.reagent, tries = 0 }
+	if ns.StatsCount then ns.StatsCount("lp") end
 	SetBusy(row)
 	C_Timer.After(0.2, TryPending)
 end
@@ -502,6 +503,7 @@ local function BuildPanel()
 	panel.leaveAll:SetScript("OnClick", function()
 		if panel.busy then return end
 		Log("loot: leave all")
+		if ns.StatsCount then ns.StatsCount("ll") end
 		panel:Hide() -- telt als zelf dichtdoen (zie OnHide)
 	end)
 	ns.Tooltip(panel.leaveAll, T("Leave all"), T("Leave the loot where it is. CarefreeBag asks again the next time you loot."))
@@ -642,6 +644,7 @@ local function ShowOffers(offers)
 	-- menu open bij een rij die er nog staat: bijwerken, anders weg
 	if panel.menu:IsShown() and panel.menuRow and panel.menuRow.offer then ShowMenu(panel.menuRow) else panel.menu:Hide() end
 	Place(math.min(#offers, MAX_ROWS))
+	if not panel:IsShown() and ns.StatsCount then ns.StatsCount("ls") end -- gebruiksstatistieken (Stats.lua)
 	panel:Show()
 end
 

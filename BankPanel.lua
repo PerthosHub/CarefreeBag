@@ -507,6 +507,7 @@ ns.ToggleViewer = function()
 	if viewer and viewer:IsShown() then viewer:Hide(); return end
 	-- Knop Bank & alts: altijd eerst je eigen bank (issue #18), ook als er zoek-hits bij een alt zijn
 	-- (die zie je aan het getal op het portret). Alleen tijdens het typen springt het paneel naar hits.
+	if ns.StatsCount then ns.StatsCount("bk") end -- gebruiksstatistieken (Stats.lua)
 	OpenViewer(nil, nil)
 end
 
@@ -534,8 +535,12 @@ local function UpdateBadge()
 end
 
 -- Zoektekst veranderd (vanuit de zoekbalk van je tassen).
+local searchCounted = false
 ns.OnSearch = function()
 	UpdateBadge()
+	-- gebruiksstatistieken (Stats.lua): één keer per zoekopdracht, vanaf 2 tekens
+	if #(ns.searchText or "") < 2 then searchCounted = false
+	elseif not searchCounted then searchCounted = true; if ns.StatsCount then ns.StatsCount("sr") end end
 	if ns.searchText == "" then
 		if viewer then
 			viewer.noAuto = nil

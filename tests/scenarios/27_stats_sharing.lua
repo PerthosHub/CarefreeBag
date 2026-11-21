@@ -48,6 +48,9 @@ check(CarefreeBagDB.stats.logins == 1, "/reload telt niet als login, echt inlogg
 NS.SetError("Interface/AddOns/CarefreeBag/Loot.lua:10: boom")
 NS.SetError("Interface/AddOns/CarefreeBag/Loot.lua:10: boom")
 check(CarefreeBagDB.stats.errors["Loot.lua:10: boom"] == 2, "fout geteld, zonder pad")
+NS.StatsCount("dr"); NS.StatsCount("dr"); NS.StatsCount("sg", 150)
+check(CarefreeBagDB.stats.f.dr == 2 and CarefreeBagDB.stats.f.sg == 150, "tellers per functie")
+CarefreeBagDB.autoSell = true
 
 -- Nep-makers
 NS.STATS_COLLECTORS[NS.NameHash("Perthos Test")] = true
@@ -63,10 +66,14 @@ check(#S == 1 and #Er == 1 and #X == 1, "pakketje in het kanaal: S, E, X")
 check(S[1]:find("|o=2|") and S[1]:find("|id=%x+|") and S[1]:find("|c=16001|") and S[1]:find("|li=1|"), "S-regel met tellers: " .. tostring(S[1]))
 check(Er[1]:find("^E|%d+|2|Loot.lua:10: boom$"), "E-regel: " .. tostring(Er[1]))
 check(X[1]:find("^X|%d+|1$"), "X-regel: " .. tostring(X[1]))
+local O, F = Chan("^O|"), Chan("^F|")
+check(#O == 1 and O[1]:find("|as=1|") and O[1]:find("|ab=0|") and O[1]:find("|g=%d+|") and O[1]:find("|ob=0$"), "O-regel met opties: " .. tostring(O[1]))
+check(#F == 1 and F[1]:find("|dr=2|") and F[1]:find("|sg=150|") and F[1]:find("|sw=0$"), "F-regel met tellers: " .. tostring(F[1]))
+check(#O[1] < 255 and #F[1] < 255 and #S[1] < 255, "elke regel past in een addon-bericht")
 check(Whispers() == 0, "geen whispers (Horde en Alliance kunnen elkaar niet fluisteren)")
 local seq = S[1]:match("^S|(%d+)|")
 check(CarefreeBagDB.statsOutbox and CarefreeBagDB.statsOutbox.seq == seq, "pakketje bewaard tot ontvangen")
-check(CarefreeBagDB.stats.opens == 0 and next(CarefreeBagDB.stats.errors) == nil, "tellers weer op nul")
+check(CarefreeBagDB.stats.opens == 0 and next(CarefreeBagDB.stats.errors) == nil and next(CarefreeBagDB.stats.f) == nil, "tellers weer op nul")
 
 -- Nog een "H" voordat het bevestigd is: niet meteen opnieuw (pas na 5 minuten)
 E("CHAT_MSG_ADDON", "CFBStats", "H|Perthos Test", "CHANNEL", "Perthos-Realm"); RunTimers()
@@ -89,5 +96,6 @@ check(CarefreeBagStatsDev == nil, "speler krijgt geen dev-venster")
 NS.SetStatsShare(false)
 check(CarefreeBagDB.statsShare == false and CarefreeBagDB.stats == nil and JOINED == nil, "uit: gewist en kanaal uit")
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
-check(CarefreeBagDB.stats == nil, "uit: niets geteld")
+NS.StatsCount("dr")
+check(CarefreeBagDB.stats == nil and CarefreeBagDB.statsID == nil, "uit: niets geteld, ook geen nummer meer")
 check(CarefreeBagDB.lastError == "Interface/AddOns/CarefreeBag/Loot.lua:10: boom", "alleen de eigen testfout: " .. tostring(CarefreeBagDB.lastError))

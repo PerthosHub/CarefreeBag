@@ -196,6 +196,13 @@ local function IsLoaded(name)
 	return IsAddOnLoaded and IsAddOnLoaded(name)
 end
 
+-- Hoeveel andere tassen-addons staan aan (voor de gebruiksstatistieken, Stats.lua)?
+function ns.OtherBagsLoaded()
+	local n = 0
+	for _, name in ipairs(OTHER_BAGS) do if IsLoaded(name) then n = n + 1 end end
+	return n
+end
+
 function ns.CheckOtherBags()
 	if not ns.DB.enabled or not StaticPopupDialogs or not StaticPopup_Show then return end
 	for _, name in ipairs(OTHER_BAGS) do

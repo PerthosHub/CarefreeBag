@@ -228,6 +228,7 @@ local function Finish(ok, msg)
 	local j = job
 	job = nil
 	ns.bagSwapDone = GetTime()
+	if ok and ns.StatsCount then ns.StatsCount("sw") end -- gebruiksstatistieken (Stats.lua)
 	if ns.RememberBags then ns.RememberBags() end
 	if msg then
 		Print(msg)
