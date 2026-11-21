@@ -213,6 +213,7 @@ local function CharData()
 end
 
 local lastOrder = {} -- per groep: de item-ID's in de volgorde zoals ze nu in beeld staan
+ns.shownOrder = lastOrder -- (alleen lezen; tests)
 
 -- Komt het item op de cursor uit dezelfde groep als deze tegel?
 local function ReorderTarget(b)
@@ -593,7 +594,15 @@ local function DropOn(sectionKey)
 	Log("dropped " .. id .. " -> " .. sectionKey)
 	-- Uit je tassen: terug naar zijn eigen vakje. Van ergens anders: in een vrij vakje leggen.
 	if not (outside and StoreCursorItem()) then ClearCursor() end
-	ns.ResetOrder()
+	-- Niet opnieuw sorteren (Johan, 2026-11-21): het item komt achteraan in de groep waar je
+	-- het losliet, de rest blijft staan. Netjes sorteren gebeurt pas bij het weer openen.
+	-- Stond het deze keer al eerder in die groep, dan ook achteraan (niet op zijn oude plek).
+	local order = frozen[sectionKey]
+	if order then
+		local mine = { ["i" .. id] = true }
+		for _, e in ipairs(lastItems) do if e.itemID == id then mine["s" .. e.bag .. ":" .. e.slot] = true end end
+		for i = #order, 1, -1 do if mine[order[i]] then table.remove(order, i) end end
+	end
 	ns.Refresh()
 end
 

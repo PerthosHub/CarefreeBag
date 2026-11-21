@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.10.4
+### 🔧 Fixes
+- 🎯 **A dragged item stays where you can see it.** Drop an item on a group and it goes to the end of that group. The rest stays in place. The group is sorted again the next time you open your bags.
+
 ## 1.10.3
 ### 🔧 Fixes
 - 🛟 **Your groups no longer reset after logging in.** Sometimes WoW doesn't tell addons your realm right away. CarefreeBag then started over: all items in Other and the first-time questions again. It now finds your own settings, and puts back the ones that were split off.
