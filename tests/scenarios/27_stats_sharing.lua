@@ -30,6 +30,7 @@ for _, p in ipairs(POPUPS) do if p.which == "CAREFREEBAG_STATS" then asked = tru
 check(asked, "bij de start de vraag")
 local dlg = StaticPopupDialogs.CAREFREEBAG_STATS
 check(dlg.text:find("gets better every day") and dlg.text:find("fix bugs much faster"), "vraag: wat heb jij eraan")
+check(not dlg.text:find("name") and NS.StatsDetails():find("character name is sent along"), "naam niet in de vraag, wel in de uitleg bij het vinkje")
 check(dlg.button1 == "Sure, I like quick bug fixes" and dlg.button2 == "No, rather not", "knoppen")
 check(not JOINED and #ADDONMSG == 0, "geen toestemming: geen kanaal, niets verstuurd")
 check(CarefreeBagDB.stats == nil and CarefreeBagDB.statsShare == nil, "geen toestemming: niets geteld")

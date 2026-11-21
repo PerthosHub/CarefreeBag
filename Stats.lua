@@ -144,7 +144,9 @@ local function Dev(msg)
 	while #devLines > 10 do table.remove(devLines) end
 	ns.Note("stats", msg)
 	BuildDev()
-	if ns.statsDev then ns.statsDev:Show(); DevUpdate() end
+	if not ns.statsDev then return end
+	if ns.DB.statsDevShow ~= false then ns.statsDev:Show() end -- vinkje in Advanced settings
+	DevUpdate()
 end
 
 function ns.StatsDevShow()
@@ -227,7 +229,7 @@ local function Join()
 		RemoveFromChatFrames()
 		ns.Note("stats", "channel " .. tostring(ChannelNumber()) .. (IsCollector() and " (collector)" or " (sharing)"))
 		if IsCollector() then
-			ns.StatsDevShow()
+			if ns.DB.statsDevShow ~= false then ns.StatsDevShow() end
 			Hello()
 			if not looping then looping = true; C_Timer.After(HELLO_EVERY, HelloLoop) end
 		else
@@ -419,7 +421,12 @@ end)
 function ns.StatsInvite()
 	return "|cffffd100" .. T("CarefreeBag is brand new and gets better every day, with your help!") .. "|r\n\n"
 		.. T("Share errors and usage stats, and we can fix bugs much faster.")
-		.. "\n\n|cffaaaaaa" .. T("Runs in the background, nothing changes for you. Your character name is sent along. Change it anytime in the options.") .. "|r"
+		.. "\n\n|cffaaaaaa" .. T("Runs in the background, nothing changes for you. Change it anytime in the options.") .. "|r"
+end
+
+-- Volledige uitleg (hover bij het vinkje in de opties): wat er gaat, hoe, en dat de naam meegaat.
+function ns.StatsDetails()
+	return T("Sends errors and how you use CarefreeBag (logins, bags opened, play time, mails) to the developer through a hidden in-game channel. Your character name is sent along, like with any in-game message. Turn it off and everything saved is deleted.")
 end
 
 function ns.SetStatsShare(v)

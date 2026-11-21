@@ -74,5 +74,14 @@ check(said, "/cfb stats toont het rapport")
 check(CarefreeBagStatsDev:IsShown(), "/cfb stats opent het dev-venster")
 
 SlashCmdList.CAREFREEBAG(""); RunTimers()
-check(CarefreeBagConfig.statsCb == nil, "maker: geen vinkje in de opties")
+check(CarefreeBagConfig.statsCb == nil, "maker: geen deel-vinkje in de opties")
+check(CarefreeBagConfig.statsDevCb, "maker: vinkje 'Show stats window (dev)'")
+
+-- Dev-venster uit: niet meer vanzelf openen, wel bijhouden
+CarefreeBagDB.statsDevShow = false
+CarefreeBagStatsDev:Hide()
+E("CHAT_MSG_ADDON", "CFBStats", "P|1.12.1", "CHANNEL", "Ann-Realm")
+check(not CarefreeBagStatsDev:IsShown() and Dev():find("Ann%-Realm is online"), "uit: blijft dicht, maar houdt het wel bij")
+SlashCmdList.CAREFREEBAG("stats")
+check(CarefreeBagStatsDev:IsShown(), "uit: /cfb stats opent hem toch")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))

@@ -204,8 +204,16 @@ local function BuildAdvanced()
 	y = y - ROW_H
 	-- Gebruiksstatistieken (Stats.lua); alleen waar het versturen werkt, niet voor de maker zelf
 	if ns.StatsSupported and ns.StatsSupported() and not ns.StatsIsCollector() then
-		config.statsCb = AddCheck(adv, 4, y, T("Help improve CarefreeBag"), ns.StatsInvite(),
+		config.statsCb = AddCheck(adv, 4, y, T("Help improve CarefreeBag"), ns.StatsDetails(),
 			function() return ns.DB.statsShare == true end, function(v) ns.SetStatsShare(v) end)
+		y = y - ROW_H
+	elseif ns.StatsSupported and ns.StatsSupported() then
+		-- Alleen de maker: dev-venster aan/uit (`/cfb stats` opent het altijd)
+		config.statsDevCb = AddCheck(adv, 4, y, T("Show stats window (dev)"), T("Only for the developer: shows who shares stats and what comes in."),
+			function() return ns.DB.statsDevShow ~= false end, function(v)
+				ns.DB.statsDevShow = v
+				if v then ns.StatsDevShow() elseif ns.statsDev then ns.statsDev:Hide() end
+			end)
 		y = y - ROW_H
 	end
 	-- Tassenbalk van WoW zelf (BlizzBagBar.lua)
