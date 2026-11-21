@@ -2,7 +2,7 @@
 
 ## 1.11.0
 ### ✨ New
-- ✉️ **The mail subject fills itself in.** Put an item in a mail and the subject becomes the item name. Different items: "Multiple items". Money: the amount. Type your own subject and it stays. You can turn this off in Advanced settings.
+- ✉️ **The mail subject fills itself in.** Put money or items in a mail and the subject shows what's in it: the money first, then the items with their count, like "12 Gold + Linen Cloth x40". More than 3 kinds of items: "Multiple items". Type your own subject and it stays. You can turn this off in Advanced settings.
 
 ## 1.10.4
 ### 🔧 Fixes

@@ -195,7 +195,7 @@ local function BuildAdvanced()
 		end)
 	y = y - ROW_H
 	config.subjectCb = AddCheck(adv, 4, y, T("Fill in the mail subject"),
-		T("When you put items or money in a mail, the subject is filled in for you: the item name, 'Multiple items', or the amount. Text you type yourself stays."),
+		T("When you put items or money in a mail, the subject is filled in for you: the money first, then the items with their count. More than 3 kinds of items: 'Multiple items'. Text you type yourself stays."),
 		function() return ns.DB.mailSubject ~= false end, function(v)
 			ns.DB.mailSubject = v
 			Log("fill in mail subject: " .. tostring(v))

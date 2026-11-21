@@ -447,18 +447,33 @@ end
 function ns.MailSubjectUpdate()
 	local box = SendMailSubjectEditBox
 	if not box or not GetSendMailItem or not ns.DB.enabled or ns.DB.mailSubject == false or ns.mail.busy then return end
-	local names, count, first = {}, 0, nil
+	-- Per itemnaam het totaal (stapels van hetzelfde item opgeteld), in de volgorde van de mail.
+	local names, order = {}, {}
 	for i = 1, ATTACHMENTS_MAX_SEND or 12 do
-		local ok, name = pcall(GetSendMailItem, i)
-		if ok and name and not names[name] then names[name] = true; count = count + 1; first = first or name end
+		local ok, name, _, _, n = pcall(GetSendMailItem, i)
+		if ok and name then
+			if not names[name] then names[name] = 0; order[#order + 1] = name end
+			names[name] = names[name] + (tonumber(n) or 1)
+		end
 	end
 	local now = box:GetText() or ""
 	-- Alleen overschrijven wat wij (of WoW zelf, met een itemnaam) erin zetten; jouw eigen tekst blijft.
 	if now ~= "" and now ~= lastSubject and not names[now] then return end
-	local subject = count == 1 and first or (count > 1 and T("Multiple items")) or nil
+	-- Geld eerst, dan de items met aantal ("12 Gold + Linen Cloth x20, Copper Ore x10").
+	-- Meer dan 3 soorten, of past het niet (max. 64 tekens): "Multiple items".
+	local parts = {}
 	local money = SendMoney()
-	if money > 0 then subject = subject and (subject .. " + " .. CoinText(money)) or CoinText(money) end
-	subject = subject or ""
+	if money > 0 then parts[1] = CoinText(money) end
+	if #order > 0 then
+		local list = {}
+		for _, name in ipairs(order) do list[#list + 1] = name .. (names[name] > 1 and (" x" .. names[name]) or "") end
+		local items = table.concat(list, ", ")
+		local full = parts[1] and (parts[1] .. " + " .. items) or items
+		local letters = select(2, full:gsub("[^\128-\191]", "")) -- letters, niet bytes (UTF-8)
+		if #order > 3 or letters > 64 then items = T("Multiple items") end
+		parts[#parts + 1] = items
+	end
+	local subject = table.concat(parts, " + ")
 	if subject ~= now then box:SetText(subject) end
 	lastSubject = box:GetText() or subject -- WoW kapt lange onderwerpen af: onthoud wat er echt staat
 end
