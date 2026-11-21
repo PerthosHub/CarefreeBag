@@ -81,6 +81,7 @@ function ns.SetError(msg)
 	ns.DB.lastError = tostring(msg)
 	ns.DB.lastErrorTime = date and date("%d-%m %H:%M:%S") or nil
 	ns.Note("error", msg)
+	if ns.StatsError then pcall(ns.StatsError, msg) end -- gebruiksstatistieken (Stats.lua, alleen met toestemming)
 end
 
 -- Iets uitvoeren; gaat het mis, dan in het logboek, bij /cfb error en één regel in de chat.

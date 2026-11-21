@@ -31,5 +31,6 @@ BlizzBagBar.lua
 QuestItems.lua
 QuestStart.lua
 QuestReminder.lua
+Stats.lua
 Options.lua
 Start.lua

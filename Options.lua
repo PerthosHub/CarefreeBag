@@ -202,6 +202,12 @@ local function BuildAdvanced()
 			if v and ns.MailSubjectUpdate then ns.MailSubjectUpdate() end
 		end)
 	y = y - ROW_H
+	-- Gebruiksstatistieken (Stats.lua); alleen waar het versturen werkt, niet voor de maker zelf
+	if ns.StatsSupported and ns.StatsSupported() and not ns.StatsIsCollector() then
+		config.statsCb = AddCheck(adv, 4, y, T("Help improve CarefreeBag"), ns.StatsInvite(),
+			function() return ns.DB.statsShare == true end, function(v) ns.SetStatsShare(v) end)
+		y = y - ROW_H
+	end
 	-- Tassenbalk van WoW zelf (BlizzBagBar.lua)
 	config.fillCb = AddCheck(adv, 4, y, T("Fill bar on the backpack"),
 		T("The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."),

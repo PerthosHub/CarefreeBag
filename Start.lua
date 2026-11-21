@@ -83,6 +83,8 @@ SlashCmdList["CAREFREEBAG"] = function(msg)
 			Print(T("Groups of this character reset."))
 			Log("groups reset by /cfb resetgroups")
 		end
+	elseif msg == "stats" then
+		ns.StatsReport()
 	elseif msg == "fout" or msg == "error" then
 		Print(T("last error: %s"):format(tostring(ns.DB.lastError or T("none")) .. (ns.DB.lastErrorTime and (" (" .. ns.DB.lastErrorTime .. ")") or "")))
 	else
