@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.11.0
+### ✨ New
+- ✉️ **The mail subject fills itself in.** Put an item in a mail and the subject becomes the item name. Different items: "Multiple items". Money: the amount. Type your own subject and it stays. You can turn this off in Advanced settings.
+
 ## 1.10.4
 ### 🔧 Fixes
 - 🎯 **A dragged item stays where you can see it.** Drop an item on a group and it goes to the end of that group. The rest stays in place. The group is sorted again the next time you open your bags.

@@ -194,6 +194,14 @@ local function BuildAdvanced()
 			if ns.UpdateMailPanel then ns.UpdateMailPanel() end
 		end)
 	y = y - ROW_H
+	config.subjectCb = AddCheck(adv, 4, y, T("Fill in the mail subject"),
+		T("When you put items or money in a mail, the subject is filled in for you: the item name, 'Multiple items', or the amount. Text you type yourself stays."),
+		function() return ns.DB.mailSubject ~= false end, function(v)
+			ns.DB.mailSubject = v
+			Log("fill in mail subject: " .. tostring(v))
+			if v and ns.MailSubjectUpdate then ns.MailSubjectUpdate() end
+		end)
+	y = y - ROW_H
 	-- Tassenbalk van WoW zelf (BlizzBagBar.lua)
 	config.fillCb = AddCheck(adv, 4, y, T("Fill bar on the backpack"),
 		T("The backpack button at the bottom of your screen fills up from green to red as your bags get full. Reagent and profession bags do not count."),

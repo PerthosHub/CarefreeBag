@@ -416,6 +416,71 @@ function ns.BuildMailPanel()
 end
 
 ---------------------------------------------------------------------------
+-- Onderwerp vanzelf invullen (issue #20) als je zelf iets in een mail stopt:
+-- één soort item = de itemnaam, verschillende items = "Multiple items",
+-- geld = het bedrag (met items: "Linen Cloth + 12 Gold"). Rembours telt niet als geld.
+-- Heb je zelf iets getypt, dan blijft dat staan (tot de mail weg is).
+---------------------------------------------------------------------------
+
+local lastSubject -- wat wij het laatst invulden
+
+local function SendMoney()
+	if not (SendMailMoney and MoneyInputFrame_GetCopper) then return 0 end
+	if SendMailCODButton and SendMailCODButton.GetChecked and SendMailCODButton:GetChecked() then return 0 end
+	local ok, c = pcall(MoneyInputFrame_GetCopper, SendMailMoney)
+	return ok and tonumber(c) or 0
+end
+
+local function CoinText(copper)
+	if GetCoinText then
+		local ok, s = pcall(GetCoinText, copper, " ")
+		if ok and s and s ~= "" then return s end
+	end
+	local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
+	local parts = {}
+	if g > 0 then parts[#parts + 1] = g .. "g" end
+	if s > 0 then parts[#parts + 1] = s .. "s" end
+	if c > 0 or #parts == 0 then parts[#parts + 1] = c .. "c" end
+	return table.concat(parts, " ")
+end
+
+function ns.MailSubjectUpdate()
+	local box = SendMailSubjectEditBox
+	if not box or not GetSendMailItem or not ns.DB.enabled or ns.DB.mailSubject == false or ns.mail.busy then return end
+	local names, count, first = {}, 0, nil
+	for i = 1, ATTACHMENTS_MAX_SEND or 12 do
+		local ok, name = pcall(GetSendMailItem, i)
+		if ok and name and not names[name] then names[name] = true; count = count + 1; first = first or name end
+	end
+	local now = box:GetText() or ""
+	-- Alleen overschrijven wat wij (of WoW zelf, met een itemnaam) erin zetten; jouw eigen tekst blijft.
+	if now ~= "" and now ~= lastSubject and not names[now] then return end
+	local subject = count == 1 and first or (count > 1 and T("Multiple items")) or nil
+	local money = SendMoney()
+	if money > 0 then subject = subject and (subject .. " + " .. CoinText(money)) or CoinText(money) end
+	subject = subject or ""
+	if subject ~= now then box:SetText(subject) end
+	lastSubject = box:GetText() or subject -- WoW kapt lange onderwerpen af: onthoud wat er echt staat
+end
+
+-- Na Blizzards eigen bijwerken van het venster (dat zet soms zelf een itemnaam neer).
+local function SubjectSoon() C_Timer.After(0, ns.MailSubjectUpdate) end
+
+local subjectHooked = false
+local function HookSubject()
+	if subjectHooked then return end
+	subjectHooked = true
+	for _, n in ipairs({ "SendMailMoneyGold", "SendMailMoneySilver", "SendMailMoneyCopper", "SendMailCODButton", "SendMailSendMoneyButton" }) do
+		local f = _G[n]
+		if f and f.HookScript then
+			pcall(f.HookScript, f, (n:find("Button$") and "OnClick" or "OnTextChanged"), SubjectSoon)
+		end
+	end
+end
+
+ns.OnEvent("MAIL_SEND_INFO_UPDATE", "mail", SubjectSoon)
+
+---------------------------------------------------------------------------
 -- Events: mailbox
 ---------------------------------------------------------------------------
 
@@ -426,6 +491,7 @@ ns.OnEvent("MAIL_SHOW", "mail", function()
 	ns.MailReportClose()  -- oud verslag nog in beeld: weg, paneel weer aan de mailbox
 	ns.mail.report = nil
 	if not ns.DB.enabled then return end
+	HookSubject()
 	if not ns.mailPanel then ns.Try("mail", ns.BuildMailPanel) end
 	if ns.mailPanel then ns.mailPanel:Show(); ns.UpdateMailPanel() end
 	C_Timer.After(0.5, ns.MailAutoNext)
@@ -439,6 +505,7 @@ ns.OnEvent("MAIL_CLOSED", "mail", function()
 end)
 
 ns.OnEvent("MAIL_SEND_SUCCESS", "mail", function()
+	lastSubject = nil -- mail is weg: de volgende begint weer leeg
 	if not (ns.mail.busy and ns.mail.waiting) then return end
 	ns.mail.waiting = false
 	ns.MailSent(ns.mail.current)

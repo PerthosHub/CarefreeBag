@@ -212,6 +212,7 @@ function ns.Defaults()
 	if ns.DB.autoSell == nil then ns.DB.autoSell = false end
 	if ns.DB.autoOpenClams == nil then ns.DB.autoOpenClams = true end -- clams na het looten openen
 	if ns.DB.autoBags == nil then ns.DB.autoBags = true end -- betere tassen vanzelf aandoen (BagSwap.lua)
+	if ns.DB.mailSubject == nil then ns.DB.mailSubject = true end -- onderwerp van een mail vanzelf invullen (Mail.lua)
 	if ns.DB.bagFill == nil then ns.DB.bagFill = true end -- vulbalk op de rugzakknop van WoW (BlizzBagBar.lua)
 	ns.DB.conflictOK = ns.DB.conflictOK or {}
 	ns.DB.maxCols = ns.DB.maxCols or 14  -- breder dan dit wordt het venster niet; daarna scrollen
