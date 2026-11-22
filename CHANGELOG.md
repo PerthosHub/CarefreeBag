@@ -1,6 +1,6 @@
 # Changelog
 
-## Next version
+## 1.12.4
 ### 🔧 Fixes
 - 🔨 **Quest items work from your bags again.** Some quest items, like a hammer to strike a gong, were blocked by WoW when you right-clicked them in CarefreeBag. They now work just like in the normal bags.
 - 📜 **"Quest found" no longer gets lost.** Looted an item that starts a quest while CarefreeBag was off, or just before logging out? The window now still shows up when you log in or turn CarefreeBag back on. Items you already said "Later" to are not asked again.
