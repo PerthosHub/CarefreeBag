@@ -18,7 +18,7 @@ local NS = LoadAddon({})
 NS.STATS_COLLECTORS[NS.NameHash("Thrall Frostwolf")] = true -- dit karakter is de maker
 local function E(ev, ...) DRIVER:Fire("OnEvent", ev, ...); RunTimers() end
 local function Find(pat) for _, x in ipairs(ADDONMSG) do if x.k == "CHANNEL" and x.t == 5 and x.m:find(pat) then return x end end end
-local function Dev() return CarefreeBagStatsDev and CarefreeBagStatsDev.text and CarefreeBagStatsDev.text:GetText() or "" end
+local function Dev() return NS.StatsDevText() end
 
 CarefreeBagDB = { lang = "en", autoBags = false }
 E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); RunTimers()
@@ -26,12 +26,12 @@ for _, p in ipairs(POPUPS) do check(p.which ~= "CAREFREEBAG_STATS", "maker krijg
 check(JOINED == "CFBStats", "maker zit in het kanaal")
 check(Find("^H|Thrall Frostwolf$"), "maker meldt zich in het kanaal")
 check(CarefreeBagStatsDev and CarefreeBagStatsDev:IsShown(), "dev-venster zichtbaar")
-check(Dev():find("Channel: #5") and Dev():find("Waiting for players") and Dev():find("All time: 0 packets") and Dev():find("Last data: never"), "dev-venster: kanaal, totaal en wachten: " .. Dev())
+check(Dev():find("Channel #5") and Dev():find("Waiting for players") and Dev():find("0 packets") and Dev():find("Last data: never"), "dev-venster: kanaal, totaal en wachten: " .. Dev())
 
 E("CHAT_MSG_ADDON", "CFBStats", "Y|1.12.1", "CHANNEL", "Bob-Realm")
 check(Dev():find("Bob%-Realm said yes %(v1.12.1%)"), "dev-venster: ja gezegd")
 E("CHAT_MSG_ADDON", "CFBStats", "P|1.12.1", "CHANNEL", "Bob-Realm")
-check(Dev():find("Bob%-Realm is online %(sharing, v1.12.1%)") and Dev():find("online now: 1"), "dev-venster: online")
+check(Dev():find("Bob%-Realm is online %(sharing, v1.12.1%)") and Dev():find("Online now"), "dev-venster: online")
 
 local function Packet(seq, withError, kind)
   kind = kind or "CHANNEL"
@@ -49,16 +49,16 @@ check(r and r.opens == 7 and r.logins == 3 and r.minutes == 50 and r.mails == 1 
 check(r.version == "1.12.1" and r.name == "Bob-Realm" and r.chars == 2, "versie, afzender, karakters")
 check(r.errors["Loot.lua:10: a|b"] == 2, "fout bewaard (ook met | erin)")
 check(r.opts and r.opts.as == "1" and r.opts.ab == "0" and r.f and r.f.dr == 7 and r.f.sg == 1500, "opties en tellers bewaard")
-check(Dev():find("Options on: Auto Sell 1/1, Equip better bags automatically 0/1") and Dev():find("items dragged 7") and Dev():find("4.0 on average, other bag addon: 1 players"), "dev-venster: overzicht opties en functies: " .. Dev())
+check(Dev():find("Options on") and Dev():find("1/1") and Dev():find("0/1") and Dev():find("Items dragged") and Dev():find("4.0 groups per player · 1 with another bag addon"), "dev-venster: overzicht opties en functies: " .. Dev())
 check(Find("^A|111$"), "bevestigd in het kanaal")
-check(Dev():find("Data from Bob%-Realm: 3 logins, 7 bag opens, 2 errors") and Dev():find("players: 1"), "dev-venster: data binnen: " .. Dev())
-check(Dev():find("All time: 1 packets, 3 logins, 7 bag opens, 0 hours played, 2 errors") and not Dev():find("Last data: never"), "dev-venster: totaal van alles: " .. Dev())
+check(Dev():find("Data from Bob%-Realm: 3 logins, 7 bag opens, 2 errors") and Dev():find("\nBob\n") and Dev():find("Version") and r.seenDays == 1, "dev-venster: data binnen: " .. Dev())
+check(Dev():find("1 packets") and Dev():find("7 bag opens") and not Dev():find("Last data: never"), "dev-venster: totaal van alles: " .. Dev())
 
 -- Weggeklikt en er komt data binnen: venster weer open
 CarefreeBagStatsDev:Hide()
 E("CHAT_MSG_ADDON", "CFBStats", "S|112|id=abc123|v=1.12.1|d=0|li=0|o=0|m=0|ma=0|ch=2", "CHANNEL", "Bob-Realm")
 E("CHAT_MSG_ADDON", "CFBStats", "X|112|0", "CHANNEL", "Bob-Realm")
-check(CarefreeBagStatsDev:IsShown() and Dev():find("All time: 2 packets"), "weggeklikt: nieuwe data opent het venster weer")
+check(CarefreeBagStatsDev:IsShown() and Dev():find("2 packets"), "weggeklikt: nieuwe data opent het venster weer")
 
 -- Dubbel (ons A kwam niet aan): opnieuw bevestigen, niet dubbel tellen
 ADDONMSG = {}
@@ -85,15 +85,20 @@ check(r.seen == date("%Y-%m-%d"), "online-ping: laatst gezien bijgewerkt")
 r.seen = "2026-01-01"
 E("CHAT_MSG_ADDON", "CFBStats", "P|1.12.1", "CHANNEL", "Bob-Realm")
 check(r.seen == date("%Y-%m-%d"), "oude ping zonder nummer: op naam gevonden")
+-- Spelerslijst: laatst gezien bovenaan
+CarefreeBagDB.collected.old1 = { name = "Oldie-Realm", seen = "2026-02-01", seenDays = 9, version = "1.12.1", opens = 3, minutes = 0, errors = {} }
+E("CHAT_MSG_ADDON", "CFBStats", "Y|1.12.3", "CHANNEL", "Dan-Realm")
+check(Dev():find("\nBob\n") < Dev():find("\nOldie\n"), "spelerslijst: vandaag gezien boven lang geleden")
+CarefreeBagDB.collected.old1 = nil
 r.seen, r.last = "2026-01-01", "2026-01-01"
 E("CHAT_MSG_ADDON", "CFBStats", "Y|1.12.3", "CHANNEL", "Carl-Realm")
-check(Dev():find("Stopped sharing: 0 · not seen for 14%+ days: 1"), "dev-venster: lang niet gezien: " .. Dev())
+check(Dev():find("1 not seen for 14%+ days") and r.seenDays == 3, "dev-venster: lang niet gezien: " .. Dev())
 
 -- Afmelding: alleen van de speler zelf
 E("CHAT_MSG_ADDON", "CFBStats", "N|abc123", "CHANNEL", "Evil-Realm")
 check(r.off == nil, "afmelding van iemand anders telt niet")
 E("CHAT_MSG_ADDON", "CFBStats", "N|abc123", "CHANNEL", "Bob-Realm")
-check(r.off and Dev():find("Bob%-Realm turned off sharing") and Dev():find("Stopped sharing: 1 · not seen for 14%+ days: 0"), "afmelding: uitgezet geteld: " .. Dev())
+check(r.off and Dev():find("Bob%-Realm turned off sharing") and Dev():find("1 stopped sharing") and Dev():find("0 not seen for 14%+ days"), "afmelding: uitgezet geteld: " .. Dev())
 
 -- Rapport
 CarefreeBagStatsDev:Hide()

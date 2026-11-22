@@ -175,37 +175,270 @@ local function Gone()
 	return T("Stopped sharing: %d · not seen for 14+ days: %d"):format(off, quiet)
 end
 
+-- Dev-venster: tegels bovenaan, spelerslijst (laatst gezien bovenaan), opties en functies
+-- met iconen en balkjes, onderaan de laatste gebeurtenissen. Alles wordt bij elke update
+-- opnieuw neergezet met hergebruikte tekst/textuur-objecten (pool).
+local DEV_W = 580
+local ICON = "Interface\\Icons\\"
+local C_GOLD, C_GREY, C_GREEN, C_YELLOW, C_RED, C_BLUE = "ffd100", "888888", "33ff66", "ffd633", "ff4d4d", "66ccff"
+local function Col(hex, s) return "|cff" .. hex .. tostring(s) .. "|r" end
+local function Ic(path, size) return "|T" .. path .. ":" .. (size or 14) .. ":" .. (size or 14) .. ":0:0:64:64:5:59:5:59|t" end
+
+local OPTION_ICONS = {
+	as = ICON .. "INV_Misc_Coin_02", ab = ICON .. "INV_Misc_Bag_08", lp = ICON .. "INV_Misc_Bag_10",
+	oc = ICON .. "INV_Misc_Shell_03", ms = ICON .. "INV_Scroll_03", bf = ICON .. "INV_Misc_Bag_07",
+	hb = ICON .. "INV_Misc_Bag_09", mq = ICON .. "INV_Letter_15",
+}
+
+-- Datum "JJJJ-MM-DD" → aantal dagen geleden (nil als onbekend).
+local function DaysAgo(d)
+	local y, m, dd = tostring(d or ""):match("^(%d+)-(%d+)-(%d+)$")
+	if not y or not (date and time) then return nil end
+	local n = date("*t")
+	local now = time({ year = n.year, month = n.month, day = n.day, hour = 12 })
+	local t = time({ year = tonumber(y), month = tonumber(m), day = tonumber(dd), hour = 12 })
+	return math.max(0, math.floor((now - t) / 86400 + 0.5))
+end
+
+local function LastSeenText(d)
+	local n = DaysAgo(d)
+	if not n then return Col(C_GREY, T("never")) end
+	if n == 0 then return Col(C_GREEN, T("today")) end
+	if n == 1 then return Col(C_YELLOW, T("yesterday")) end
+	if n < 14 then return T("%d days ago"):format(n) end
+	return Col(C_GREY, T("%d days ago"):format(n))
+end
+
+local function ErrCount(r) local n = 0; for _, c in pairs(r.errors or {}) do n = n + c end; return n end
+
+local devText = {} -- alle teksten van de laatste update (voor tests: ns.StatsDevText)
+function ns.StatsDevText() return table.concat(devText, "\n") end
+
 local function DevUpdate()
 	local f = ns.statsDev
 	if not f then return end
-	local ch = ChannelNumber() and ("#" .. ChannelNumber()) or T("not joined")
-	local head = T("Channel: %s · online now: %d · players: %d"):format(ch, CountKeys(online), CountKeys(ns.DB.collected))
-	-- Alles wat ooit binnenkwam (alle sessies), niet alleen deze sessie
-	local t = { logins = 0, opens = 0, minutes = 0, errors = 0 }
-	for _, r in pairs(ns.DB.collected or {}) do
-		t.logins, t.opens, t.minutes = t.logins + (r.logins or 0), t.opens + (r.opens or 0), t.minutes + (r.minutes or 0)
-		for _, n in pairs(r.errors or {}) do t.errors = t.errors + n end
+	devText = {}
+	local nFS, nTX = 0, 0
+	for _, o in ipairs(f.fsPool) do o:Hide() end
+	for _, o in ipairs(f.txPool) do o:Hide() end
+	local function FS(font, x, y, w, text, justify)
+		nFS = nFS + 1
+		local s = f.fsPool[nFS]
+		if not s then s = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall"); f.fsPool[nFS] = s end
+		s:SetFontObject(font or "GameFontHighlightSmall")
+		s:ClearAllPoints()
+		s:SetPoint("TOPLEFT", f, "TOPLEFT", x, y)
+		s:SetWidth(w or 0)
+		s:SetJustifyH(justify or "LEFT")
+		if s.SetWordWrap then s:SetWordWrap(false) end
+		s:SetText(text)
+		s:Show()
+		devText[#devText + 1] = tostring(text)
+		return s
 	end
+	local function TX(x, y, w, h, path, r, g, b, a)
+		nTX = nTX + 1
+		local t = f.txPool[nTX]
+		if not t then t = f:CreateTexture(nil, "ARTWORK"); f.txPool[nTX] = t end
+		t:ClearAllPoints()
+		t:SetPoint("TOPLEFT", f, "TOPLEFT", x, y)
+		t:SetSize(w, h)
+		if path then
+			t:SetTexture(path)
+			t:SetTexCoord(0, 1, 0, 1)
+			if path:find("\\Icons\\") then t:SetTexCoord(0.08, 0.92, 0.08, 0.92) end
+			t:SetVertexColor(1, 1, 1, 1)
+		else
+			t:SetColorTexture(r or 0, g or 0, b or 0, a or 1)
+		end
+		t:Show()
+		return t
+	end
+	local function Header(y, icon, text)
+		TX(16, y - 1, 16, 16, icon)
+		FS("GameFontNormal", 38, y, 300, Col(C_GOLD, text))
+		TX(16, y - 19, DEV_W - 32, 1, nil, 1, 0.82, 0, 0.35)
+		return y - 26
+	end
+	local function Bar(x, y, w, frac, r, g, b)
+		TX(x, y, w, 8, nil, 0, 0, 0, 0.5)
+		if frac > 0 then TX(x, y, math.max(2, math.floor(w * math.min(1, frac))), 8, nil, r, g, b, 0.9) end
+	end
+
+	local all = ns.DB.collected or {}
 	local rec = ns.DB.statsReceived or {}
-	local total = T("All time: %d packets, %d logins, %d bag opens, %d hours played, %d errors"):format(
-		rec.packets or 0, t.logins, t.opens, math.floor(t.minutes / 60), t.errors)
-	local last = T("Last data: %s"):format(rec.last or T("never"))
-	local body = #devLines > 0 and table.concat(devLines, "\n") or ("|cff888888" .. T("Waiting for players...") .. "|r")
-	local ov = Overview()
-	local extra = ov and ("\n\n|cff66ccff" .. table.concat(ov, "\n") .. "|r") or ""
-	f.text:SetText("|cffffd100" .. head .. "|r\n" .. total .. "\n" .. Gone() .. "\n|cff888888" .. last .. "|r" .. extra .. "\n\n" .. body)
-	f:SetHeight(math.max(110, f.text:GetStringHeight() + 50))
+	local t = { players = 0, opens = 0, minutes = 0, errors = 0, off = 0, quiet = 0 }
+	for _, r in pairs(all) do
+		t.players = t.players + 1
+		t.opens, t.minutes, t.errors = t.opens + (r.opens or 0), t.minutes + (r.minutes or 0), t.errors + ErrCount(r)
+		if r.off then t.off = t.off + 1
+		elseif (DaysAgo(r.seen or r.last) or 99) >= 14 then t.quiet = t.quiet + 1 end
+	end
+
+	-- Kop: kanaal en laatste data
+	local y = -32
+	local ch = ChannelNumber() and ("#" .. ChannelNumber()) or T("not joined")
+	FS("GameFontHighlightSmall", 16, y, 260, Col(C_GREY, T("Channel %s"):format(ch)))
+	FS("GameFontHighlightSmall", DEV_W - 276, y, 260, Col(C_GREY, T("Last data: %s"):format(rec.last or T("never"))), "RIGHT")
+	y = y - 18
+
+	-- Vier tegels
+	local tiles = {
+		{ ICON .. "Spell_Holy_PrayerOfFortitude", t.players, T("Players"), C_BLUE },
+		{ "Interface\\COMMON\\Indicator-Green", CountKeys(online), T("Online now"), C_GREEN },
+		{ ICON .. "INV_Misc_PocketWatch_01", math.floor(t.minutes / 60), T("Hours played"), C_GOLD },
+		{ ICON .. "Spell_Shadow_DeathScream", t.errors, T("Errors"), t.errors > 0 and C_RED or C_GREEN },
+	}
+	local tw = math.floor((DEV_W - 32 - 3 * 8) / 4)
+	for i, tile in ipairs(tiles) do
+		local x = 16 + (i - 1) * (tw + 8)
+		TX(x, y, tw, 46, nil, 0, 0, 0, 0.45)
+		TX(x + 6, y - 7, 32, 32, tile[1])
+		FS("GameFontNormalHuge", x + 44, y - 6, tw - 50, Col(tile[4], tile[2]))
+		FS("GameFontHighlightSmall", x + 44, y - 30, tw - 50, Col(C_GREY, tile[3]))
+	end
+	y = y - 54
+
+	-- Kleine regel eronder
+	local mini = {
+		Ic(ICON .. "INV_Letter_15") .. " " .. T("%d packets"):format(rec.packets or 0),
+		Ic(ICON .. "INV_Misc_Bag_08") .. " " .. T("%d bag opens"):format(t.opens),
+		Ic("Interface\\RaidFrame\\ReadyCheck-NotReady") .. " " .. (t.off > 0 and Col(C_RED, T("%d stopped sharing"):format(t.off)) or T("%d stopped sharing"):format(0)),
+		Ic(ICON .. "Spell_Nature_Sleep") .. " " .. (t.quiet > 0 and Col(C_YELLOW, T("%d not seen for 14+ days"):format(t.quiet)) or T("%d not seen for 14+ days"):format(0)),
+	}
+	local mw = math.floor((DEV_W - 32) / 4)
+	for i, s in ipairs(mini) do FS("GameFontHighlightSmall", 16 + (i - 1) * mw, y, mw, s) end
+	y = y - 24
+
+	-- Spelers: online eerst, dan laatst gezien, dan hoe vaak gezien
+	y = Header(y, ICON .. "Spell_Holy_PrayerOfFortitude", T("Players"))
+	local list = {}
+	for _, r in pairs(all) do list[#list + 1] = r end
+	table.sort(list, function(a, b)
+		local oa, ob = online[a.name] and 1 or 0, online[b.name] and 1 or 0
+		if oa ~= ob then return oa > ob end
+		local sa, sb = a.seen or a.last or "", b.seen or b.last or ""
+		if sa ~= sb then return sa > sb end
+		return (a.seenDays or 1) > (b.seenDays or 1)
+	end)
+	local maxDays = 1
+	for _, r in ipairs(list) do maxDays = math.max(maxDays, r.seenDays or 1) end
+	local cols = { name = 38, ver = 200, last = 262, days = 350, hours = 452, bags = 494, err = 536 }
+	if #list == 0 then
+		FS("GameFontHighlightSmall", 38, y, 400, Col(C_GREY, T("Waiting for players...")))
+		y = y - 18
+	else
+		FS("GameFontHighlightSmall", cols.name, y, 150, Col(C_GREY, T("Name")))
+		FS("GameFontHighlightSmall", cols.ver, y, 60, Col(C_GREY, T("Version")))
+		FS("GameFontHighlightSmall", cols.last, y, 86, Col(C_GREY, T("Last seen")))
+		FS("GameFontHighlightSmall", cols.days, y, 100, Col(C_GREY, T("Days seen")))
+		FS("GameFontHighlightSmall", cols.hours - 6, y, 40, Col(C_GREY, T("Hours")), "RIGHT")
+		FS("GameFontHighlightSmall", cols.bags - 6, y, 40, Col(C_GREY, T("Bags")), "RIGHT")
+		FS("GameFontHighlightSmall", cols.err - 16, y, 40, Col(C_GREY, T("Errors")), "RIGHT")
+		y = y - 16
+		for i, r in ipairs(list) do
+			if i > 12 then
+				FS("GameFontHighlightSmall", cols.name, y, 300, Col(C_GREY, T("and %d more"):format(#list - 12)))
+				y = y - 16
+				break
+			end
+			if i % 2 == 1 then TX(14, y + 2, DEV_W - 28, 16, nil, 1, 1, 1, 0.05) end
+			local status = r.off and "Interface\\RaidFrame\\ReadyCheck-NotReady"
+				or online[r.name] and "Interface\\COMMON\\Indicator-Green"
+				or (DaysAgo(r.seen or r.last) or 99) >= 14 and (ICON .. "Spell_Nature_Sleep")
+				or "Interface\\COMMON\\Indicator-Yellow"
+			TX(18, y + 1, 14, 14, status)
+			local nm = tostring(r.name or "?"):gsub("%-.*$", "")
+			FS("GameFontHighlightSmall", cols.name, y, 158, r.off and Col(C_GREY, nm) or nm)
+			FS("GameFontHighlightSmall", cols.ver, y, 60, Col(r.version == ns.VERSION and C_GREEN or "ff9933", r.version or "?"))
+			FS("GameFontHighlightSmall", cols.last, y, 86, r.off and Col(C_RED, T("Stopped sharing")) or LastSeenText(r.seen or r.last))
+			local sd = r.seenDays or 1
+			local frac = sd / maxDays
+			Bar(cols.days, y - 3, 60, frac, frac >= 0.66 and 0.2 or frac >= 0.33 and 1 or 0.6, frac >= 0.66 and 1 or frac >= 0.33 and 0.84 or 0.6, frac >= 0.66 and 0.4 or frac >= 0.33 and 0.2 or 0.6)
+			FS("GameFontHighlightSmall", cols.days + 66, y, 30, tostring(sd))
+			FS("GameFontHighlightSmall", cols.hours - 6, y, 40, ("%.1f"):format((r.minutes or 0) / 60), "RIGHT")
+			FS("GameFontHighlightSmall", cols.bags - 6, y, 40, tostring(r.opens or 0), "RIGHT")
+			local ne = ErrCount(r)
+			FS("GameFontHighlightSmall", cols.err - 16, y, 40, ne > 0 and Col(C_RED, ne) or Col(C_GREY, 0), "RIGHT")
+			y = y - 16
+		end
+	end
+	y = y - 8
+
+	-- Opties en functies (alleen spelers met 1.12.2 of nieuwer sturen dit)
+	local withOpts, on, groups, other, fe = 0, {}, 0, 0, {}
+	for _, r in pairs(all) do
+		if r.opts then
+			withOpts = withOpts + 1
+			for _, o in ipairs(OPTION_NAMES) do if r.opts[o[1]] == "1" then on[o[1]] = (on[o[1]] or 0) + 1 end end
+			groups = groups + (tonumber(r.opts.g) or 0)
+			if (tonumber(r.opts.ob) or 0) > 0 then other = other + 1 end
+		end
+		for k, v in pairs(r.f or {}) do fe[k] = (fe[k] or 0) + v end
+	end
+	if withOpts > 0 then
+		y = Header(y, ICON .. "INV_Misc_Gear_01", T("Options on"))
+		local half = math.floor((DEV_W - 32) / 2)
+		for i, o in ipairs(OPTION_NAMES) do
+			local x = 16 + ((i - 1) % 2) * half
+			local yy = y - math.floor((i - 1) / 2) * 18
+			local n = on[o[1]] or 0
+			TX(x, yy + 1, 14, 14, OPTION_ICONS[o[1]])
+			FS("GameFontHighlightSmall", x + 20, yy, half - 120, o[2] == "Auto Sell" and o[2] or T(o[2]))
+			Bar(x + half - 96, yy - 3, 50, n / withOpts, 0.2, 0.8, 1)
+			FS("GameFontHighlightSmall", x + half - 40, yy, 36, Col(n > 0 and C_BLUE or C_GREY, n .. "/" .. withOpts), "RIGHT")
+		end
+		y = y - math.ceil(#OPTION_NAMES / 2) * 18 - 4
+		FS("GameFontHighlightSmall", 16, y, DEV_W - 32, Col(C_GREY, T("%.1f groups per player · %d with another bag addon"):format(groups / withOpts, other)))
+		y = y - 22
+
+		y = Header(y, ICON .. "INV_Misc_Note_01", T("Features used"))
+		local money = tostring(fe.sg or 0)
+		if GetCoinTextureString then
+			local ok, m = pcall(GetCoinTextureString, fe.sg or 0)
+			if ok and m then money = m end
+		end
+		local feats = {
+			{ ICON .. "INV_Misc_Bag_10", T("Bags full panel"), fe.ls, T("%d picked up, %d left all"):format(fe.lp or 0, fe.ll or 0) },
+			{ ICON .. "INV_Misc_Coin_02", "Auto Sell", fe.sl, money },
+			{ ICON .. "INV_Letter_15", T("CFB mail"), fe.cm },
+			{ ICON .. "INV_Misc_Bag_10_Blue", T("Bank & alts"), fe.bk },
+			{ ICON .. "INV_Misc_Spyglass_03", T("Searches"), fe.sr },
+			{ ICON .. "INV_Misc_Bag_08", T("Items dragged"), fe.dr },
+			{ ICON .. "INV_Misc_Bag_07", T("Bags swapped"), fe.sw },
+		}
+		local half2 = math.floor((DEV_W - 32) / 2)
+		for i, ft in ipairs(feats) do
+			local x = 16 + ((i - 1) % 2) * half2
+			local yy = y - math.floor((i - 1) / 2) * 18
+			local n = ft[3] or 0
+			TX(x, yy + 1, 14, 14, ft[1])
+			FS("GameFontHighlightSmall", x + 20, yy, 110, n > 0 and ft[2] or Col(C_GREY, ft[2]))
+			FS("GameFontHighlightSmall", x + 132, yy, 30, Col(n > 0 and C_GREEN or C_GREY, n))
+			if ft[4] and n > 0 then FS("GameFontHighlightSmall", x + 166, yy, half2 - 170, Col(C_GREY, ft[4])) end
+		end
+		y = y - math.ceil(#feats / 2) * 18 - 8
+	end
+
+	-- Laatste gebeurtenissen
+	y = Header(y, ICON .. "INV_Misc_PocketWatch_01", T("Recent"))
+	if #devLines == 0 then
+		FS("GameFontHighlightSmall", 16, y, DEV_W - 32, Col(C_GREY, T("Waiting for players...")))
+		y = y - 16
+	end
+	for i = 1, math.min(6, #devLines) do
+		FS("GameFontHighlightSmall", 16, y, DEV_W - 32, Col(i == 1 and "ffffff" or "aaaaaa", devLines[i]))
+		y = y - 15
+	end
+	f:SetHeight(-y + 16)
 end
 
 local function BuildDev()
 	if ns.statsDev or not ns.NewWindow then return end
-	local f = ns.NewWindow("CarefreeBagStatsDev", T("CarefreeBag stats (dev)"), 340, 110)
+	local f = ns.NewWindow("CarefreeBagStatsDev", T("CarefreeBag stats (dev)"), DEV_W, 200)
 	f:SetPoint("TOP", UIParent, "TOP", 0, -120)
 	f:SetScript("OnDragStop", f.StopMovingOrSizing)
-	f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	f.text:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -30)
-	f.text:SetWidth(308)
-	f.text:SetJustifyH("LEFT")
+	f.fsPool, f.txPool = {}, {}
 	ns.statsDev = f
 end
 
@@ -424,6 +657,17 @@ local function Fields(parts)
 	return f
 end
 
+-- Gezien vandaag: "laatst gezien" en "dagen gezien" (score: op hoeveel dagen online of data).
+local function MarkSeen(r)
+	local today = Today()
+	if r.seen == today then return end
+	-- Van vóór deze teller (nog niet geteld): een eerder gezien speler telt als 1 dag.
+	if not r.seenDays then r.seenDays = (r.seen or r.last) and 1 or 0 end
+	if (r.seen or r.last) == today then r.seen = today; return end
+	r.seenDays = r.seenDays + 1
+	r.seen = today
+end
+
 local function Store(sender, box)
 	ns.DB.collected = ns.DB.collected or {}
 	local f = box.fields
@@ -438,8 +682,9 @@ local function Store(sender, box)
 	for _, s in ipairs(r.seqs) do if s == box.seq then return false end end -- al eerder ontvangen (ons "A" kwam niet aan)
 	table.insert(r.seqs, box.seq)
 	while #r.seqs > 20 do table.remove(r.seqs, 1) end
-	r.name, r.last, r.seen, r.version, r.client, r.locale, r.lang, r.since, r.chars =
-		sender, Today(), Today(), f.v, f.c, f.l, f.lang, f.s, tonumber(f.ch)
+	MarkSeen(r)
+	r.name, r.last, r.version, r.client, r.locale, r.lang, r.since, r.chars =
+		sender, Today(), f.v, f.c, f.l, f.lang, f.s, tonumber(f.ch)
 	for _, k in ipairs({ { "logins", "li" }, { "opens", "o" }, { "minutes", "m" }, { "mails", "ma" }, { "days", "d" } }) do
 		r[k[1]] = (r[k[1]] or 0) + (tonumber(f[k[2]]) or 0)
 	end
@@ -466,7 +711,7 @@ local function Seen(id, sender)
 	if not r then
 		for _, x in pairs(all) do if x.name == sender and not x.off then r = x; break end end
 	end
-	if r then r.seen = Today() end
+	if r then MarkSeen(r) end
 end
 
 local function OnCollector(msg, sender)
