@@ -88,8 +88,21 @@ local function Build()
 	end)
 end
 
+-- Per karakter onthouden welke quest-items al een venster kregen (ch.questOffered[itemID] = true).
+-- Zo komt een item dat je lootte terwijl CFB uit stond (of vlak voor uitloggen) na het inloggen
+-- alsnog, en vraagt CFB niet elke keer opnieuw naar items die je bewust laat liggen.
+local function Offered()
+	local ch = ns.CharEntry and ns.CharEntry()
+	if not ch then return nil end
+	local first = ch.questOffered == nil
+	ch.questOffered = ch.questOffered or {}
+	return ch.questOffered, first
+end
+
 local function ShowFor(itemID, f)
 	if not popup then Build() end
+	local offered = Offered()
+	if offered then offered[itemID] = true end
 	popup.itemID, popup.used = itemID, nil
 	popup.icon:SetTexture(f.icon)
 	popup.name:SetText(f.link or tostring(itemID))
@@ -123,10 +136,17 @@ function ns.QuestStartCheck()
 	if InCombatLockdown and InCombatLockdown() then return end -- beveiligde knop: pas na het gevecht
 	local found = Starters()
 	if not known then
-		-- eerste keer (inloggen): wat je al had is de basis, daar vragen we niet naar
+		-- eerste keer (inloggen): items die al een venster kregen zijn de basis. Een item dat nog
+		-- nooit gevraagd is (geloot met CFB uit, of vlak voor uitloggen) komt nu alsnog.
+		-- Allereerste keer voor dit karakter (nog geen lijst): alles wat je al had telt als gevraagd.
+		local offered, first = Offered()
 		known = {}
-		for id, f in pairs(found) do known[id] = f.count end
-		return
+		for id, f in pairs(found) do
+			if not offered or first or offered[id] then
+				known[id] = f.count
+				if offered then offered[id] = true end
+			end
+		end
 	end
 	for id, f in pairs(found) do
 		if f.count > (known[id] or 0) and not later[id] then

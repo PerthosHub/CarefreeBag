@@ -179,6 +179,9 @@ function ns.SetEnabled(v)
 	if ns.UpdateMinimapIcon then ns.UpdateMinimapIcon() end
 	if ns.UpdateBagSlots then ns.UpdateBagSlots() end -- CFB uit = de normale tassenbalk terug (BlizzBagBar.lua)
 	if ns.RefreshConfig then ns.RefreshConfig() end
+	-- weer aan: quest-items die je lootte terwijl CFB uit stond, krijgen nu alsnog hun venster
+	-- (Ready, niet Check: stond CFB al uit bij het inloggen, dan was het venster nog niet klaar)
+	if ns.DB.enabled and ns.QuestStartReady then pcall(ns.QuestStartReady) end
 end
 
 ---------------------------------------------------------------------------

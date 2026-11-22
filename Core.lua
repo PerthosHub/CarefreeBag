@@ -297,7 +297,7 @@ local function RepairEmptyRealm(full, key)
 		for id, k in pairs(bad.assign or {}) do
 			if good.assign[id] == nil and groups[k] then good.assign[id] = k end
 		end
-		for _, f in ipairs({ "hidden", "keep", "questKeep", "questSnooze" }) do
+		for _, f in ipairs({ "hidden", "keep", "questKeep", "questSnooze", "questOffered" }) do
 			if bad[f] then
 				good[f] = good[f] or {}
 				for id, v in pairs(bad[f]) do if good[f][id] == nil then good[f][id] = v end end

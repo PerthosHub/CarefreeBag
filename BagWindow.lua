@@ -761,11 +761,28 @@ local function DropAnywhere()
 	if id and not FromBags(id) then StoreCursorItem() end
 end
 
+-- Per tas een onzichtbaar ouder-frame met SetID(tas). WoW's knop leest de tas dan zelf via
+-- GetParent():GetID(). Nooit b:SetBagID(): dat zet een Lua-veld vanuit onze code, en dan
+-- blokkeert WoW het gebruiken van sommige items (bijv. een questitem op een voorwerp in de wereld:
+-- ADDON_ACTION_FORBIDDEN UseContainerItem, Johan 2026-11-22). Zo doen andere tassen-addons het ook.
+local bagParents = {}
+local function BagParent(bag)
+	local p = bagParents[bag]
+	if not p then
+		p = CreateFrame("Frame", nil, ns.main.content)
+		p:SetAllPoints(ns.main.content)
+		p:SetID(bag)
+		bagParents[bag] = p
+	end
+	return p
+end
+
 local function SetupItemButton(b, g)
 	local e = g.rep
 	local info = e.info
 	b.group = g
-	b:SetBagID(e.bag)
+	local parent = BagParent(e.bag)
+	if b:GetParent() ~= parent then b:SetParent(parent) end
 	b:SetID(e.slot)
 	pcall(ClearItemButtonOverlay, b)
 	pcall(b.SetHasItem, b, info.iconFileID)
