@@ -44,7 +44,8 @@ function Methods:SetID(i) self.id = i end
 function Methods:GetID() return self.id end
 function Methods:SetBagID(b) self.bagID = b end
 -- zoals WoW: eigen bagID, anders de ID van het ouder-frame
-function Methods:GetBagID() if self.bagID then return self.bagID end return self.parent and self.parent.id endfunction Methods:RegisterEvent(e) self.events = self.events or {}; self.events[e] = true; if e == "ADDON_LOADED" then DRIVER = self end end
+function Methods:GetBagID() if self.bagID then return self.bagID end return self.parent and self.parent.id end
+function Methods:RegisterEvent(e) self.events = self.events or {}; self.events[e] = true; if e == "ADDON_LOADED" then DRIVER = self end end
 function Methods:GetCenter() return 0, 0 end
 function Methods:GetEffectiveScale() return 1 end
 function Methods:SetEnabled(v) self.enabled = v end
