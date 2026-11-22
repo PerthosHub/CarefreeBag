@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.5
+### 🔧 Fixes
+- 🖱️ **Windows no longer stick to your mouse.** After dragging the quest items list, "Quest found" or the "Bags full" window, it kept following your mouse. Now it stays where you let go.
+
 ## 1.12.4
 ### 🔧 Fixes
 - 🔨 **Quest items work from your bags again.** Some quest items, like a hammer to strike a gong, were blocked by WoW when you right-clicked them in CarefreeBag. They now work just like in the normal bags.

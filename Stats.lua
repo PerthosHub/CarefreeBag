@@ -437,7 +437,6 @@ local function BuildDev()
 	if ns.statsDev or not ns.NewWindow then return end
 	local f = ns.NewWindow("CarefreeBagStatsDev", T("CarefreeBag stats (dev)"), DEV_W, 200)
 	f:SetPoint("TOP", UIParent, "TOP", 0, -120)
-	f:SetScript("OnDragStop", f.StopMovingOrSizing)
 	f.fsPool, f.txPool = {}, {}
 	ns.statsDev = f
 end

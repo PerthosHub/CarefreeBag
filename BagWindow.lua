@@ -33,6 +33,8 @@ function ns.NewWindow(name, title, w, h)
 	f:SetClampedToScreen(true)
 	f:RegisterForDrag("LeftButton")
 	f:SetScript("OnDragStart", f.StartMoving)
+	-- Zonder OnDragStop blijft het venster na loslaten aan de muis plakken.
+	f:SetScript("OnDragStop", f.StopMovingOrSizing)
 	local okH, header = pcall(CreateFrame, "Frame", nil, f, "DialogHeaderTemplate")
 	if okH and header and header.Setup then
 		pcall(header.Setup, header, title)
