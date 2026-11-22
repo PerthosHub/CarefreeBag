@@ -78,6 +78,23 @@ E("CHAT_MSG_ADDON", "CFBStats", "S|333|id=abc123|v=1.12.0|d=0|li=0|o=7|m=0|ma=0|
 E("CHAT_MSG_ADDON", "CFBStats", "X|333|0", "WHISPER", "Bob-Realm")
 check(r.opens == 14 and Find("^A|333$"), "oude whisper-pakketjes ook bewaard en bevestigd")
 
+-- Laatst gezien: online-ping met nummer (1.12.3), zonder nummer op naam
+r.seen = "2026-01-01"
+E("CHAT_MSG_ADDON", "CFBStats", "P|1.12.3|abc123", "CHANNEL", "Bob-Realm")
+check(r.seen == date("%Y-%m-%d"), "online-ping: laatst gezien bijgewerkt")
+r.seen = "2026-01-01"
+E("CHAT_MSG_ADDON", "CFBStats", "P|1.12.1", "CHANNEL", "Bob-Realm")
+check(r.seen == date("%Y-%m-%d"), "oude ping zonder nummer: op naam gevonden")
+r.seen, r.last = "2026-01-01", "2026-01-01"
+E("CHAT_MSG_ADDON", "CFBStats", "Y|1.12.3", "CHANNEL", "Carl-Realm")
+check(Dev():find("Stopped sharing: 0 · not seen for 14%+ days: 1"), "dev-venster: lang niet gezien: " .. Dev())
+
+-- Afmelding: alleen van de speler zelf
+E("CHAT_MSG_ADDON", "CFBStats", "N|abc123", "CHANNEL", "Evil-Realm")
+check(r.off == nil, "afmelding van iemand anders telt niet")
+E("CHAT_MSG_ADDON", "CFBStats", "N|abc123", "CHANNEL", "Bob-Realm")
+check(r.off and Dev():find("Bob%-Realm turned off sharing") and Dev():find("Stopped sharing: 1 · not seen for 14%+ days: 0"), "afmelding: uitgezet geteld: " .. Dev())
+
 -- Rapport
 CarefreeBagStatsDev:Hide()
 SlashCmdList.CAREFREEBAG("stats")

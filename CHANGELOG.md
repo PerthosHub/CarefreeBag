@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.3
+### 🔧 Fixes
+- 👋 **Turning off stats says goodbye.** One last short message tells the developer you chose to stop sharing, so it isn't mistaken for leaving the addon. After that, nothing more is sent.
+
 ## 1.12.2
 ### ✨ New
 - 📊 **Shared stats now include which options you use and which features.** Only if you already said yes. This tells us what to improve first. Nothing is asked again.

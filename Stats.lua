@@ -9,7 +9,9 @@
 --     (whispers komen daar niet over), en er zijn geen servers meer, alleen één grote
 --     server per regelset (Normal, PvP, RP).
 --   * Maker roept "H|<naam>" bij inloggen, elke 15 min en na een ping (max. 1× per 30 s).
---   * Speler roept na het joinen "P|versie" (online), na "ja" ook "Y|versie" (net toegestemd).
+--   * Speler roept na het joinen "P|versie|nummer" (online), na "ja" ook "Y|versie" (net toegestemd).
+--     Uitzetten = eerst nog "N|nummer" (afmelding), dan het kanaal uit. De maker houdt per
+--     speler "laatst gezien" bij: lang niet gezien = waarschijnlijk gestopt.
 --   * Na een geldige "H" stuurt de speler zijn pakketje: "S|seq|velden", "E|seq|aantal|fout"
 --     (max 5), "X|seq|aantal E". De maker bewaart het en roept "A|seq"; dan wist de speler het.
 --   * Geen "A" = het pakketje blijft bewaard tot de volgende keer (niets gaat verloren).
@@ -162,6 +164,17 @@ local function Overview()
 	}
 end
 
+-- Wie deelt niet meer: zelf uitgezet (afmelding), of 14+ dagen niet gezien (gestopt of pauze).
+local function Gone()
+	local off, quiet = 0, 0
+	local cut = (date and time) and date("%Y-%m-%d", time() - 14 * 86400) or ""
+	for _, r in pairs(ns.DB.collected or {}) do
+		if r.off then off = off + 1
+		elseif (r.seen or r.last or "") < cut then quiet = quiet + 1 end
+	end
+	return T("Stopped sharing: %d · not seen for 14+ days: %d"):format(off, quiet)
+end
+
 local function DevUpdate()
 	local f = ns.statsDev
 	if not f then return end
@@ -180,7 +193,7 @@ local function DevUpdate()
 	local body = #devLines > 0 and table.concat(devLines, "\n") or ("|cff888888" .. T("Waiting for players...") .. "|r")
 	local ov = Overview()
 	local extra = ov and ("\n\n|cff66ccff" .. table.concat(ov, "\n") .. "|r") or ""
-	f.text:SetText("|cffffd100" .. head .. "|r\n" .. total .. "\n|cff888888" .. last .. "|r" .. extra .. "\n\n" .. body)
+	f.text:SetText("|cffffd100" .. head .. "|r\n" .. total .. "\n" .. Gone() .. "\n|cff888888" .. last .. "|r" .. extra .. "\n\n" .. body)
 	f:SetHeight(math.max(110, f.text:GetStringHeight() + 50))
 end
 
@@ -294,7 +307,9 @@ local function Join()
 			if not looping then looping = true; C_Timer.After(HELLO_EVERY, HelloLoop) end
 		else
 			if justAgreed then justAgreed = false; SendChannel("Y|" .. tostring(ns.VERSION)) end
-			SendChannel("P|" .. tostring(ns.VERSION))
+			Stats() -- zorgt dat er een nummer is
+			-- Met het nummer: zo weet de maker "laatst gezien" per speler (vanaf 1.12.3).
+			SendChannel("P|" .. tostring(ns.VERSION) .. "|" .. tostring(ns.DB.statsID))
 		end
 	end
 	C_Timer.After(2, Ready)
@@ -423,8 +438,8 @@ local function Store(sender, box)
 	for _, s in ipairs(r.seqs) do if s == box.seq then return false end end -- al eerder ontvangen (ons "A" kwam niet aan)
 	table.insert(r.seqs, box.seq)
 	while #r.seqs > 20 do table.remove(r.seqs, 1) end
-	r.name, r.last, r.version, r.client, r.locale, r.lang, r.since, r.chars =
-		sender, Today(), f.v, f.c, f.l, f.lang, f.s, tonumber(f.ch)
+	r.name, r.last, r.seen, r.version, r.client, r.locale, r.lang, r.since, r.chars =
+		sender, Today(), Today(), f.v, f.c, f.l, f.lang, f.s, tonumber(f.ch)
 	for _, k in ipairs({ { "logins", "li" }, { "opens", "o" }, { "minutes", "m" }, { "mails", "ma" }, { "days", "d" } }) do
 		r[k[1]] = (r[k[1]] or 0) + (tonumber(f[k[2]]) or 0)
 	end
@@ -443,11 +458,23 @@ local function Store(sender, box)
 	return true
 end
 
+-- Laatst gezien (online-ping): op nummer, oude versies (zonder nummer) op afzendernaam.
+local function Seen(id, sender)
+	local all = ns.DB.collected
+	if not all then return end
+	local r = id and id ~= "" and all[id]
+	if not r then
+		for _, x in pairs(all) do if x.name == sender and not x.off then r = x; break end end
+	end
+	if r then r.seen = Today() end
+end
+
 local function OnCollector(msg, sender)
 	local parts = {}
 	for p in (msg .. "|"):gmatch("(.-)|") do parts[#parts + 1] = p end
 	local kind, seq = parts[1], parts[2]
 	if kind == "P" then
+		Seen(parts[3], sender)
 		if not online[sender] then
 			online[sender] = true
 			Dev(T("%s is online (sharing, v%s)"):format(sender, seq or "?"))
@@ -461,6 +488,12 @@ local function OnCollector(msg, sender)
 		end
 	elseif kind == "Y" then
 		Dev(T("%s said yes (v%s)"):format(sender, seq or "?"))
+	elseif kind == "N" then
+		-- Speler zette delen uit (vanaf 1.12.3): niet meer volgen, wel weten dat het een keuze was.
+		local r = ns.DB.collected and seq and ns.DB.collected[seq]
+		if r and r.name == sender then r.off = Today() end
+		online[sender] = nil
+		Dev(T("%s turned off sharing"):format(sender))
 	elseif kind == "S" and seq then
 		incoming[sender] = { seq = seq, fields = Fields(parts), errors = {} }
 	elseif kind == "O" and incoming[sender] and incoming[sender].seq == seq then
@@ -538,11 +571,16 @@ function ns.SetStatsShare(v)
 		justAgreed = true
 		Join()
 	else
-		-- Uit = niets meer bewaren of versturen, en het kanaal uit.
+		-- Uit = niets meer bewaren of versturen, en het kanaal uit. Eerst nog één afmelding
+		-- ("N|nummer"), zodat de maker weet dat het een keuze was en niet dat je gestopt bent.
+		local id = ns.DB.statsID
 		ns.DB.stats, ns.DB.statsOutbox, ns.DB.statsID, sessionStart = nil, nil, nil, nil
 		if joined and not IsCollector() then
 			joined = false
-			if LeaveChannelByName then pcall(LeaveChannelByName, CHANNEL_NAME) end
+			if id and ChannelNumber() then Send("N|" .. id, "CHANNEL", ChannelNumber()) end
+			C_Timer.After(1, function() -- even wachten, anders gaat de afmelding misschien niet meer weg
+				if not joined and LeaveChannelByName then pcall(LeaveChannelByName, CHANNEL_NAME) end
+			end)
 		end
 	end
 	if ns.RefreshConfig then ns.RefreshConfig() end
@@ -584,6 +622,7 @@ function ns.StatsReport()
 	end
 	Print(T("Usage stats: %d players, %d active in the last 7 days."):format(players, active))
 	print("  " .. T("Logins %d, bags opened %d, hours played %d, mails sent %d."):format(t.logins, t.opens, math.floor(t.minutes / 60), t.mails))
+	print("  " .. Gone())
 	local v = {}
 	for ver, n in pairs(versions) do v[#v + 1] = ver .. " (" .. n .. ")" end
 	table.sort(v)

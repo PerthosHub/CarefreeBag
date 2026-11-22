@@ -40,6 +40,7 @@ dlg.OnAccept(); RunTimers()
 check(CarefreeBagDB.statsShare == true, "toestemming bewaard")
 check(JOINED == "CFBStats" and JOIN_PASS == "cfb4stats" and PREFIX_REG == "CFBStats", "verborgen kanaal met wachtwoord en prefix")
 check(#Chan("^Y|") == 1 and #Chan("^P|") == 1, "maker hoort 'net ja gezegd' en 'online'")
+check(Chan("^P|")[1] == "P|" .. NS.VERSION .. "|" .. tostring(CarefreeBagDB.statsID), "online-ping met nummer: " .. tostring(Chan("^P|")[1]))
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
 check(CarefreeBagDB.stats.opens == 2, "tassen open geteld: " .. tostring(CarefreeBagDB.stats.opens))
@@ -93,7 +94,11 @@ check(CarefreeBagConfig.statsCb, "vinkje 'Help improve CarefreeBag' in de opties
 check(CarefreeBagStatsDev == nil, "speler krijgt geen dev-venster")
 
 -- Uit: niets meer bewaren, kanaal uit
+local myID = CarefreeBagDB.statsID
+ADDONMSG = {}
 NS.SetStatsShare(false)
+check(#Chan("^N|") == 1 and Chan("^N|")[1] == "N|" .. tostring(myID), "uit: eerst een afmelding met het nummer")
+RunTimers()
 check(CarefreeBagDB.statsShare == false and CarefreeBagDB.stats == nil and JOINED == nil, "uit: gewist en kanaal uit")
 CarefreeBagFrame:Hide(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
 NS.StatsCount("dr")
