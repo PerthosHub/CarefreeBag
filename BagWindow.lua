@@ -194,6 +194,41 @@ local function FromBags(id)
 end
 local StoreCursorItem -- staat verderop, na FirstFreeSlot
 
+-- Gesplitste stapel (Shift-klik, bijv. 10 van 20) op de cursor. CFB toont één vakje per item, dus
+-- er is geen leeg vakje om hem op te leggen: terugleggen op het item voegde hem weer samen
+-- (Johan, 2026-11-24). Zolang een gesplitste stapel aan de muis hangt, ligt er over elk item een
+-- vanger: klik of loslaten = in een vrij vakje. Achtergrond, vulbalk en "+" doen hetzelfde.
+local split -- { id = itemID } zolang de gesplitste stapel op de cursor zit
+local function SplitOnCursor()
+	if not split then return false end
+	if not CursorHasItem() or CursorItemID() ~= split.id then split = nil; return false end
+	return true
+end
+local splitWatch = CreateFrame("Frame")
+splitWatch:Hide()
+local function ShowCatchers(on)
+	for _, b in ipairs(itemPool) do
+		if b.splitCatch then b.splitCatch:SetShown(on and b:IsShown() and true or false) end
+	end
+end
+local function CheckSplit()
+	-- ook na een Refresh (nieuwe tegels) blijven de vangers kloppen
+	if SplitOnCursor() then ShowCatchers(true); return end
+	ShowCatchers(false); splitWatch:Hide()
+end
+splitWatch:SetScript("OnUpdate", CheckSplit)
+local function OnSplit(bag, slot)
+	local ok, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
+	if not (ok and info and info.itemID) then return end
+	split = { id = info.itemID }
+	Log("split " .. info.itemID .. " from " .. tostring(bag) .. ":" .. tostring(slot))
+	ShowCatchers(true); splitWatch:Show()
+end
+if C_Container and C_Container.SplitContainerItem then hooksecurefunc(C_Container, "SplitContainerItem", OnSplit) end
+if _G.SplitContainerItem then hooksecurefunc("SplitContainerItem", OnSplit) end
+-- Item op de cursor dat (nog) geen eigen vakje heeft: van buiten je tassen, of een gesplitste stapel.
+local function Loose(id) return SplitOnCursor() or not FromBags(id) end
+
 -- Sorteren per categorie: soort, stapelprijs, nieuwste als laatst of handmatig.
 local SORTS = { "value", "newest", "manual" }
 local SORT_NAME = { value = "Stack price", newest = "Newest last", manual = "Manual" }
@@ -346,6 +381,17 @@ local function NewItemButton(i)
 		end
 		if origDrag then return origDrag(self, ...) end
 	end)
+	-- Vanger voor een gesplitste stapel (zie SplitOnCursor): alleen zichtbaar zolang die aan de muis hangt.
+	local c = CreateFrame("Button", nil, b)
+	c:SetAllPoints(b)
+	c:SetFrameLevel(b:GetFrameLevel() + 6)
+	c:RegisterForClicks("LeftButtonUp")
+	c:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	local function catch() if SplitOnCursor() then StoreCursorItem() end; CheckSplit() end
+	c:SetScript("OnClick", catch)
+	c:SetScript("OnReceiveDrag", catch)
+	c:Hide()
+	b.splitCatch = c
 	b.multi = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
 	b.multi:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -2)
 	b.multi:SetTextColor(0.4, 0.85, 1)
@@ -583,7 +629,7 @@ end
 local function DropOn(sectionKey)
 	local id = CursorItemID()
 	if not id then return end
-	local outside = not FromBags(id)
+	local outside = Loose(id)
 	if sectionKey == "hidden" then
 		Hidden()[id] = true
 	elseif sectionKey == "other" then
@@ -597,6 +643,7 @@ local function DropOn(sectionKey)
 	if ns.StatsCount then ns.StatsCount("dr") end -- gebruiksstatistieken (Stats.lua)
 	-- Uit je tassen: terug naar zijn eigen vakje. Van ergens anders: in een vrij vakje leggen.
 	if not (outside and StoreCursorItem()) then ClearCursor() end
+	CheckSplit()
 	-- Niet opnieuw sorteren (Johan, 2026-11-21): het item komt achteraan in de groep waar je
 	-- het losliet, de rest blijft staan. Netjes sorteren gebeurt pas bij het weer openen.
 	-- Stond het deze keer al eerder in die groep, dan ook achteraan (niet op zijn oude plek).
@@ -760,7 +807,8 @@ end
 -- Ergens op het venster (achtergrond, vulbalk) laten vallen.
 local function DropAnywhere()
 	local id = CursorItemID()
-	if id and not FromBags(id) then StoreCursorItem() end
+	if id and Loose(id) then StoreCursorItem() end
+	CheckSplit()
 end
 
 -- Per tas een onzichtbaar ouder-frame met SetID(tas). WoW's knop leest de tas dan zelf via
