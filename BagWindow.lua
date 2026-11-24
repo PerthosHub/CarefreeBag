@@ -221,6 +221,7 @@ splitWatch:SetScript("OnUpdate", CheckSplit)
 local function OnSplit(bag, slot)
 	local ok, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
 	if not (ok and info and info.itemID) then return end
+	if split and split.id == info.itemID and SplitOnCursor() then return end -- al gezien (2 hooks)
 	split = { id = info.itemID }
 	-- Zelf gesplitst = bewust losse stapels: niet vanzelf weer samenvoegen (Chores.lua),
 	-- tot er nog maar één stapel van over is.
@@ -396,6 +397,11 @@ local function NewItemButton(i)
 	c:SetScript("OnReceiveDrag", catch)
 	c:Hide()
 	b.splitCatch = c
+	-- WoW's splitsvenster roept owner:SplitStack(n) aan. Ook hier luisteren: als WoW de functie
+	-- C_Container.SplitContainerItem al vóór CFB in een local had gezet, mist de hook hierboven hem.
+	if type(b.SplitStack) == "function" then
+		hooksecurefunc(b, "SplitStack", function(self) OnSplit(self:GetBagID(), self:GetID()) end)
+	end
 	b.multi = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
 	b.multi:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -2)
 	b.multi:SetTextColor(0.4, 0.85, 1)
