@@ -199,6 +199,7 @@ local StoreCursorItem -- staat verderop, na FirstFreeSlot
 -- (Johan, 2026-11-24). Zolang een gesplitste stapel aan de muis hangt, ligt er over elk item een
 -- vanger: klik of loslaten = in een vrij vakje. Achtergrond, vulbalk en "+" doen hetzelfde.
 local split -- { id = itemID } zolang de gesplitste stapel op de cursor zit
+ns.splitByYou = {} -- [itemID] = true: deze sessie zelf gesplitst
 local function SplitOnCursor()
 	if not split then return false end
 	if not CursorHasItem() or CursorItemID() ~= split.id then split = nil; return false end
@@ -221,6 +222,9 @@ local function OnSplit(bag, slot)
 	local ok, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
 	if not (ok and info and info.itemID) then return end
 	split = { id = info.itemID }
+	-- Zelf gesplitst = bewust losse stapels: niet vanzelf weer samenvoegen (Chores.lua),
+	-- tot er nog maar één stapel van over is.
+	ns.splitByYou[info.itemID] = true
 	Log("split " .. info.itemID .. " from " .. tostring(bag) .. ":" .. tostring(slot))
 	ShowCatchers(true); splitWatch:Show()
 end

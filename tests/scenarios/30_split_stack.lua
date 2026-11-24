@@ -25,9 +25,11 @@ t.splitCatch:Fire("OnClick", "LeftButton"); RunTimers()
 local n, c = stacks(7964)
 check(CURSOR == nil and n == 2 and c[1] == 10 and c[2] == 10, "2× 10 in de tas (" .. n .. " stapels)")
 check(not t.splitCatch.shown, "vanger weer weg")
+E("BAG_UPDATE_DELAYED"); RunTimers(); E("BAG_UPDATE_DELAYED"); RunTimers()
+n = stacks(7964)
+check(n == 2, "zelf gesplitst: niet vanzelf weer samengevoegd (" .. n .. " stapels)")
 
 -- 2) Splitsen en op de achtergrond laten vallen
-E("BAG_UPDATE_DELAYED"); RunTimers()
 C_Container.SplitContainerItem(0, 1, 4)
 CarefreeBagFrame:Fire("OnReceiveDrag"); RunTimers()
 n = stacks(7964)
@@ -38,4 +40,10 @@ E("BAG_UPDATE_DELAYED"); RunTimers()
 CURSOR = { itemID = 4599, count = 5 }; BAGS[0][2] = nil
 check(not Tile(7964).splitCatch.shown, "geen vanger bij gewoon oppakken")
 CURSOR = nil; BAGS[0][2] = { itemID = 4599, count = 5 }
+
+-- 4) Niet zelf gesplitst: losse stapels worden gewoon samengevoegd
+BAGS[0][7] = { itemID = 4599, count = 3 }
+E("BAG_UPDATE_DELAYED"); RunTimers(); E("BAG_UPDATE_DELAYED"); RunTimers()
+n = stacks(4599)
+check(n == 1, "ander item: wel samengevoegd (" .. n .. " stapels)")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))

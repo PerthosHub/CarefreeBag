@@ -33,9 +33,18 @@ local function RestackStep()
 	if ns.bankOpen or ns.mailOpen then return false end -- MAIL_CLOSED/BANKFRAME_CLOSED starten het weer
 	if stack.burst >= 40 then return false end -- veiligheidsrem
 	local items = Scan()
-	local by = {}
+	local by, stacks = {}, {}
+	local split = ns.splitByYou or {}
 	for _, e in ipairs(items) do
-		if e.stackKnown and not e.key and e.maxStack > 1 and e.count < e.maxStack and not e.info.isLocked then
+		stacks[e.itemID] = (stacks[e.itemID] or 0) + 1
+	end
+	-- Zelf gesplitst (BagWindow.lua): laten staan tot er nog maar één stapel is.
+	for id in pairs(split) do
+		if (stacks[id] or 0) <= 1 then split[id] = nil end
+	end
+	for _, e in ipairs(items) do
+		if e.stackKnown and not e.key and e.maxStack > 1 and e.count < e.maxStack and not e.info.isLocked
+			and not split[e.itemID] then
 			by[e.itemID] = by[e.itemID] or {}
 			table.insert(by[e.itemID], e)
 		end
