@@ -38,9 +38,12 @@ local function RestackStep()
 	for _, e in ipairs(items) do
 		stacks[e.itemID] = (stacks[e.itemID] or 0) + 1
 	end
-	-- Zelf gesplitst (BagWindow.lua): laten staan tot er nog maar één stapel is.
-	for id in pairs(split) do
-		if (stacks[id] or 0) <= 1 then split[id] = nil end
+	-- Zelf gesplitst (BagWindow.lua): laten staan tot er nog maar één stapel is. Pas na 5 s:
+	-- WoW meldt een tas-wijziging soms al vóór de neergelegde stapel in zijn vakje staat, dan
+	-- telden we 1 stapel en voegden we hem daarna toch samen (Johan, 2026-11-24, log 21:24:18).
+	local now = GetTime()
+	for id, t in pairs(split) do
+		if (stacks[id] or 0) <= 1 and now - (tonumber(t) or 0) > 5 then split[id] = nil end
 	end
 	for _, e in ipairs(items) do
 		if e.stackKnown and not e.key and e.maxStack > 1 and e.count < e.maxStack and not e.info.isLocked

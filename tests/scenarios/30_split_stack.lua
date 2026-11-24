@@ -29,6 +29,18 @@ E("BAG_UPDATE_DELAYED"); RunTimers(); E("BAG_UPDATE_DELAYED"); RunTimers()
 n = stacks(7964)
 check(n == 2, "zelf gesplitst: niet vanzelf weer samengevoegd (" .. n .. " stapels)")
 
+-- 1b) Zoals in het spel (log 21:24): WoW meldt de tas-wijziging al vóór de neergelegde stapel in
+-- zijn vakje staat. Dan even maar 1 stapel te zien; daarna mag hij toch niet samengevoegd worden.
+BAGS[0][1] = { itemID = 7964, count = 20 }; BAGS[0][3] = nil
+E("BAG_UPDATE_DELAYED"); RunTimers()
+C_Container.SplitContainerItem(0, 1, 10)
+CURSOR = nil -- onderweg naar het vrije vakje
+E("BAG_UPDATE_DELAYED"); RunTimers()
+BAGS[0][3] = { itemID = 7964, count = 10 } -- nu pas in het vakje
+E("BAG_UPDATE_DELAYED"); RunTimers(); E("BAG_UPDATE_DELAYED"); RunTimers()
+n = stacks(7964)
+check(n == 2, "stapel nog onderweg: daarna niet samengevoegd (" .. n .. " stapels)")
+
 -- 2) Splitsen en op de achtergrond laten vallen
 C_Container.SplitContainerItem(0, 1, 4)
 CarefreeBagFrame:Fire("OnReceiveDrag"); RunTimers()
