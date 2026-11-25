@@ -44,17 +44,15 @@ check(n == 2, "stapel nog onderweg: daarna niet samengevoegd (" .. n .. " stapel
 -- 1c) Twee vakjes in het venster (Johan, 2026-11-25), elk met zijn eigen aantal, naast elkaar
 local function tiles(id) local t = {} for _, f in ipairs(ALLFRAMES) do if f.isCarefreeItem and f.shown and f.group and f.group.itemID == id then t[#t+1] = f.group.count end end table.sort(t); return table.concat(t, "+"), #t end
 check(tiles(7964) == "10+10", "twee vakjes van 10: " .. tiles(7964))
--- na /reload nog steeds apart en niet samengevoegd
-for _, f in ipairs(ALLFRAMES) do if f.isCarefreeItem then f.shown, f.isCarefreeItem = false, nil end end -- oud venster weg
-NS = {}; LoadAddon(NS)
-E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); NOW = NOW + 60
-SlashCmdList.CAREFREEBAG("show"); E("BAG_UPDATE_DELAYED"); RunTimers()
+-- tas dicht en weer open (Johan, 2026-11-25): dan mag alles weer samen
+CarefreeBagFrame:Hide(); RunTimers(); E("BAG_UPDATE_DELAYED"); RunTimers()
 n = stacks(7964)
-check(n == 2, "na /reload niet samengevoegd (" .. n .. " stapels)")
--- zelf weer op elkaar gelegd: na 5 s vergeten, weer 1 vakje
-BAGS[0][1] = { itemID = 7964, count = 20 }; BAGS[0][3] = nil
-E("BAG_UPDATE_DELAYED"); NOW = NOW + 6; E("BAG_UPDATE_DELAYED"); RunTimers()
-check(not CFC().splitKeep[7964] and select(2, tiles(7964)) == 1, "weer samen: 1 vakje (" .. tiles(7964) .. ")")
+check(n == 1, "tas dicht: weer samengevoegd (" .. n .. " stapels)")
+SlashCmdList.CAREFREEBAG("show"); E("BAG_UPDATE_DELAYED"); RunTimers()
+check(select(2, tiles(7964)) == 1, "weer open: 1 vakje (" .. tiles(7964) .. ")")
+-- daarna opnieuw splitsen werkt gewoon (BAGS opnieuw klaarzetten voor de rest van de test)
+for s = 1, BAGS[0].n do if BAGS[0][s] and BAGS[0][s].itemID == 7964 then BAGS[0][s] = nil end end
+BAGS[0][1] = { itemID = 7964, count = 20 }; E("BAG_UPDATE_DELAYED"); RunTimers()
 C_Container.SplitContainerItem(0, 1, 10); Tile(7964).splitCatch:Fire("OnClick", "LeftButton"); RunTimers()
 E("BAG_UPDATE_DELAYED"); RunTimers()
 
@@ -76,3 +74,26 @@ E("BAG_UPDATE_DELAYED"); RunTimers(); E("BAG_UPDATE_DELAYED"); RunTimers()
 n = stacks(4599)
 check(n == 1, "ander item: wel samengevoegd (" .. n .. " stapels)")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))
+
+-- 5) Volle tassen: gesplitste stapel op een stapel van hetzelfde item = er weer bij
+local function fill()
+  for s = 1, BAGS[0].n do BAGS[0][s] = nil end
+  BAGS[0][1] = { itemID = 7964, count = 20 }
+  for s = 2, BAGS[0].n do BAGS[0][s] = { itemID = 4599, count = 20 } end
+end
+CarefreeBagFrame:Hide(); RunTimers(); SlashCmdList.CAREFREEBAG("show"); fill(); E("BAG_UPDATE_DELAYED"); RunTimers()
+C_Container.SplitContainerItem(0, 1, 5)
+Tile(7964).splitCatch:Fire("OnClick", "LeftButton"); RunTimers()
+local merged = false
+for _, l in ipairs(CarefreeBagDB.log) do if l:find("merged cursor item 7964 into 0:1", 1, true) then merged = true end end
+check(merged, "volle tassen: terug op de eigen stapel")
+CURSOR = nil
+
+-- 6) Splitsen in de bank: niet als eigen splitsing onthouden
+BAGS[-1] = { n = 4, [1] = { itemID = 7964, count = 20 } }
+CarefreeBagFrame:Hide(); RunTimers(); SlashCmdList.CAREFREEBAG("show"); RunTimers()
+C_Container.SplitContainerItem(-1, 1, 5)
+check(NS.splitKeep[7964] == nil and not Tile(7964).splitCatch.shown, "bank-splitsing: gewoon WoW")
+CURSOR = nil
+check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))
+

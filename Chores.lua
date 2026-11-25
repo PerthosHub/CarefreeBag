@@ -33,27 +33,8 @@ local function RestackStep()
 	if ns.bankOpen or ns.mailOpen then return false end -- MAIL_CLOSED/BANKFRAME_CLOSED starten het weer
 	if stack.burst >= 40 then return false end -- veiligheidsrem
 	local items = Scan()
-	local by, stacks = {}, {}
-	local split = ns.CS().splitKeep or {}
-	for _, e in ipairs(items) do
-		stacks[e.itemID] = (stacks[e.itemID] or 0) + 1
-	end
-	-- Zelf gesplitst (BagWindow.lua): onthouden tot er 5 s lang nog maar één stapel is. Niet
-	-- meteen vergeten: WoW meldt een tas-wijziging soms al vóór de neergelegde stapel in zijn
-	-- vakje staat (log 24-11 21:24:18), en vlak na het inloggen kunnen de tassen nog leeg zijn.
-	local now = GetTime()
-	for id in pairs(split) do
-		if (stacks[id] or 0) > 1 then
-			ns.splitLow[id] = nil
-		elseif not ns.splitLow[id] then
-			ns.splitLow[id] = now
-			C_Timer.After(6, ns.ScheduleRestack)
-		elseif now - ns.splitLow[id] >= 5 then
-			split[id], ns.splitLow[id] = nil, nil
-			Log("split " .. id .. ": one stack again")
-			if ns.Refresh then ns.Refresh() end
-		end
-	end
+	local by = {}
+	local split = ns.splitKeep or {} -- zelf gesplitst (BagWindow.lua): laten staan tot de tas dicht is
 	for _, e in ipairs(items) do
 		if e.stackKnown and not e.key and e.maxStack > 1 and e.count < e.maxStack and not e.info.isLocked
 			and not split[e.itemID] then

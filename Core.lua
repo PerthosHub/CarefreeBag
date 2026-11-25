@@ -3,7 +3,7 @@
 -- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
 local ADDON, ns = ...
 
-ns.VERSION = "1.12.5"
+ns.VERSION = "1.13.0"
 do -- versie uit de .toc (bij een release vult de packager die in vanuit de git-tag)
 	local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 	local v = get and get(ADDON, "Version")
@@ -297,7 +297,7 @@ local function RepairEmptyRealm(full, key)
 		for id, k in pairs(bad.assign or {}) do
 			if good.assign[id] == nil and groups[k] then good.assign[id] = k end
 		end
-		for _, f in ipairs({ "hidden", "keep", "questKeep", "questSnooze", "questOffered", "splitKeep" }) do
+		for _, f in ipairs({ "hidden", "keep", "questKeep", "questSnooze", "questOffered" }) do
 			if bad[f] then
 				good[f] = good[f] or {}
 				for id, v in pairs(bad[f]) do if good[f][id] == nil then good[f][id] = v end end

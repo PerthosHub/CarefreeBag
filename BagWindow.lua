@@ -199,7 +199,7 @@ local StoreCursorItem -- staat verderop, na FirstFreeSlot
 -- (Johan, 2026-11-24). Zolang een gesplitste stapel aan de muis hangt, ligt er over elk item een
 -- vanger: klik of loslaten = in een vrij vakje. Achtergrond, vulbalk en "+" doen hetzelfde.
 local split -- { id = itemID } zolang de gesplitste stapel op de cursor zit
-ns.splitLow = {} -- [itemID] = sinds wanneer er van een gesplitst item nog maar 1 stapel is (Chores.lua)
+ns.splitKeep = {} -- [itemID] = zelf gesplitst: aparte vakjes tot je de tas sluit
 local function SplitOnCursor()
 	if not split then return false end
 	if not CursorHasItem() or CursorItemID() ~= split.id then split = nil; return false end
@@ -222,13 +222,14 @@ local function OnSplit(bag, slot)
 	local ok, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
 	if not (ok and info and info.itemID) then return end
 	if split and split.id == info.itemID and SplitOnCursor() then return end -- al gezien (2 hooks)
+	-- Gesplitst in de bank: gewoon WoW (bij je stapel leggen = erbij, zie MergeCursorInto).
+	for _, id in ipairs(ns.BankBags and ns.BankBags() or {}) do
+		if id == bag then return end
+	end
 	split = { id = info.itemID }
-	-- Zelf gesplitst = bewust losse stapels, per karakter onthouden (ook na /reload): elk een eigen
-	-- vakje (GroupItems) en niet vanzelf samenvoegen (Chores.lua), tot er weer maar één stapel is.
-	local cs = CS()
-	cs.splitKeep = cs.splitKeep or {}
-	cs.splitKeep[info.itemID] = true
-	ns.splitLow[info.itemID] = nil
+	-- Zelf gesplitst = bewust losse stapels: elk een eigen vakje (GroupItems) en niet vanzelf
+	-- samenvoegen (Chores.lua). Tas dicht = vergeten, dan mag alles weer samen (Johan, 2026-11-25).
+	ns.splitKeep[info.itemID] = true
 	Log("split " .. info.itemID .. " from " .. tostring(bag) .. ":" .. tostring(slot))
 	ShowCatchers(true); splitWatch:Show()
 end
@@ -395,7 +396,16 @@ local function NewItemButton(i)
 	c:SetFrameLevel(b:GetFrameLevel() + 6)
 	c:RegisterForClicks("LeftButtonUp")
 	c:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-	local function catch() if SplitOnCursor() then StoreCursorItem() end; CheckSplit() end
+	-- Volle tassen: op een stapel van hetzelfde item = er weer bij.
+	local function catch()
+		if SplitOnCursor() and not StoreCursorItem(true) then
+			local id = CursorItemID()
+			if not (b.group and b.group.itemID == id and ns.MergeCursorInto(id, b.group.rep)) then
+				StoreCursorItem() -- geeft de melding "Inventory is full"
+			end
+		end
+		CheckSplit()
+	end
 	c:SetScript("OnClick", catch)
 	c:SetScript("OnReceiveDrag", catch)
 	c:Hide()
@@ -980,7 +990,7 @@ local function GroupItems(items)
 		local s = bySection[sec]
 		if not s then s = { groups = {}, byKey = {} }; bySection[sec] = s end
 		-- zelf gesplitst: elke stapel een eigen vakje, zodat je er één kunt handelen, banken of veilen
-		local apart = CS().splitKeep and CS().splitKeep[e.itemID]
+		local apart = ns.splitKeep[e.itemID]
 		local key = (ns.DB.merge and e.maxStack > 1 and not apart) and ("i" .. e.itemID) or ("s" .. e.bag .. ":" .. e.slot)
 		local g = s.byKey[key]
 		if not g then
@@ -1080,7 +1090,7 @@ local function FrozenCells(sec, s, groups)
 		end
 		if g and not used[g.key] then
 			cells[#cells + 1] = g; used[g.key] = true
-			kept[#kept + 1] = { key = g.key, id = o.id }
+			kept[#kept + 1] = { key = g.key, id = g.itemID } -- vak kan een ander item hebben gekregen
 		elseif not g then
 			kept[#kept + 1] = o -- even weg: houdt zijn plek
 		end
@@ -1344,6 +1354,12 @@ function ns.BuildMain()
 	ns.main:SetScript("OnHide", function()
 		showHidden = false
 		ns.ResetOrder() -- volgende keer openen: netjes opnieuw gesorteerd
+		-- Tas dicht: zelf gesplitste stapels mogen weer samen.
+		if next(ns.splitKeep) then
+			Log("split: bags closed, stacks may merge again")
+			ns.splitKeep = {}
+			if ns.ScheduleRestack then ns.ScheduleRestack() end
+		end
 		-- Tas dicht: nieuwe items zijn gezien, markering weghalen.
 		ClearNew()
 		-- Tas dicht: zoeken stopt (volgende keer openen = alles weer zichtbaar).
