@@ -82,7 +82,7 @@ local function fill()
   for s = 2, BAGS[0].n do BAGS[0][s] = { itemID = 4599, count = 20 } end
 end
 CarefreeBagFrame:Hide(); RunTimers(); SlashCmdList.CAREFREEBAG("show"); fill(); E("BAG_UPDATE_DELAYED"); RunTimers()
-C_Container.SplitContainerItem(0, 1, 5)
+C_Container.SplitContainerItem(0, 1, 5); E("BAG_UPDATE_DELAYED"); RunTimers() -- zoals in het spel: venster ververst
 Tile(7964).splitCatch:Fire("OnClick", "LeftButton"); RunTimers()
 local merged = false
 for _, l in ipairs(CarefreeBagDB.log) do if l:find("merged cursor item 7964 into 0:1", 1, true) then merged = true end end
