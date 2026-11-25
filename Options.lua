@@ -388,6 +388,35 @@ local function RowMail(r)
 	Tooltip(r.mailAuto, T("Send without asking"), T("At the mailbox this group is sent right away, without the Yes/Skip question."))
 end
 
+-- Een eigen groep pas verwijderen na "ja" (issue #21).
+local function RemoveCat(key)
+	-- opnieuw opzoeken: tussen vraag en antwoord kan de lijst veranderd zijn
+	local c, idx = CatByKey(key)
+	if c then
+		table.remove(CS().cats, idx)
+		-- alleen bij dit karakter: andere karakters houden hun groepen en geleerde items
+		local own = Assign()
+		for id, k in pairs(own) do if k == key then own[id] = nil end end
+		Log("category removed: " .. key)
+		Print(T("category '%s' removed. Its items are back in Other."):format(c.name))
+	end
+	ResetOrder(); ns.Refresh(); ns.RefreshConfig()
+end
+
+local function AskRemoveCat(c)
+	local key = c.key
+	StaticPopupDialogs["CAREFREEBAG_DELCAT"] = {
+		text = "%s",
+		button1 = T("Remove"),
+		button2 = T("No"),
+		OnAccept = function() RemoveCat(key) end,
+		OnCancel = function() Log("category not removed: " .. key) end,
+		timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+	}
+	Log("category remove asked: " .. key)
+	StaticPopup_Show("CAREFREEBAG_DELCAT", T("Remove the group '%s'? Its items go back to Other."):format(c.name))
+end
+
 -- Volgorde, verwijderen en "Always keep" rechts in de rij.
 local function RowButtons(r)
 	r.up = MakeButton(r, "^", 24)
@@ -399,15 +428,8 @@ local function RowButtons(r)
 	r.up:SetScript("OnClick", function() MoveKey(r.index, -1) end)
 	r.down:SetScript("OnClick", function() MoveKey(r.index, 1) end)
 	r.del:SetScript("OnClick", function()
-		local c, idx = CatByKey(r.key)
-		if c then
-			table.remove(CS().cats, idx)
-			-- alleen bij dit karakter: andere karakters houden hun groepen en geleerde items
-			local own = Assign()
-			for id, k in pairs(own) do if k == c.key then own[id] = nil end end
-			Print(T("category '%s' removed. Its items are back in Other."):format(c.name))
-		end
-		ResetOrder(); ns.Refresh(); ns.RefreshConfig()
+		local c = CatByKey(r.key)
+		if c then AskRemoveCat(c) end
 	end)
 	Tooltip(r.del, T("Remove"), T("Items go back to Other."))
 	-- Bij volle tassen nooit iets uit deze groep weggooien.

@@ -70,4 +70,9 @@ local me = CarefreeBagDB.chars["Thrall Frostwolf-"]; me.assign[2589] = "prof"
 CarefreeBagConfig:Show(); RunTimers()
 local r; for _, f in ipairs(ALLFRAMES) do if f.del and f.key == "prof" and f.shown then r = f end end
 r.del:Fire("OnClick"); RunTimers()
+-- eerst vragen (issue #21): zonder "ja" gebeurt er niets
+check(POPUPS[#POPUPS].which == "CAREFREEBAG_DELCAT" and me.assign[2589] == "prof", "verwijderen: eerst een vraag, nog niets weg")
+StaticPopupDialogs.CAREFREEBAG_DELCAT.OnCancel(); RunTimers()
+check(me.assign[2589] == "prof", "nee: groep blijft")
+r.del:Fire("OnClick"); StaticPopupDialogs.CAREFREEBAG_DELCAT.OnAccept(); RunTimers()
 check(me.assign[2589] == nil and CarefreeBagDB.chars["Ander-"].assign[2589] == "prof", "verwijderen: alleen dit karakter vergeet de items")

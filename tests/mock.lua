@@ -82,7 +82,10 @@ function GetMoneyString(m) return m .. "c" end
 function GetCursorPosition() return 0, 0 end
 C_Timer = { After = function(d, f) QUEUE[#QUEUE+1] = f end }
 function RunTimers() for i = 1, 20 do local q = QUEUE; QUEUE = {}; if #q == 0 then return end for _, f in ipairs(q) do f() end end end
-function hooksecurefunc(name, fn) local old = _G[name]; _G[name] = function(...) local r = { old(...) }; fn(...); return unpack(r) end end
+function hooksecurefunc(t, name, fn)
+  if type(t) ~= "table" then t, name, fn = _G, t, name end
+  local old = t[name]; t[name] = function(...) local r = { old(...) }; fn(...); return unpack(r) end
+end
 function SetItemButtonTexture(b, t) b.tex = t end
 function SetItemButtonCount(b, c) b.count = c end
 function SetItemButtonDesaturated(b, d) b.desat = d end
@@ -108,6 +111,12 @@ function CursorHasItem() return CURSOR ~= nil end
 function GetCursorInfo() if CURSOR then return "item", CURSOR.itemID end end
 function ClearCursor() CURSOR = nil end
 C_Container = {}
+-- Shift-klik splitsen: een deel naar de cursor, de rest blijft in het vakje.
+function C_Container.SplitContainerItem(b, s, n)
+  local it = BAGS[b][s]; if not it or CURSOR or n >= it.count then return end
+  it.count = it.count - n; CURSOR = { itemID = it.itemID, count = n }
+  log("SPLIT " .. b .. ":" .. s .. " " .. n)
+end
 function C_Container.GetContainerNumSlots(b) return BAGS[b] and BAGS[b].n or 0 end
 function C_Container.GetContainerNumFreeSlots(b) return 0, 0 end
 function C_Container.GetContainerItemInfo(b, s)

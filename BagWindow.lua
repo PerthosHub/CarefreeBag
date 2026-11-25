@@ -194,6 +194,52 @@ local function FromBags(id)
 end
 local StoreCursorItem -- staat verderop, na FirstFreeSlot
 
+-- Gesplitste stapel (Shift-klik, bijv. 10 van 20) op de cursor. CFB toont één vakje per item, dus
+-- er is geen leeg vakje om hem op te leggen: terugleggen op het item voegde hem weer samen
+-- (Johan, 2026-11-24). Zolang een gesplitste stapel aan de muis hangt, ligt er over elk item een
+-- vanger: klik of loslaten = in een vrij vakje. Achtergrond, vulbalk en "+" doen hetzelfde.
+local split -- { id = itemID } zolang de gesplitste stapel op de cursor zit
+ns.splitKeep = {} -- [itemID] = zelf gesplitst: aparte vakjes tot je de tas sluit
+local function SplitOnCursor()
+	if not split then return false end
+	if not CursorHasItem() or CursorItemID() ~= split.id then split = nil; return false end
+	return true
+end
+local splitWatch = CreateFrame("Frame")
+splitWatch:Hide()
+local function ShowCatchers(on)
+	for _, b in ipairs(itemPool) do
+		if b.splitCatch then b.splitCatch:SetShown(on and b:IsShown() and true or false) end
+	end
+end
+local function CheckSplit()
+	-- ook na een Refresh (nieuwe tegels) blijven de vangers kloppen
+	if SplitOnCursor() then ShowCatchers(true); return end
+	ShowCatchers(false); splitWatch:Hide()
+end
+splitWatch:SetScript("OnUpdate", CheckSplit)
+local function OnSplit(bag, slot)
+	local ok, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
+	if not (ok and info and info.itemID) then return end
+	-- Gesplitst in de bank: gewoon WoW (bij je stapel leggen = erbij, zie MergeCursorInto).
+	for _, id in ipairs(ns.BankBags and ns.BankBags() or {}) do
+		if id == bag then return end
+	end
+	-- Twee hooks zien dezelfde splitsing: alles mag dubbel, alleen niet twee keer loggen. Nooit
+	-- hier stoppen, anders kan een volgende splitsing van hetzelfde item gemist worden.
+	local again = split and split.id == info.itemID and SplitOnCursor()
+	split = { id = info.itemID }
+	-- Zelf gesplitst = bewust losse stapels: elk een eigen vakje (GroupItems) en niet vanzelf
+	-- samenvoegen (Chores.lua). Tas dicht = vergeten, dan mag alles weer samen (Johan, 2026-11-25).
+	ns.splitKeep[info.itemID] = true
+	if not again then Log("split " .. info.itemID .. " from " .. tostring(bag) .. ":" .. tostring(slot)) end
+	ShowCatchers(true); splitWatch:Show()
+end
+if C_Container and C_Container.SplitContainerItem then hooksecurefunc(C_Container, "SplitContainerItem", OnSplit) end
+if _G.SplitContainerItem then hooksecurefunc("SplitContainerItem", OnSplit) end
+-- Item op de cursor dat (nog) geen eigen vakje heeft: van buiten je tassen, of een gesplitste stapel.
+local function Loose(id) return SplitOnCursor() or not FromBags(id) end
+
 -- Sorteren per categorie: soort, stapelprijs, nieuwste als laatst of handmatig.
 local SORTS = { "value", "newest", "manual" }
 local SORT_NAME = { value = "Stack price", newest = "Newest last", manual = "Manual" }
@@ -346,6 +392,31 @@ local function NewItemButton(i)
 		end
 		if origDrag then return origDrag(self, ...) end
 	end)
+	-- Vanger voor een gesplitste stapel (zie SplitOnCursor): alleen zichtbaar zolang die aan de muis hangt.
+	local c = CreateFrame("Button", nil, b)
+	c:SetAllPoints(b)
+	c:SetFrameLevel(b:GetFrameLevel() + 6)
+	c:RegisterForClicks("LeftButtonUp")
+	c:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	-- Volle tassen: op een stapel van hetzelfde item = er weer bij.
+	local function catch()
+		if SplitOnCursor() and not StoreCursorItem(true) then
+			local id = CursorItemID()
+			if not (b.group and b.group.itemID == id and ns.MergeCursorInto(id, b.group.rep)) then
+				StoreCursorItem() -- geeft de melding "Inventory is full"
+			end
+		end
+		CheckSplit()
+	end
+	c:SetScript("OnClick", catch)
+	c:SetScript("OnReceiveDrag", catch)
+	c:Hide()
+	b.splitCatch = c
+	-- WoW's splitsvenster roept owner:SplitStack(n) aan. Ook hier luisteren: als WoW de functie
+	-- C_Container.SplitContainerItem al vóór CFB in een local had gezet, mist de hook hierboven hem.
+	if type(b.SplitStack) == "function" then
+		hooksecurefunc(b, "SplitStack", function(self) OnSplit(self:GetBagID(), self:GetID()) end)
+	end
 	b.multi = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
 	b.multi:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -2)
 	b.multi:SetTextColor(0.4, 0.85, 1)
@@ -583,7 +654,7 @@ end
 local function DropOn(sectionKey)
 	local id = CursorItemID()
 	if not id then return end
-	local outside = not FromBags(id)
+	local outside = Loose(id)
 	if sectionKey == "hidden" then
 		Hidden()[id] = true
 	elseif sectionKey == "other" then
@@ -597,14 +668,13 @@ local function DropOn(sectionKey)
 	if ns.StatsCount then ns.StatsCount("dr") end -- gebruiksstatistieken (Stats.lua)
 	-- Uit je tassen: terug naar zijn eigen vakje. Van ergens anders: in een vrij vakje leggen.
 	if not (outside and StoreCursorItem()) then ClearCursor() end
+	CheckSplit()
 	-- Niet opnieuw sorteren (Johan, 2026-11-21): het item komt achteraan in de groep waar je
 	-- het losliet, de rest blijft staan. Netjes sorteren gebeurt pas bij het weer openen.
 	-- Stond het deze keer al eerder in die groep, dan ook achteraan (niet op zijn oude plek).
 	local order = frozen[sectionKey]
 	if order then
-		local mine = { ["i" .. id] = true }
-		for _, e in ipairs(lastItems) do if e.itemID == id then mine["s" .. e.bag .. ":" .. e.slot] = true end end
-		for i = #order, 1, -1 do if mine[order[i]] then table.remove(order, i) end end
+		for i = #order, 1, -1 do if order[i].id == id then table.remove(order, i) end end
 	end
 	ns.Refresh()
 end
@@ -760,7 +830,8 @@ end
 -- Ergens op het venster (achtergrond, vulbalk) laten vallen.
 local function DropAnywhere()
 	local id = CursorItemID()
-	if id and not FromBags(id) then StoreCursorItem() end
+	if id and Loose(id) then StoreCursorItem() end
+	CheckSplit()
 end
 
 -- Per tas een onzichtbaar ouder-frame met SetID(tas). WoW's knop leest de tas dan zelf via
@@ -920,7 +991,9 @@ local function GroupItems(items)
 		if sec == "hidden" then hiddenCount = hiddenCount + 1 end
 		local s = bySection[sec]
 		if not s then s = { groups = {}, byKey = {} }; bySection[sec] = s end
-		local key = (ns.DB.merge and e.maxStack > 1) and ("i" .. e.itemID) or ("s" .. e.bag .. ":" .. e.slot)
+		-- zelf gesplitst: elke stapel een eigen vakje, zodat je er één kunt handelen, banken of veilen
+		local apart = ns.splitKeep[e.itemID]
+		local key = (ns.DB.merge and e.maxStack > 1 and not apart) and ("i" .. e.itemID) or ("s" .. e.bag .. ":" .. e.slot)
 		local g = s.byKey[key]
 		if not g then
 			g = { key = key, slots = {}, count = 0, quality = e.quality, name = e.name, link = e.link, itemID = e.itemID, price = e.price, value = 0, ahValue = 0 }
@@ -1002,18 +1075,42 @@ local function FrozenCells(sec, s, groups)
 	local order = frozen[sec.key]
 	if not order then
 		order = {}
-		for _, g in ipairs(groups) do cells[#cells + 1] = g; order[#order + 1] = g.key end
+		for _, g in ipairs(groups) do cells[#cells + 1] = g; order[#order + 1] = { key = g.key, id = g.itemID } end
 		frozen[sec.key] = order
 		return cells
 	end
 	local byKey = s and s.byKey or {}
-	local used = {}
-	for _, k in ipairs(order) do
-		if byKey[k] then cells[#cells + 1] = byKey[k]; used[k] = true end
+	local known, used, kept = {}, {}, {}
+	for _, o in ipairs(order) do known[o.key] = true end
+	for _, o in ipairs(order) do
+		local g = byKey[o.key]
+		if not g then
+			-- sleutel veranderd (stapel gesplitst of weer samen): zelfde item op dezelfde plek
+			for _, n in ipairs(groups) do
+				if n.itemID == o.id and not used[n.key] and not known[n.key] then g = n; break end
+			end
+		end
+		if g and not used[g.key] then
+			cells[#cells + 1] = g; used[g.key] = true
+			kept[#kept + 1] = { key = g.key, id = g.itemID } -- vak kan een ander item hebben gekregen
+		elseif not g then
+			kept[#kept + 1] = o -- even weg: houdt zijn plek
+		end
+	end
+	-- Nieuw: naast een ander vakje van hetzelfde item (de tweede stapel), anders achteraan.
+	local function after(list, id)
+		for i = #list, 1, -1 do
+			if (list[i].id or list[i].itemID) == id then return i + 1 end
+		end
+		return #list + 1
 	end
 	for _, g in ipairs(groups) do
-		if not used[g.key] then cells[#cells + 1] = g; order[#order + 1] = g.key end
+		if not used[g.key] then
+			table.insert(cells, after(cells, g.itemID), g)
+			table.insert(kept, after(kept, g.itemID), { key = g.key, id = g.itemID })
+		end
 	end
+	frozen[sec.key] = kept
 	return cells
 end
 
@@ -1259,6 +1356,12 @@ function ns.BuildMain()
 	ns.main:SetScript("OnHide", function()
 		showHidden = false
 		ns.ResetOrder() -- volgende keer openen: netjes opnieuw gesorteerd
+		-- Tas dicht: zelf gesplitste stapels mogen weer samen.
+		if next(ns.splitKeep) then
+			Log("split: bags closed, stacks may merge again")
+			ns.splitKeep = {}
+			if ns.ScheduleRestack then ns.ScheduleRestack() end
+		end
 		-- Tas dicht: nieuwe items zijn gezien, markering weghalen.
 		ClearNew()
 		-- Tas dicht: zoeken stopt (volgende keer openen = alles weer zichtbaar).

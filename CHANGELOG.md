@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.13.0
+### ✨ New
+- ✂️ **Split stacks stay apart.** Shift-click to split a stack, then click any item to put it in a free slot. You now see two stacks, so you can trade, bank or auction one of them. They can merge again after you close your bags.
+- 🗑️ **Removing a group asks first.** One wrong click no longer removes your group.
+
 ## 1.12.5
 ### 🔧 Fixes
 - 🖱️ **Windows no longer stick to your mouse.** After dragging the quest items list, "Quest found" or the "Bags full" window, it kept following your mouse. Now it stays where you let go.

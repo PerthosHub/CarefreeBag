@@ -34,8 +34,10 @@ local function RestackStep()
 	if stack.burst >= 40 then return false end -- veiligheidsrem
 	local items = Scan()
 	local by = {}
+	local split = ns.splitKeep or {} -- zelf gesplitst (BagWindow.lua): laten staan tot de tas dicht is
 	for _, e in ipairs(items) do
-		if e.stackKnown and not e.key and e.maxStack > 1 and e.count < e.maxStack and not e.info.isLocked then
+		if e.stackKnown and not e.key and e.maxStack > 1 and e.count < e.maxStack and not e.info.isLocked
+			and not split[e.itemID] then
 			by[e.itemID] = by[e.itemID] or {}
 			table.insert(by[e.itemID], e)
 		end
