@@ -56,9 +56,6 @@ BAGS[0][1] = { itemID = 7964, count = 20 }; E("BAG_UPDATE_DELAYED"); RunTimers()
 C_Container.SplitContainerItem(0, 1, 10); Tile(7964).splitCatch:Fire("OnClick", "LeftButton"); RunTimers()
 E("BAG_UPDATE_DELAYED"); RunTimers()
 
-do local t = {} for i = 1, BAGS[0].n do local it = BAGS[0][i]; if it then t[#t+1] = i .. "=" .. it.itemID .. "x" .. it.count end end
-print("DEBUG bags " .. table.concat(t, " ") .. " cursor " .. tostring(CURSOR and CURSOR.count) .. " shown " .. tostring(CarefreeBagFrame.shown))
-for i = math.max(1, #CarefreeBagDB.log - 15), #CarefreeBagDB.log do print("DEBUG " .. CarefreeBagDB.log[i]) end end
 -- 2) Splitsen en op de achtergrond laten vallen
 C_Container.SplitContainerItem(0, 1, 4)
 CarefreeBagFrame:Fire("OnReceiveDrag"); RunTimers()

@@ -221,16 +221,18 @@ splitWatch:SetScript("OnUpdate", CheckSplit)
 local function OnSplit(bag, slot)
 	local ok, info = pcall(C_Container.GetContainerItemInfo, bag, slot)
 	if not (ok and info and info.itemID) then return end
-	if split and split.id == info.itemID and SplitOnCursor() then return end -- al gezien (2 hooks)
 	-- Gesplitst in de bank: gewoon WoW (bij je stapel leggen = erbij, zie MergeCursorInto).
 	for _, id in ipairs(ns.BankBags and ns.BankBags() or {}) do
 		if id == bag then return end
 	end
+	-- Twee hooks zien dezelfde splitsing: alles mag dubbel, alleen niet twee keer loggen. Nooit
+	-- hier stoppen, anders kan een volgende splitsing van hetzelfde item gemist worden.
+	local again = split and split.id == info.itemID and SplitOnCursor()
 	split = { id = info.itemID }
 	-- Zelf gesplitst = bewust losse stapels: elk een eigen vakje (GroupItems) en niet vanzelf
 	-- samenvoegen (Chores.lua). Tas dicht = vergeten, dan mag alles weer samen (Johan, 2026-11-25).
 	ns.splitKeep[info.itemID] = true
-	Log("split " .. info.itemID .. " from " .. tostring(bag) .. ":" .. tostring(slot))
+	if not again then Log("split " .. info.itemID .. " from " .. tostring(bag) .. ":" .. tostring(slot)) end
 	ShowCatchers(true); splitWatch:Show()
 end
 if C_Container and C_Container.SplitContainerItem then hooksecurefunc(C_Container, "SplitContainerItem", OnSplit) end
