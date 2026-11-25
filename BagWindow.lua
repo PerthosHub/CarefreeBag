@@ -199,7 +199,7 @@ local StoreCursorItem -- staat verderop, na FirstFreeSlot
 -- (Johan, 2026-11-24). Zolang een gesplitste stapel aan de muis hangt, ligt er over elk item een
 -- vanger: klik of loslaten = in een vrij vakje. Achtergrond, vulbalk en "+" doen hetzelfde.
 local split -- { id = itemID } zolang de gesplitste stapel op de cursor zit
-ns.splitByYou = {} -- [itemID] = tijd: deze sessie zelf gesplitst
+ns.splitLow = {} -- [itemID] = sinds wanneer er van een gesplitst item nog maar 1 stapel is (Chores.lua)
 local function SplitOnCursor()
 	if not split then return false end
 	if not CursorHasItem() or CursorItemID() ~= split.id then split = nil; return false end
@@ -223,9 +223,12 @@ local function OnSplit(bag, slot)
 	if not (ok and info and info.itemID) then return end
 	if split and split.id == info.itemID and SplitOnCursor() then return end -- al gezien (2 hooks)
 	split = { id = info.itemID }
-	-- Zelf gesplitst = bewust losse stapels: niet vanzelf weer samenvoegen (Chores.lua),
-	-- tot er nog maar één stapel van over is.
-	ns.splitByYou[info.itemID] = GetTime()
+	-- Zelf gesplitst = bewust losse stapels, per karakter onthouden (ook na /reload): elk een eigen
+	-- vakje (GroupItems) en niet vanzelf samenvoegen (Chores.lua), tot er weer maar één stapel is.
+	local cs = CS()
+	cs.splitKeep = cs.splitKeep or {}
+	cs.splitKeep[info.itemID] = true
+	ns.splitLow[info.itemID] = nil
 	Log("split " .. info.itemID .. " from " .. tostring(bag) .. ":" .. tostring(slot))
 	ShowCatchers(true); splitWatch:Show()
 end
@@ -659,9 +662,7 @@ local function DropOn(sectionKey)
 	-- Stond het deze keer al eerder in die groep, dan ook achteraan (niet op zijn oude plek).
 	local order = frozen[sectionKey]
 	if order then
-		local mine = { ["i" .. id] = true }
-		for _, e in ipairs(lastItems) do if e.itemID == id then mine["s" .. e.bag .. ":" .. e.slot] = true end end
-		for i = #order, 1, -1 do if mine[order[i]] then table.remove(order, i) end end
+		for i = #order, 1, -1 do if order[i].id == id then table.remove(order, i) end end
 	end
 	ns.Refresh()
 end
@@ -978,7 +979,9 @@ local function GroupItems(items)
 		if sec == "hidden" then hiddenCount = hiddenCount + 1 end
 		local s = bySection[sec]
 		if not s then s = { groups = {}, byKey = {} }; bySection[sec] = s end
-		local key = (ns.DB.merge and e.maxStack > 1) and ("i" .. e.itemID) or ("s" .. e.bag .. ":" .. e.slot)
+		-- zelf gesplitst: elke stapel een eigen vakje, zodat je er één kunt handelen, banken of veilen
+		local apart = CS().splitKeep and CS().splitKeep[e.itemID]
+		local key = (ns.DB.merge and e.maxStack > 1 and not apart) and ("i" .. e.itemID) or ("s" .. e.bag .. ":" .. e.slot)
 		local g = s.byKey[key]
 		if not g then
 			g = { key = key, slots = {}, count = 0, quality = e.quality, name = e.name, link = e.link, itemID = e.itemID, price = e.price, value = 0, ahValue = 0 }
@@ -1060,18 +1063,42 @@ local function FrozenCells(sec, s, groups)
 	local order = frozen[sec.key]
 	if not order then
 		order = {}
-		for _, g in ipairs(groups) do cells[#cells + 1] = g; order[#order + 1] = g.key end
+		for _, g in ipairs(groups) do cells[#cells + 1] = g; order[#order + 1] = { key = g.key, id = g.itemID } end
 		frozen[sec.key] = order
 		return cells
 	end
 	local byKey = s and s.byKey or {}
-	local used = {}
-	for _, k in ipairs(order) do
-		if byKey[k] then cells[#cells + 1] = byKey[k]; used[k] = true end
+	local known, used, kept = {}, {}, {}
+	for _, o in ipairs(order) do known[o.key] = true end
+	for _, o in ipairs(order) do
+		local g = byKey[o.key]
+		if not g then
+			-- sleutel veranderd (stapel gesplitst of weer samen): zelfde item op dezelfde plek
+			for _, n in ipairs(groups) do
+				if n.itemID == o.id and not used[n.key] and not known[n.key] then g = n; break end
+			end
+		end
+		if g and not used[g.key] then
+			cells[#cells + 1] = g; used[g.key] = true
+			kept[#kept + 1] = { key = g.key, id = o.id }
+		elseif not g then
+			kept[#kept + 1] = o -- even weg: houdt zijn plek
+		end
+	end
+	-- Nieuw: naast een ander vakje van hetzelfde item (de tweede stapel), anders achteraan.
+	local function after(list, id)
+		for i = #list, 1, -1 do
+			if (list[i].id or list[i].itemID) == id then return i + 1 end
+		end
+		return #list + 1
 	end
 	for _, g in ipairs(groups) do
-		if not used[g.key] then cells[#cells + 1] = g; order[#order + 1] = g.key end
+		if not used[g.key] then
+			table.insert(cells, after(cells, g.itemID), g)
+			table.insert(kept, after(kept, g.itemID), { key = g.key, id = g.itemID })
+		end
 	end
+	frozen[sec.key] = kept
 	return cells
 end
 

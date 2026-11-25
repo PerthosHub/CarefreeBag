@@ -30,7 +30,7 @@ local function SAVED()
         assign = { [2589] = "drinks", [4599] = "drinks" }, hidden = { [1234] = true }, seen = {}, manual = {},
         cats = { { key = "drinks", name = "Drinks" }, { key = "craft", name = "Craft", mailTo = "Thrall Stormrage" } },
         order = { "drinks", "craft", "quest", "other" }, collapsed = { craft = true },
-        hideBagSlots = true, keep = { [4599] = true }, panelSide = "left", questOffered = { [5003] = true },
+        hideBagSlots = true, keep = { [4599] = true }, panelSide = "left", questOffered = { [5003] = true }, splitKeep = { [4599] = true },
         snap = { name = "Thrall Frostwolf", class = "SHAMAN", bags = {}, bagsTime = 1000, bank = { { id = 2589, n = 20 } }, bankTime = 900 },
       },
       [ALT] = { assign = {}, cats = {}, snap = { name = "Thrall Stormrage", bags = {}, bagsTime = 500 } },
@@ -58,6 +58,7 @@ local function KeptAll(NS, label)
   check(ch.order[1] == "drinks" and ch.collapsed.craft, label .. ": volgorde en ingeklapt blijven")
   check(ch.hidden[1234] and ch.keep[4599] and ch.panelSide == "left", label .. ": verborgen/bewaard/paneelkant blijven")
   check(ch.hideBagSlots == true and not asked("CAREFREEBAG_BAGBAR"), label .. ": tassenbalk-vraag niet opnieuw")
+  check(ch.splitKeep and ch.splitKeep[4599], label .. ": zelf gesplitste stapels blijven onthouden")
   check(ch.snap.bank and #ch.snap.bank >= 1, label .. ": onthouden bank blijft")
   check(ch.questOffered and ch.questOffered[5003], label .. ": al gevraagde quest-items blijven onthouden")
   check(db.lang == "nl" and db.autoSell == true and db.autoSellAsked == true and db.mailAlwaysAuto == false, label .. ": taal en Auto Sell blijven")

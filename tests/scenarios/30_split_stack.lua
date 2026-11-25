@@ -41,6 +41,23 @@ E("BAG_UPDATE_DELAYED"); RunTimers(); E("BAG_UPDATE_DELAYED"); RunTimers()
 n = stacks(7964)
 check(n == 2, "stapel nog onderweg: daarna niet samengevoegd (" .. n .. " stapels)")
 
+-- 1c) Twee vakjes in het venster (Johan, 2026-11-25), elk met zijn eigen aantal, naast elkaar
+local function tiles(id) local t = {} for _, f in ipairs(ALLFRAMES) do if f.isCarefreeItem and f.shown and f.group and f.group.itemID == id then t[#t+1] = f.group.count end end table.sort(t); return table.concat(t, "+"), #t end
+check(tiles(7964) == "10+10", "twee vakjes van 10: " .. tiles(7964))
+-- na /reload nog steeds apart en niet samengevoegd
+for _, f in ipairs(ALLFRAMES) do if f.isCarefreeItem then f.shown, f.isCarefreeItem = false, nil end end -- oud venster weg
+NS = {}; LoadAddon(NS)
+E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); NOW = NOW + 60
+SlashCmdList.CAREFREEBAG("show"); E("BAG_UPDATE_DELAYED"); RunTimers()
+n = stacks(7964)
+check(n == 2, "na /reload niet samengevoegd (" .. n .. " stapels)")
+-- zelf weer op elkaar gelegd: na 5 s vergeten, weer 1 vakje
+BAGS[0][1] = { itemID = 7964, count = 20 }; BAGS[0][3] = nil
+E("BAG_UPDATE_DELAYED"); NOW = NOW + 6; E("BAG_UPDATE_DELAYED"); RunTimers()
+check(not CFC().splitKeep[7964] and select(2, tiles(7964)) == 1, "weer samen: 1 vakje (" .. tiles(7964) .. ")")
+C_Container.SplitContainerItem(0, 1, 10); Tile(7964).splitCatch:Fire("OnClick", "LeftButton"); RunTimers()
+E("BAG_UPDATE_DELAYED"); RunTimers()
+
 -- 2) Splitsen en op de achtergrond laten vallen
 C_Container.SplitContainerItem(0, 1, 4)
 CarefreeBagFrame:Fire("OnReceiveDrag"); RunTimers()
