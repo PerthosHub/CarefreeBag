@@ -225,6 +225,9 @@ end
 
 local job -- { steps, before = { [id] = aantal in de tassen bij de start } }
 
+-- Bezig met verplaatsen bij de bank? Dan wacht het wisselen van tassen (BagSwap.lua).
+function ns.StockBusy() return job ~= nil end
+
 local function Finish()
 	if not job then return end
 	local toBank, fromBank = {}, {}

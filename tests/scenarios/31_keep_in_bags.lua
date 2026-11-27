@@ -98,4 +98,10 @@ check(Chat("Low on: Minor Healing Potion 4/5"), "AH: lijstje met tekort")
 -- 8. Uitzetten: omlaag tot uit
 SHIFT = true; Wheel(Tile(118), -1, 30); SHIFT = false
 check(CFC().stock[118] == nil and not Tile(118).stockText.shown, "helemaal omlaag: uit, geen getal meer")
+
+-- 9. Keep N gaat voor Auto Sell: niet verkopen en meteen terugkopen
+CarefreeBagDB.autoSell = true; CFC().assign[159] = "grey"; SOLD = {}; NOW = NOW + 10
+E("BAG_UPDATE_DELAYED"); MerchantFrame.shown = true; E("MERCHANT_SHOW"); RunTimers()
+check(#SOLD == 0 and total(0, 159) == 20, "water in Auto Sell met Keep 20: niet verkocht")
+MerchantFrame.shown = false; E("MERCHANT_CLOSED")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))

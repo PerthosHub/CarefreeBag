@@ -17,14 +17,20 @@ local rows = {}
 local retried = false -- leeg questlog bij inloggen: één keer later opnieuw kijken
 local skipNow = {}    -- "Remind me next login": deze sessie niet meer in het lijstje
 
+-- Verkoopt Auto Sell echt? Groep aan, en niet "nee" gezegd op de vraag bij de eerste vendor.
+local function AutoSellWorks()
+	return ns.On and ns.On("grey") and not (ns.DB.autoSellAsked and not ns.DB.autoSell)
+end
+
 -- Alle quest-restjes in je tassen, één regel per item. all = ook wat je altijd houdt of hebt
 -- uitgesteld (achteraan, item.kind = "kept"/"snoozed"). Tweede waarde: hoeveel daarvan restjes zijn.
 function ns.QuestLeftovers(all)
 	local list, rest, at = {}, {}, {}
 	if not (ns.Scan and ns.QuestState) then return list, 0 end
 	local assign = ns.Assign()
+	local selling = AutoSellWorks()
 	for _, e in ipairs(ns.Scan()) do
-		if assign[e.itemID] == "grey" then
+		if assign[e.itemID] == "grey" and selling then
 			-- al naar Auto Sell (wordt bij de vendor verkocht): geen herinnering meer nodig
 		elseif not e.key and at[e.itemID] then
 			at[e.itemID].count = at[e.itemID].count + (e.count or 1) -- meer stapels van hetzelfde item
@@ -46,8 +52,8 @@ end
 
 local function Money(m) return GetMoneyString and GetMoneyString(math.floor(m), true) or tostring(m) end
 
--- Kan het naar Auto Sell? Alleen met een vendorprijs en als de groep Auto Sell aan staat.
-local function CanSell(item) return (item.price or 0) > 0 and ns.On and ns.On("grey") end
+-- Kan het naar Auto Sell? Alleen met een vendorprijs en als Auto Sell echt verkoopt.
+local function CanSell(item) return (item.price or 0) > 0 and AutoSellWorks() end
 
 local function Refill() if ns.QuestReminderFill then ns.QuestReminderFill() end end
 

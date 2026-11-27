@@ -600,6 +600,7 @@ function ns.BagCheck()
 	if CursorHasItem() then return Wait("item on cursor") end
 	if ns.mail and ns.mail.busy then return Wait("mailing") end
 	if ns.SellBusy and ns.SellBusy() then return Wait("selling") end
+	if ns.StockBusy and ns.StockBusy() then return Wait("keep in bags: moving at the bank") end
 	if GetNumLootItems and (GetNumLootItems() or 0) > 0 then return Wait("loot window") end
 	Wait(nil)
 	local cand, s = BestMove()

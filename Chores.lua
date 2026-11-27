@@ -138,8 +138,10 @@ ns.SellStart = function(confirmed)
 	if not On("grey") then return end
 	local items = Scan()
 	local q = {}
+	local stock = ns.Stock and ns.Stock() or {}
 	for _, e in ipairs(items) do
-		if SectionOf(e) == "grey" and not e.info.hasNoValue and (e.price or 0) > 0 then
+		-- Met "Keep N" (Stock.lua) wil je het juist houden: niet verkopen (anders verkopen en meteen terugkopen).
+		if SectionOf(e) == "grey" and not e.info.hasNoValue and (e.price or 0) > 0 and stock[e.itemID] == nil then
 			q[#q + 1] = { bag = e.bag, slot = e.slot, itemID = e.itemID, value = e.price * e.count }
 		end
 	end
