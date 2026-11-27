@@ -65,7 +65,8 @@ ns.StockNext = Next -- voor de tests
 -- Op het vakje en in de tooltip
 ---------------------------------------------------------------------------
 
--- Klein getal linksboven op het vakje: blauw = genoeg, oranje = te weinig. "0" = alles naar de bank.
+-- Klein getal rechtsboven op het vakje (linksboven staat "2x", rechtsonder het aantal):
+-- goud = op peil, oranje = te weinig. "0" = alles naar de bank.
 function ns.StockBadge(b, g)
 	local n = g and ns.Stock()[g.itemID]
 	if n == nil then
@@ -74,31 +75,53 @@ function ns.StockBadge(b, g)
 	end
 	if not b.stockText then
 		b.stockText = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
-		b.stockText:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -2)
+		b.stockText:SetPoint("TOPRIGHT", b, "TOPRIGHT", -2, -2)
 	end
 	b.stockText:SetText(tostring(n))
-	if n > 0 and Have(g.itemID) < n then b.stockText:SetTextColor(1, 0.6, 0.2) else b.stockText:SetTextColor(0.4, 0.8, 1) end
+	if n > 0 and Have(g.itemID) < n then b.stockText:SetTextColor(1, 0.6, 0.2) else b.stockText:SetTextColor(1, 0.82, 0) end
 	b.stockText:Show()
 end
 
--- Tooltipregels (Data.lua, tooltip van een CFB-vakje). Zonder instelling alleen de uitleg,
--- en alleen bij stapelbare items: daar is het voor.
+local GOLD, GREY = "|cffffd100", "|cffaaaaaa"
+
+-- Tooltipregels (Data.lua, tooltip van een CFB-vakje). Kort: één regel "Hold Shift for
+-- Auto-restock & stash" (of wat je hebt ingesteld). Shift ingedrukt: de uitleg (Johan, 2026-11-27).
+-- Alleen bij stapelbare items of als er al iets is ingesteld: daar is het voor.
 function ns.StockLine(tt, g)
 	if not (tt and g and g.itemID) then return end
 	local n = ns.Stock()[g.itemID]
-	if n == nil then
-		if g.rep and (g.rep.maxStack or 1) > 1 then
-			tt:AddLine(COLOR .. "CarefreeBag:|r |cffaaaaaa" .. T("Shift + mouse wheel: always keep a number of these in your bags.") .. "|r", 1, 1, 1, true)
+	if n == nil and not (g.rep and (g.rep.maxStack or 1) > 1) then return end
+	local name = GOLD .. T("Auto-restock & stash") .. "|r"
+	if IsShiftKeyDown and IsShiftKeyDown() then
+		tt:AddLine(COLOR .. "CarefreeBag:|r " .. name, 1, 1, 1)
+		tt:AddLine(T("Scroll the mouse wheel to set how many you always carry."), 1, 1, 1, true)
+		tt:AddLine("• " .. T("Vendor: buys up to that number, if the vendor sells it."), 1, 1, 1, true)
+		tt:AddLine("• " .. T("Bank: fills up to it, the rest goes to the bank."), 1, 1, 1, true)
+		tt:AddLine("• " .. T("Auction House: shows what you are low on."), 1, 1, 1, true)
+		tt:AddLine("• " .. T("0 = everything goes to the bank."), 1, 1, 1, true)
+		if n == nil then
+			tt:AddLine(GREY .. T("Not set for this item.") .. "|r", 1, 1, 1, true)
+		else
+			tt:AddLine(GOLD .. T("Now: %d (in your bags: %d)."):format(n, Have(g.itemID)) .. "|r", 1, 1, 1, true)
 		end
 		return
 	end
-	if n == 0 then
-		tt:AddLine(COLOR .. "CarefreeBag:|r " .. T("Keep 0 in your bags: all of them go to the bank."), 1, 1, 1, true)
+	if n == nil then
+		tt:AddLine(COLOR .. "CarefreeBag:|r " .. GREY .. T("Hold Shift for %s"):format(name .. GREY) .. "|r", 1, 1, 1, true)
+	elseif n == 0 then
+		tt:AddLine(COLOR .. "CarefreeBag:|r " .. name .. ": " .. T("0, all go to the bank.") .. " " .. GREY .. T("Hold Shift for more.") .. "|r", 1, 1, 1, true)
 	else
-		tt:AddLine(COLOR .. "CarefreeBag:|r " .. T("Keep %d in your bags (now %d). The vendor and the bank top up to %d, the rest goes to the bank.")
-			:format(n, Have(g.itemID), n), 1, 1, 1, true)
+		tt:AddLine(COLOR .. "CarefreeBag:|r " .. name .. ": " .. T("%d (now %d)."):format(n, Have(g.itemID)) .. " " .. GREY .. T("Hold Shift for more.") .. "|r", 1, 1, 1, true)
 	end
-	tt:AddLine("|cffaaaaaa" .. T("Shift + mouse wheel to change.") .. "|r", 1, 1, 1, true)
+end
+
+-- Shift indrukken of loslaten met de muis op een CFB-vakje: tooltip opnieuw opbouwen.
+local function RefreshTip()
+	local owner = GameTooltip and GameTooltip.GetOwner and GameTooltip:GetOwner()
+	if owner and owner.isCarefreeItem and GameTooltip:IsShown() then
+		local enter = owner:GetScript("OnEnter")
+		if enter then pcall(enter, owner) end
+	end
 end
 
 local lastHave = {} -- voor "Running low": wat je had bij de vorige keer kijken
@@ -163,7 +186,9 @@ local function BuyUp()
 			pack = (pack and pack > 0) and pack or 1
 			price = price or 0
 			if need > 0 and purchasable ~= false and not ext then
-				local packs = math.ceil(need / pack)
+				-- nooit meer dan je getal: verkoopt de vendor per 5 en mis je er 1, dan niets kopen
+				-- (Johan, 2026-11-27: 19 van 20 werd 24)
+				local packs = math.floor(need / pack)
 				if avail and avail >= 0 then packs = math.min(packs, avail) end -- -1 = onbeperkt
 				if price > 0 then packs = math.min(packs, math.floor(money / price)) end
 				if packs > 0 then
@@ -344,3 +369,6 @@ ns.OnEvent("BANKFRAME_OPENED", "keep", function() C_Timer.After(0.5, function() 
 ns.OnEvent("BAG_UPDATE_DELAYED", "keep", function() if next(ns.Stock()) then CheckLow() end end)
 ns.OnEvent("AUCTION_HOUSE_SHOW", "keep", AtAuctionHouse)
 ns.OnEvent("AUCTION_SHOW", "keep", AtAuctionHouse) -- Classic-AH
+ns.OnEvent("MODIFIER_STATE_CHANGED", "keep", function(_, key)
+	if type(key) == "string" and key:find("SHIFT") then RefreshTip() end
+end)

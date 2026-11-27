@@ -32,7 +32,11 @@ end
 local lines = {}
 local tt = { AddLine = function(_, l) lines[#lines + 1] = l end }
 NS.StockLine(tt, Tile(159).group)
-check(lines[1] and lines[1]:find("Shift + mouse wheel", 1, true), "tooltip water: uitleg Shift + muiswiel")
+check(#lines == 1 and lines[1]:find("Hold Shift for", 1, true) and lines[1]:find("Auto-restock & stash", 1, true), "tooltip water: één regel 'Hold Shift for Auto-restock & stash'")
+SHIFT = true; lines = {}; NS.StockLine(tt, Tile(159).group); SHIFT = false
+local all = table.concat(lines, "\n")
+check(#lines >= 6 and all:find("Vendor: buys up to", 1, true) and all:find("Bank: fills up", 1, true) and all:find("Auction House", 1, true)
+  and all:find("0 = everything", 1, true) and all:find("Not set", 1, true), "Shift ingedrukt: korte uitleg (vendor, bank, AH, 0)")
 lines = {}; NS.StockLine(tt, Tile(6948).group)
 check(#lines == 0, "hearthstone (niet stapelbaar): geen uitleg")
 
@@ -41,9 +45,10 @@ SHIFT = false; Wheel(Tile(159), 1)
 check(CFC().stock == nil or CFC().stock[159] == nil, "zonder Shift: niets ingesteld")
 SHIFT = true; Wheel(Tile(159), 1, 8); SHIFT = false
 check(CFC().stock[159] == 20, "Shift + 8× omhoog: 20 water (" .. tostring(CFC().stock[159]) .. ")")
-check(Tile(159).stockText and Tile(159).stockText.text == "20" and Tile(159).stockText.shown, "getal 20 op het vakje")
+local st = Tile(159).stockText
+check(st and st.text == "20" and st.shown and st.points[1][1] == "TOPRIGHT", "getal 20 rechtsboven op het vakje (linksboven staat 2x)")
 lines = {}; NS.StockLine(tt, Tile(159).group)
-check(lines[1]:find("Keep 20 in your bags (now 12)", 1, true), "tooltip: Keep 20 (now 12): " .. tostring(lines[1]))
+check(lines[1]:find("20 (now 12)", 1, true) and lines[1]:find("Hold Shift for more", 1, true), "tooltip: 20 (now 12), Hold Shift for more: " .. tostring(lines[1]))
 check(NS.StockNext(20, false) == 15 and NS.StockNext(1, false) == 0 and NS.StockNext(0, false) == nil and NS.StockNext(nil, true) == 1
   and NS.StockNext(7, true) == 10 and NS.StockNext(7, false) == 5, "stappen omhoog/omlaag (1 → 0 = naar de bank → uit)")
 
@@ -65,6 +70,19 @@ check(total(0, 159) == 20, "nu 20 water")
 E("MERCHANT_SHOW"); RunTimers()
 check(#BOUGHT == 1, "nog eens open: niets meer kopen")
 MerchantFrame.shown = false; E("MERCHANT_CLOSED")
+
+-- 3b. Per 5 verkocht (Moonberry Juice): nooit meer dan je getal (Johan: 19 van 20 werd 24)
+ITEMS[1645] = { name = "Moonberry Juice", quality = 1, stack = 20, bind = 0, icon = 6, class = 0, sub = 5, price = 20 }
+MERCHANT[3] = { id = 1645, price = 100, qty = 5 }
+BAGS[0][12] = { itemID = 1645, count = 19 }; CFC().stock[1645] = 20
+NOW = NOW + 10; MerchantFrame.shown = true; E("MERCHANT_SHOW"); RunTimers()
+check(#BOUGHT == 1 and total(0, 1645) == 19, "19 van 20, per 5 verkocht: niets gekocht")
+BAGS[0][12].count = 14
+NOW = NOW + 10; E("MERCHANT_SHOW"); RunTimers()
+check(#BOUGHT == 2 and BOUGHT[2].id == 1645 and total(0, 1645) == 19, "14 van 20: één keer 5 gekocht (19), niet 24")
+MerchantFrame.shown = false; E("MERCHANT_CLOSED")
+CFC().stock[1645] = nil
+for s = 1, BAGS[0].n do if BAGS[0][s] and BAGS[0][s].itemID == 1645 then BAGS[0][s] = nil end end
 
 -- 4. Bank: leer houden op 10 (35 → 10, 25 naar de bank), potions aanvullen tot 5 (2 + 3 uit de bank)
 CFC().stock[2318] = 10; CFC().stock[118] = 5

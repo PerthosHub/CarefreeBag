@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.14.1
+### 🔧 Fixes
+- 🧃 **Never buys more than your number.** Some drinks are only sold per 5. With 19 of 20 you no longer end up with 24: CarefreeBag only buys what fits.
+- 💬 **Shorter tooltip.** One line: "Hold Shift for Auto-restock & stash". Hold Shift to see what it does.
+- 🔢 **The number moved to the top right, in gold.** It no longer covers the "2x" for multiple stacks, and it no longer looks like a stack count.
+
 ## 1.14.0
 ### ✨ New
 - 🎯 **Always keep a number of an item in your bags.** Hold Shift and scroll the mouse wheel on an item, for example 20 water. At a vendor CarefreeBag buys more until you have 20. At the bank it takes what you are missing and puts the rest away. The number shows on the item.

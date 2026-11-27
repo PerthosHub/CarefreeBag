@@ -4,6 +4,18 @@ local _, ns = ...
 ns.L = ns.L or {}
 
 ns.L.nl = {
+	["Auto-restock & stash"] = "Auto-restock & stash",
+	["Scroll the mouse wheel to set how many you always carry."] = "Scroll met het muiswiel om in te stellen hoeveel je altijd bij je hebt.",
+	["Vendor: buys up to that number, if the vendor sells it."] = "Vendor: koopt bij tot dat aantal, als de vendor het verkoopt.",
+	["Bank: fills up to it, the rest goes to the bank."] = "Bank: vult aan tot dat aantal, de rest gaat naar de bank.",
+	["Auction House: shows what you are low on."] = "Veilinghuis: laat zien waar je bijna doorheen bent.",
+	["0 = everything goes to the bank."] = "0 = alles gaat naar de bank.",
+	["Not set for this item."] = "Niet ingesteld voor dit item.",
+	["Now: %d (in your bags: %d)."] = "Nu: %d (in je tassen: %d).",
+	["Hold Shift for %s"] = "Houd Shift ingedrukt voor %s",
+	["0, all go to the bank."] = "0, alles gaat naar de bank.",
+	["Hold Shift for more."] = "Houd Shift ingedrukt voor meer.",
+	["%d (now %d)."] = "%d (nu %d).",
 	["Leave this loot where it is. Nothing is destroyed."] = "Laat deze loot liggen. Er wordt niets weggegooid.",
 	["%s goes to Auto Sell: sold at the next vendor."] = "%s gaat naar Auto Sell: verkocht bij de volgende vendor.",
 	["Destroy %s?\nYou cannot get it back."] = "%s weggooien?\nJe krijgt het niet meer terug.",
@@ -357,6 +369,18 @@ ns.L.nl = {
 }
 
 ns.L.de = {
+	["Auto-restock & stash"] = "Auto-restock & stash",
+	["Scroll the mouse wheel to set how many you always carry."] = "Scrolle mit dem Mausrad, um festzulegen, wie viele du immer dabeihast.",
+	["Vendor: buys up to that number, if the vendor sells it."] = "Händler: kauft bis zu dieser Anzahl nach, wenn der Händler es verkauft.",
+	["Bank: fills up to it, the rest goes to the bank."] = "Bank: füllt bis zu dieser Anzahl auf, der Rest kommt in die Bank.",
+	["Auction House: shows what you are low on."] = "Auktionshaus: zeigt, wovon du zu wenig hast.",
+	["0 = everything goes to the bank."] = "0 = alles kommt in die Bank.",
+	["Not set for this item."] = "Für diesen Gegenstand nicht eingestellt.",
+	["Now: %d (in your bags: %d)."] = "Jetzt: %d (in deinen Taschen: %d).",
+	["Hold Shift for %s"] = "Halte Shift für %s",
+	["0, all go to the bank."] = "0, alles kommt in die Bank.",
+	["Hold Shift for more."] = "Halte Shift für mehr.",
+	["%d (now %d)."] = "%d (jetzt %d).",
 	["Leave this loot where it is. Nothing is destroyed."] = "Lass diese Beute liegen. Es wird nichts zerstört.",
 	["%s goes to Auto Sell: sold at the next vendor."] = "%s kommt zu Auto Sell: wird beim nächsten Händler verkauft.",
 	["Destroy %s?\nYou cannot get it back."] = "%s zerstören?\nDu bekommst es nicht zurück.",
@@ -711,6 +735,18 @@ ns.L.de = {
 }
 
 ns.L.fr = {
+	["Auto-restock & stash"] = "Auto-restock & stash",
+	["Scroll the mouse wheel to set how many you always carry."] = "Utilise la molette pour choisir combien tu en gardes toujours sur toi.",
+	["Vendor: buys up to that number, if the vendor sells it."] = "Marchand : achète jusqu'à ce nombre, si le marchand le vend.",
+	["Bank: fills up to it, the rest goes to the bank."] = "Banque : complète jusqu'à ce nombre, le reste va à la banque.",
+	["Auction House: shows what you are low on."] = "Hôtel des ventes : montre ce qui te manque.",
+	["0 = everything goes to the bank."] = "0 = tout va à la banque.",
+	["Not set for this item."] = "Non réglé pour cet objet.",
+	["Now: %d (in your bags: %d)."] = "Maintenant : %d (dans tes sacs : %d).",
+	["Hold Shift for %s"] = "Maintiens Maj pour %s",
+	["0, all go to the bank."] = "0, tout va à la banque.",
+	["Hold Shift for more."] = "Maintiens Maj pour plus.",
+	["%d (now %d)."] = "%d (maintenant %d).",
 	["Leave this loot where it is. Nothing is destroyed."] = "Laisse ce butin sur place. Rien n'est détruit.",
 	["%s goes to Auto Sell: sold at the next vendor."] = "%s va dans Auto Sell : vendu chez le prochain marchand.",
 	["Destroy %s?\nYou cannot get it back."] = "Détruire %s ?\nTu ne pourras pas le récupérer.",
@@ -1065,6 +1101,18 @@ ns.L.fr = {
 }
 
 ns.L.es = {
+	["Auto-restock & stash"] = "Auto-restock & stash",
+	["Scroll the mouse wheel to set how many you always carry."] = "Usa la rueda del ratón para elegir cuántos llevas siempre.",
+	["Vendor: buys up to that number, if the vendor sells it."] = "Vendedor: compra hasta ese número, si el vendedor lo vende.",
+	["Bank: fills up to it, the rest goes to the bank."] = "Banco: completa hasta ese número, el resto va al banco.",
+	["Auction House: shows what you are low on."] = "Casa de subastas: muestra lo que te falta.",
+	["0 = everything goes to the bank."] = "0 = todo va al banco.",
+	["Not set for this item."] = "Sin ajustar para este objeto.",
+	["Now: %d (in your bags: %d)."] = "Ahora: %d (en tus bolsas: %d).",
+	["Hold Shift for %s"] = "Mantén Mayús para %s",
+	["0, all go to the bank."] = "0, todo va al banco.",
+	["Hold Shift for more."] = "Mantén Mayús para más.",
+	["%d (now %d)."] = "%d (ahora %d).",
 	["Leave this loot where it is. Nothing is destroyed."] = "Deja este botín donde está. No se destruye nada.",
 	["%s goes to Auto Sell: sold at the next vendor."] = "%s va a Auto Sell: se vende en el próximo vendedor.",
 	["Destroy %s?\nYou cannot get it back."] = "¿Destruir %s?\nNo podrás recuperarlo.",
@@ -1419,6 +1467,18 @@ ns.L.es = {
 }
 
 ns.L.pt = {
+	["Auto-restock & stash"] = "Auto-restock & stash",
+	["Scroll the mouse wheel to set how many you always carry."] = "Use a roda do mouse para definir quantos você sempre carrega.",
+	["Vendor: buys up to that number, if the vendor sells it."] = "Vendedor: compra até esse número, se o vendedor vender.",
+	["Bank: fills up to it, the rest goes to the bank."] = "Banco: completa até esse número, o resto vai para o banco.",
+	["Auction House: shows what you are low on."] = "Casa de Leilões: mostra o que está faltando.",
+	["0 = everything goes to the bank."] = "0 = tudo vai para o banco.",
+	["Not set for this item."] = "Não definido para este item.",
+	["Now: %d (in your bags: %d)."] = "Agora: %d (nas bolsas: %d).",
+	["Hold Shift for %s"] = "Segure Shift para %s",
+	["0, all go to the bank."] = "0, tudo vai para o banco.",
+	["Hold Shift for more."] = "Segure Shift para mais.",
+	["%d (now %d)."] = "%d (agora %d).",
 	["Leave this loot where it is. Nothing is destroyed."] = "Deixe este saque onde está. Nada é destruído.",
 	["%s goes to Auto Sell: sold at the next vendor."] = "%s vai para Auto Sell: vendido no próximo vendedor.",
 	["Destroy %s?\nYou cannot get it back."] = "Destruir %s?\nVocê não poderá recuperá-lo.",
@@ -1773,6 +1833,18 @@ ns.L.pt = {
 }
 
 ns.L.it = {
+	["Auto-restock & stash"] = "Auto-restock & stash",
+	["Scroll the mouse wheel to set how many you always carry."] = "Usa la rotella per scegliere quanti ne porti sempre con te.",
+	["Vendor: buys up to that number, if the vendor sells it."] = "Mercante: compra fino a quel numero, se il mercante lo vende.",
+	["Bank: fills up to it, the rest goes to the bank."] = "Banca: riempie fino a quel numero, il resto va in banca.",
+	["Auction House: shows what you are low on."] = "Casa d'aste: mostra cosa ti manca.",
+	["0 = everything goes to the bank."] = "0 = tutto va in banca.",
+	["Not set for this item."] = "Non impostato per questo oggetto.",
+	["Now: %d (in your bags: %d)."] = "Ora: %d (nelle borse: %d).",
+	["Hold Shift for %s"] = "Tieni premuto Maiusc per %s",
+	["0, all go to the bank."] = "0, tutto va in banca.",
+	["Hold Shift for more."] = "Tieni premuto Maiusc per altro.",
+	["%d (now %d)."] = "%d (ora %d).",
 	["Leave this loot where it is. Nothing is destroyed."] = "Lascia questo bottino dov'è. Non viene distrutto nulla.",
 	["%s goes to Auto Sell: sold at the next vendor."] = "%s va in Auto Sell: venduto al prossimo mercante.",
 	["Destroy %s?\nYou cannot get it back."] = "Distruggere %s?\nNon potrai riaverlo.",
@@ -2127,6 +2199,18 @@ ns.L.it = {
 }
 
 ns.L.ru = {
+	["Auto-restock & stash"] = "Auto-restock & stash",
+	["Scroll the mouse wheel to set how many you always carry."] = "Колесо мыши: сколько всегда носить с собой.",
+	["Vendor: buys up to that number, if the vendor sells it."] = "Торговец: докупает до этого числа, если торговец это продаёт.",
+	["Bank: fills up to it, the rest goes to the bank."] = "Банк: пополняет до этого числа, остальное отправляется в банк.",
+	["Auction House: shows what you are low on."] = "Аукцион: показывает, чего не хватает.",
+	["0 = everything goes to the bank."] = "0 = всё отправляется в банк.",
+	["Not set for this item."] = "Для этого предмета не задано.",
+	["Now: %d (in your bags: %d)."] = "Сейчас: %d (в сумках: %d).",
+	["Hold Shift for %s"] = "Удерживайте Shift: %s",
+	["0, all go to the bank."] = "0, всё отправляется в банк.",
+	["Hold Shift for more."] = "Удерживайте Shift, чтобы узнать больше.",
+	["%d (now %d)."] = "%d (сейчас %d).",
 	["Leave this loot where it is. Nothing is destroyed."] = "Оставить эту добычу на месте. Ничего не уничтожается.",
 	["%s goes to Auto Sell: sold at the next vendor."] = "%s переходит в Auto Sell: продаётся у следующего торговца.",
 	["Destroy %s?\nYou cannot get it back."] = "Уничтожить %s?\nВернуть будет нельзя.",
