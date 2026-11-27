@@ -216,7 +216,11 @@ end
 function ns.QuestReminderFill()
 	if not win then return end
 	local list, nLeft = ns.QuestLeftovers(win.all)
-	if #list == 0 then win:Hide(); return end
+	if #list == 0 then
+		for _, r in ipairs(rows) do r.item = nil; r:Hide() end
+		win:Hide()
+		return
+	end
 	-- op max level kun je niet hoger: dan alleen "Remind me later", in het midden
 	local can = ns.QuestCanSnooze() and nLeft > 1
 	win.snoozeAll:SetShown(can)
