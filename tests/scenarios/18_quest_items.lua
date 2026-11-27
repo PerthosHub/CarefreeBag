@@ -148,7 +148,7 @@ hq = QuestHeader()
 hq.quest:Fire("OnClick"); RunTimers()
 check(not CarefreeBagQuestReminder:IsShown(), "nog een klik op Leftovers: lijstje dicht")
 check(Btn(5004).questKind == "done" and Tip(5004):find("already did", 1, true), "Faded Letter: quest al gedaan")
-check(not Btn(2589).questKind and Tip(2589) == "", "Linen Cloth: geen quest-regels")
+check(not Btn(2589).questKind and not Tip(2589):find("uest"), "Linen Cloth: geen quest-regels (wel de uitleg van Shift + muiswiel)")
 check(not (CarefreeBagQuestPopup and CarefreeBagQuestPopup:IsShown()), "geen venstertje bij inloggen")
 
 -- Dusty Map geloot: venstertje + blauwe gloed

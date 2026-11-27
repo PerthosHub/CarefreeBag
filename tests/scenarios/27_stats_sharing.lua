@@ -24,7 +24,8 @@ check(NS.NameHash("Thrall Frostwolf") == 2411278354, "naam-hash gelijk aan die v
 check(NS.NameHash("THRALL frostwolf") == NS.NameHash("thrall frostwolf"), "hash zonder verschil in hoofdletters")
 
 CarefreeBagDB = { lang = "en", autoBags = false }
-E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); E("PLAYER_ENTERING_WORLD", true); RunTimers()
+-- zoals in WoW: inloggen en de wereld in, pas daarna lopen de timers (melding na 12 s)
+E("ADDON_LOADED", "CarefreeBag"); DRIVER:Fire("OnEvent", "PLAYER_LOGIN"); DRIVER:Fire("OnEvent", "PLAYER_ENTERING_WORLD", true); RunTimers()
 local asked = false
 for _, p in ipairs(POPUPS) do if p.which == "CAREFREEBAG_STATS" then asked = true end end
 check(asked, "bij de start een melding (Johans keuze 2026-11-27: geen ja/nee-vraag meer)")

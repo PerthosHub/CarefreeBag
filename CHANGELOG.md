@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.14.0
+### ✨ New
+- 🎯 **Always keep a number of an item in your bags.** Hold Shift and scroll the mouse wheel on an item, for example 20 water. At a vendor CarefreeBag buys more until you have 20. At the bank it takes what you are missing and puts the rest away. The number shows on the item.
+- 🏦 **Send an item straight to the bank.** Scroll down to 0 and all of it goes to the bank on your next visit.
+- 🔔 **Running low warning.** When you drop below your number, you see a short message. At the auction house you get a list of what you are low on.
+- 🎒 **Clearer "Bags full" window.** The rows now follow the same order as the loot window and line up with it. Every row has two buttons, "Pick up" and "Leave it". The smart choice is green, the other one grey.
+- 📜 **Simpler quest item list.** One button per item with the advice: "Auto Sell" when it is worth money, otherwise "Destroy" (it asks first). More choices are behind the small arrow.
+
+### 🔧 Fixes
+- 🦪 **Clams keep opening.** A clam that would not open no longer gets tried over and over. Using an item yourself no longer stops clams from opening.
+- 🎨 **Softer green and red** in the "Bags full" window, so they fit better with the rest of the game.
+- 📊 **Usage stats are now a short notice** instead of a question. You can turn them off anytime in the options. If you said no before, nothing changes.
+
 ## 1.13.0
 ### ✨ New
 - ✂️ **Split stacks stay apart.** Shift-click to split a stack, then click any item to put it in a free slot. You now see two stacks, so you can trade, bank or auction one of them. They can merge again after you close your bags.

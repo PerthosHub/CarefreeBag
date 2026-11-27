@@ -235,6 +235,9 @@ function ns.OpenClams()
 		lastTryTime = clamTry.t
 		local key = e.bag .. ":" .. e.slot .. ":" .. e.itemID .. ":" .. (info.stackCount or 1)
 		tries[key] = (tries[key] or 0) + 1
+		-- Even later kijken: is hij open gegaan (vakje leeg of minder), dan de poging vergeten.
+		-- Anders telt een nieuwe clam die later in hetzelfde vakje komt als "vastzittend".
+		C_Timer.After(1, PruneTries)
 		pcall(C_Container.UseContainerItem, e.bag, e.slot)
 	end)
 	-- één tegelijk; de volgende na het looten van deze
