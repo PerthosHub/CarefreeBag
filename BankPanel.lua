@@ -597,6 +597,8 @@ local function BankSpot(id)
 	return empty
 end
 
+ns.BankSpot = BankSpot -- ook voor "Keep N" (Stock.lua)
+
 local function BankCount(id)
 	local n = 0
 	for _, bag in ipairs(ns.BankBags()) do

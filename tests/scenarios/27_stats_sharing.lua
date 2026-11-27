@@ -27,17 +27,13 @@ CarefreeBagDB = { lang = "en", autoBags = false }
 E("ADDON_LOADED", "CarefreeBag"); E("PLAYER_LOGIN"); E("PLAYER_ENTERING_WORLD", true); RunTimers()
 local asked = false
 for _, p in ipairs(POPUPS) do if p.which == "CAREFREEBAG_STATS" then asked = true end end
-check(asked, "bij de start de vraag")
+check(asked, "bij de start een melding (Johans keuze 2026-11-27: geen ja/nee-vraag meer)")
 local dlg = StaticPopupDialogs.CAREFREEBAG_STATS
-check(dlg.text:find("gets better every day") and dlg.text:find("fix bugs much faster"), "vraag: wat heb jij eraan")
-check(not dlg.text:find("name") and NS.StatsDetails():find("character name is sent along"), "naam niet in de vraag, wel in de uitleg bij het vinkje")
-check(dlg.button1 == "Sure, I like quick bug fixes" and dlg.button2 == "No, rather not", "knoppen")
-check(not JOINED and #ADDONMSG == 0, "geen toestemming: geen kanaal, niets verstuurd")
-check(CarefreeBagDB.stats == nil and CarefreeBagDB.statsShare == nil, "geen toestemming: niets geteld")
-
--- Ja
-dlg.OnAccept(); RunTimers()
-check(CarefreeBagDB.statsShare == true, "toestemming bewaard")
+check(dlg.text:find("so bugs get fixed faster") and dlg.text:find("Turn it off in the options"), "melding: wat, waarom, en waar je het uitzet")
+check(not dlg.text:find("name") and NS.StatsDetails():find("character name is sent along"), "naam niet in de melding, wel in de uitleg bij het vinkje")
+check(dlg.button1 == "OK" and dlg.button2 == nil and not dlg.OnAccept, "één knop OK, geen keuze in de melding")
+RunTimers()
+check(CarefreeBagDB.statsShare == true, "delen staat aan zodra de melding er is")
 check(JOINED == "CFBStats" and JOIN_PASS == "cfb4stats" and PREFIX_REG == "CFBStats", "verborgen kanaal met wachtwoord en prefix")
 check(#Chan("^Y|") == 1 and #Chan("^P|") == 1, "maker hoort 'net ja gezegd' en 'online'")
 check(Chan("^P|")[1] == "P|" .. NS.VERSION .. "|" .. tostring(CarefreeBagDB.statsID), "online-ping met nummer: " .. tostring(Chan("^P|")[1]))

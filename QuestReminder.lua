@@ -1,6 +1,9 @@
 -- CarefreeBag: QuestReminder.lua
 -- Bij inloggen: een venster met de quest-items die waarschijnlijk weg kunnen (niet in je questlog).
--- Per item "Always keep" / "Next level", of alles "All next level" / "Remind me later" (volgende login).
+-- Per item één knop met het advies (Johan, #25: minder knoppen): heeft het een prijs, dan
+-- "Auto Sell" (wordt bij de volgende vendor verkocht), anders "Destroy" (met een vraag vooraf).
+-- De andere keuzes staan in het ▼-menu: weggooien, volgende login, volgend level, altijd houden.
+-- Onderaan "Remind me later" (volgende login) en, bij meerdere items, "All next level".
 -- Hetzelfde venster opent ook via het oranje "leftovers" in de kop van de groep Quest; dan staan
 -- ook de items erin die je altijd houdt of hebt uitgesteld, met een knop "Remind me" om dat terug te draaien.
 -- Gedeelde namen staan in de addon-tabel `ns` (zie CLAUDE.md).
@@ -12,20 +15,26 @@ local W, ROW, MAX_ROWS = 430, 26, 8
 local win
 local rows = {}
 local retried = false -- leeg questlog bij inloggen: één keer later opnieuw kijken
+local skipNow = {}    -- "Remind me next login": deze sessie niet meer in het lijstje
 
 -- Alle quest-restjes in je tassen, één regel per item. all = ook wat je altijd houdt of hebt
 -- uitgesteld (achteraan, item.kind = "kept"/"snoozed"). Tweede waarde: hoeveel daarvan restjes zijn.
 function ns.QuestLeftovers(all)
 	local list, rest, at = {}, {}, {}
 	if not (ns.Scan and ns.QuestState) then return list, 0 end
+	local assign = ns.Assign()
 	for _, e in ipairs(ns.Scan()) do
-		if not e.key and not at[e.itemID] then
+		if assign[e.itemID] == "grey" then
+			-- al naar Auto Sell (wordt bij de vendor verkocht): geen herinnering meer nodig
+		elseif not e.key and at[e.itemID] then
+			at[e.itemID].count = at[e.itemID].count + (e.count or 1) -- meer stapels van hetzelfde item
+		elseif not e.key then
 			local s = ns.QuestState(e.bag, e.slot, e.itemID, e.link, e.quest)
-			local left = ns.QuestLeftover(s)
+			local left = ns.QuestLeftover(s) and (all or not skipNow[e.itemID])
 			if left or (all and s and (s.kind == "kept" or s.kind == "snoozed")) then
-				at[e.itemID] = true
 				local item = { itemID = e.itemID, bag = e.bag, slot = e.slot, link = e.link, icon = e.info and e.info.iconFileID,
-					kind = not left and s.kind or nil, level = s.level }
+					kind = not left and s.kind or nil, level = s.level, price = e.price or 0, count = e.count or 1 }
+				at[e.itemID] = item
 				if left then list[#list + 1] = item else rest[#rest + 1] = item end
 			end
 		end
@@ -33,6 +42,103 @@ function ns.QuestLeftovers(all)
 	local n = #list
 	for _, item in ipairs(rest) do list[#list + 1] = item end
 	return list, n
+end
+
+local function Money(m) return GetMoneyString and GetMoneyString(math.floor(m), true) or tostring(m) end
+
+-- Kan het naar Auto Sell? Alleen met een vendorprijs en als de groep Auto Sell aan staat.
+local function CanSell(item) return (item.price or 0) > 0 and ns.On and ns.On("grey") end
+
+local function Refill() if ns.QuestReminderFill then ns.QuestReminderFill() end end
+
+-- Naar Auto Sell: wordt bij de volgende vendor vanzelf verkocht.
+local function ToAutoSell(item)
+	ns.Assign()[item.itemID] = "grey"
+	ns.Print(T("%s goes to Auto Sell: sold at the next vendor."):format(item.link or tostring(item.itemID)))
+	Log("quest leftover to auto sell " .. tostring(item.itemID))
+	if ns.Refresh then pcall(ns.Refresh) end
+	Refill()
+end
+
+-- Weggooien (alle stapels van dit item), na een vraag. Mag alleen tijdens een echte klik: de knop
+-- in WoW's vraagvenster is die klik.
+local destroyItem
+local function DestroyNow()
+	local item = destroyItem
+	destroyItem = nil
+	if not item then return end
+	local n = 0
+	for _, e in ipairs(ns.Scan()) do
+		if e.itemID == item.itemID and not e.key and not e.info.isLocked then
+			if CursorHasItem() then ClearCursor() end
+			C_Container.PickupContainerItem(e.bag, e.slot)
+			local kind, id = GetCursorInfo()
+			if kind == "item" and id == item.itemID then
+				DeleteCursorItem()
+				n = n + (e.count or 1)
+			else
+				ClearCursor()
+			end
+		end
+	end
+	if n > 0 then
+		ns.Print(T("Destroyed %s."):format((item.link or tostring(item.itemID)) .. (n > 1 and (" x" .. n) or "")))
+		Log("quest leftover destroyed " .. tostring(item.itemID) .. " x" .. n)
+	end
+	Refill()
+end
+
+local function AskDestroy(item)
+	if not (StaticPopupDialogs and StaticPopup_Show) then return end
+	destroyItem = item
+	StaticPopupDialogs["CAREFREEBAG_DESTROY"] = {
+		text = T("Destroy %s?\nYou cannot get it back."),
+		button1 = T("Destroy"), button2 = T("Cancel"),
+		OnAccept = DestroyNow,
+		OnCancel = function() destroyItem = nil end,
+		timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+	}
+	StaticPopup_Show("CAREFREEBAG_DESTROY", item.link or tostring(item.itemID))
+end
+
+-- Alle keuzes voor één item (knop en ▼-menu gebruiken dezelfde).
+local function Choose(item, what)
+	if not item then return end
+	if what == "sell" then ToAutoSell(item)
+	elseif what == "destroy" then AskDestroy(item)
+	elseif what == "login" then
+		skipNow[item.itemID] = true
+		ns.Print(T("%s: reminder again the next time you log in."):format(item.link or tostring(item.itemID)))
+		Refill()
+	elseif what == "snooze" then ns.QuestSetSnooze(item.itemID, true, item.link); Refill()
+	elseif what == "keep" then ns.QuestSetKeep(item.itemID, true, item.link); Refill()
+	elseif what == "remind" then
+		-- terugdraaien (lijstje via "Leftovers"): weer herinneren
+		if item.kind == "kept" then ns.QuestSetKeep(item.itemID, false, item.link)
+		elseif item.kind == "snoozed" then ns.QuestSetSnooze(item.itemID, false, item.link) end
+		Refill()
+	end
+end
+
+-- Het advies van een item: de knop, en een korte grijze tekst achter de naam.
+local function Advice(item)
+	if item.kind then return "remind", T("Remind me") end
+	if CanSell(item) then return "sell", T("Auto Sell"), T("worth %s"):format(Money(item.price * item.count)) end
+	return "destroy", T("Destroy"), T("no value")
+end
+
+local function OpenMenu(r)
+	local item = r.item
+	if not item or item.kind then return end
+	local main = Advice(item)
+	local list = {}
+	if main ~= "destroy" then list[#list + 1] = { text = T("Destroy"), fn = function() Choose(item, "destroy") end } end
+	if main ~= "sell" and CanSell(item) then list[#list + 1] = { text = T("Move to Auto Sell"), fn = function() Choose(item, "sell") end } end
+	list[#list + 1] = { text = T("Remind me next login"), fn = function() Choose(item, "login") end }
+	if ns.QuestCanSnooze() then list[#list + 1] = { text = T("Remind me next level"), fn = function() Choose(item, "snooze") end } end
+	list[#list + 1] = { text = T("Always keep"), fn = function() Choose(item, "keep") end }
+	r.menuChoices = list -- voor de tests
+	ns.ChoiceMenu(r.opt, item.link and item.link:match("%[(.-)%]") or nil, list)
 end
 
 local function Row(i)
@@ -43,29 +149,26 @@ local function Row(i)
 	r.icon = r:CreateTexture(nil, "ARTWORK")
 	r.icon:SetSize(22, 22)
 	r.icon:SetPoint("LEFT", r, "LEFT", 2, 0)
-	r.keep = ns.MakeButton(r, T("Always keep"), 104)
-	r.keep:SetPoint("RIGHT", r, "RIGHT", 0, 0)
-	r.keep:SetScript("OnClick", function()
-		local item = r.item
-		if not item then return end
-		if item.kind == "kept" then ns.QuestSetKeep(item.itemID, false, item.link)
-		elseif item.kind == "snoozed" then ns.QuestSetSnooze(item.itemID, false, item.link)
-		else ns.QuestSetKeep(item.itemID, true, item.link) end
-		ns.QuestReminderFill()
-	end)
-	-- "Next level": pas weer herinneren als je een level hoger bent
-	r.snooze = ns.MakeButton(r, T("Next level"), 90)
-	r.snooze:SetPoint("RIGHT", r.keep, "LEFT", -4, 0)
-	r.snooze:SetScript("OnClick", function()
-		if r.item then ns.QuestSetSnooze(r.item.itemID, true, r.item.link) end
-		ns.QuestReminderFill()
-	end)
-	ns.Tooltip(r.snooze, T("Remind me next level"), T("No reminder for this item until you are a level higher."))
+	-- ▼: de andere keuzes
+	r.opt = CreateFrame("Button", nil, r)
+	r.opt:SetSize(24, 24)
+	r.opt:SetPoint("RIGHT", r, "RIGHT", 0, 0)
+	r.opt:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
+	r.opt:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Down")
+	r.opt:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+	r.opt:SetScript("OnClick", function() OpenMenu(r) end)
+	ns.Tooltip(r.opt, T("More choices"), T("Destroy, remind me next login or next level, or always keep."))
+	-- de knop met het advies
+	r.main = ns.MakeButton(r, T("Destroy"), 96)
+	r.main:SetPoint("RIGHT", r.opt, "LEFT", -2, 0)
+	r.main:SetScript("OnClick", function() Choose(r.item, r.action) end)
 	r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	r.name:SetPoint("LEFT", r.icon, "RIGHT", 6, 0)
-	r.name:SetPoint("RIGHT", r.snooze, "LEFT", -6, 0)
+	r.name:SetPoint("RIGHT", r.main, "LEFT", -6, 0)
 	r.name:SetJustifyH("LEFT")
 	r.name:SetWordWrap(false)
+	-- voor de tests: een keuze maken zonder menu
+	r.Choose = function(self, what) Choose(self.item, what) end
 	-- zo ziet de tooltip (QuestItems.lua) welk tasvak het is
 	r.GetBagID = function(self) return self.item and self.item.bag end
 	r:SetScript("OnEnter", function(self)
@@ -90,13 +193,13 @@ local function Build()
 	win.text:SetWidth(W - 2 * ns.PAD)
 	win.text:SetJustifyH("LEFT")
 	win.text:SetWordWrap(true)
-	win.text:SetText(T("These quest items are not in your quest log. Check them and throw away what you don't need. Hover an item to see why you may still need it."))
+	win.text:SetText(T("Not in your quest log anymore, so you probably don't need these. Hover an item to see why you may still need it."))
 	win.more = win:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	win.later = ns.MakeButton(win, T("Remind me later"), 170)
 	win.later:SetPoint("BOTTOMRIGHT", win, "BOTTOM", -4, 14)
 	win.later:SetScript("OnClick", function() win:Hide() end)
 	ns.Tooltip(win.later, T("Remind me later"), T("You see this list again the next time you log in."))
-	-- Alles uitstellen tot het volgende level
+	-- Alles uitstellen tot het volgende level (alleen bij meer dan één item)
 	win.snoozeAll = ns.MakeButton(win, T("All next level"), 170)
 	win.snoozeAll:SetPoint("BOTTOMLEFT", win, "BOTTOM", 4, 14)
 	win.snoozeAll:SetScript("OnClick", function()
@@ -115,7 +218,7 @@ function ns.QuestReminderFill()
 	local list, nLeft = ns.QuestLeftovers(win.all)
 	if #list == 0 then win:Hide(); return end
 	-- op max level kun je niet hoger: dan alleen "Remind me later", in het midden
-	local can = ns.QuestCanSnooze() and nLeft > 0
+	local can = ns.QuestCanSnooze() and nLeft > 1
 	win.snoozeAll:SetShown(can)
 	win.later:ClearAllPoints()
 	if can then win.later:SetPoint("BOTTOMRIGHT", win, "BOTTOM", -4, 14)
@@ -128,14 +231,20 @@ function ns.QuestReminderFill()
 			r.item = item
 			r.icon:SetTexture(item.icon)
 			local name = item.link or tostring(item.itemID)
+			local action, label, note = Advice(item)
 			if item.kind == "kept" then
-				name = name .. "  |cff888888" .. T("always kept") .. "|r"
+				note = T("always kept")
 			elseif item.kind == "snoozed" then
-				name = name .. "  |cff888888" .. T("from level %d"):format(item.level or 0) .. "|r"
+				note = T("from level %d"):format(item.level or 0)
 			end
+			if note then name = name .. "  |cff888888" .. note .. "|r" end
 			r.name:SetText(name)
-			r.keep:SetText(item.kind and T("Remind me") or T("Always keep"))
-			r.snooze:SetShown(not item.kind and ns.QuestCanSnooze()) -- op max level kun je niet hoger
+			r.action = action
+			r.main:SetText(label)
+			r.opt:SetShown(not item.kind)
+			r.main:ClearAllPoints()
+			if item.kind then r.main:SetPoint("RIGHT", r, "RIGHT", 0, 0)
+			else r.main:SetPoint("RIGHT", r.opt, "LEFT", -2, 0) end
 			r:ClearAllPoints()
 			r:SetPoint("TOPLEFT", win, "TOPLEFT", ns.PAD, y)
 			r:Show()

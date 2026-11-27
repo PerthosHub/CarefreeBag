@@ -175,6 +175,23 @@ end
 local openPending = false
 local clamTry -- { id, t }: laatste poging, om te zien wat WoW daarna deed (belangrijke momenten)
 local clamWait -- laatste reden van wachten (één keer noteren, niet bij elke tasupdate)
+local lastTryTime -- wanneer CFB het laatst een clam probeerde (ook na het resultaat)
+-- Pogingen per vakje: zelfde clam, zelfde vakje, zelfde aantal = niet gelukt. Na 2 keer
+-- overslaan tot /reload (Johans log 27-11: 7× dezelfde clam op 3:4, die bleef liggen).
+local tries, MAX_TRIES = {}, 2
+local function TryKey(e) return e.bag .. ":" .. e.slot .. ":" .. e.itemID .. ":" .. (e.count or 1) end
+
+-- Probeerde CFB net een clam? (Start.lua: welke blokkade bij welke actie hoort)
+function ns.ClamTriedRecently() return lastTryTime ~= nil and GetTime() - lastTryTime < 5 end
+
+-- Vakjes die niet meer dezelfde clam bevatten: vergeten (die is open gegaan).
+local function PruneTries()
+	for key in pairs(tries) do
+		local bag, slot, id, n = key:match("^(-?%d+):(%d+):(%d+):(%d+)$")
+		local info = bag and C_Container.GetContainerItemInfo(tonumber(bag), tonumber(slot))
+		if not (info and info.itemID == tonumber(id) and (info.stackCount or 1) == tonumber(n)) then tries[key] = nil end
+	end
+end
 
 local function FreeSlots()
 	local _, free = Scan()
@@ -185,9 +202,17 @@ end
 
 function ns.OpenClams()
 	if not ns.DB.enabled or not ns.DB.autoOpenClams or ns.clamBlocked or openPending then return end
+	PruneTries()
 	local clam
 	for _, e in ipairs(Scan()) do
-		if IsClam(e) and not e.info.isLocked then clam = e; break end
+		if IsClam(e) and not e.info.isLocked then
+			local n = tries[TryKey(e)] or 0
+			if n < MAX_TRIES then clam = e; break end
+			if n == MAX_TRIES then
+				tries[TryKey(e)] = n + 1 -- één keer noteren
+				ns.Note("clam", ("%s at %d:%d did not open after %d tries: skipped until /reload"):format(tostring(e.itemID), e.bag, e.slot, n))
+			end
+		end
 	end
 	if not clam then clamWait = nil; return end
 	local why = (InCombatLockdown() and "combat") or (CursorHasItem() and "item on cursor") or (SomethingOpen() and "vendor/bank/mail open")
@@ -207,6 +232,9 @@ function ns.OpenClams()
 		if not info or info.itemID ~= e.itemID or info.isLocked then return end
 		ns.Note("clam", ("open %s at %d:%d, free slots %d"):format(tostring(e.itemID), e.bag, e.slot, FreeSlots()))
 		clamTry = { id = e.itemID, t = GetTime() }
+		lastTryTime = clamTry.t
+		local key = e.bag .. ":" .. e.slot .. ":" .. e.itemID .. ":" .. (info.stackCount or 1)
+		tries[key] = (tries[key] or 0) + 1
 		pcall(C_Container.UseContainerItem, e.bag, e.slot)
 	end)
 	-- één tegelijk; de volgende na het looten van deze
@@ -236,8 +264,11 @@ ns.OnEvent("LOOT_CLOSED", "clams", function()
 	C_Timer.After(0.5, function() ns.Try("clams", ns.OpenClams) end)
 end)
 -- WoW staat automatisch openen hier niet toe: stoppen (tot /reload) en één keer melden.
+-- Alleen als CFB vlak daarvoor zelf een clam probeerde: anders was het iets anders (bijv. je
+-- eigen rechtsklik op een item) en zou die blokkade de clams onterecht stilleggen (Johans log 27-11).
 local function ClamBlocked(_, addon, what)
 	if addon ~= ADDON or ns.clamBlocked or not tostring(what):find("UseContainerItem") then return end
+	if not ns.ClamTriedRecently() then return end
 	ns.clamBlocked = true
 	ns.Note("clam", "blocked by WoW, free slots " .. FreeSlots() .. ": no more automatic opening until /reload")
 	Print(T("WoW does not allow opening clams automatically here. Open them yourself with a right-click."))

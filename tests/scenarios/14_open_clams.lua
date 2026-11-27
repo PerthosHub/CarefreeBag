@@ -40,11 +40,35 @@ COMBAT = nil
 E("LOOT_CLOSED"); RunTimers()
 check(#OPENED == 2, "lootvenster dicht: clam alsnog geopend")
 
+-- Blokkade die niet van een clam komt (eigen rechtsklik): clams gaan gewoon door
+NOW = NOW + 60
+E("ADDON_ACTION_FORBIDDEN", "CarefreeBag", "UseContainerItem()")
+check(not NS.clamBlocked, "blokkade zonder clam-poging: clams niet stilgelegd")
+local ev0 = table.concat(CarefreeBagDB.events or {}, "\n")
+check(ev0:find("blocked: UseContainerItem%(%), no click on a CFB slot") and ev0:find("clam tried: no"), "blokkade genoteerd met wat eraan voorafging:\n" .. ev0)
+CarefreeBagDB.lastError = nil
+
+-- Clam die niet opengaat (blijft liggen): 2 pogingen, dan overslaan
+function C_Container.UseContainerItem(b, s) OPENED[#OPENED + 1] = BAGS[b][s] and BAGS[b][s].itemID end
+BAGS[0][3] = { itemID = 5524, count = 1 }
+for _ = 1, 5 do E("BAG_UPDATE_DELAYED"); RunTimers() end
+check(#OPENED == 4, "vastzittende clam: 2 pogingen, daarna niet meer: " .. #OPENED)
+check(table.concat(CarefreeBagDB.events, "\n"):find("did not open after 2 tries"), "overslaan genoteerd")
+-- Blokkade vlak na een clam-poging: dan wel stoppen
+BAGS[0][4] = { itemID = 5524, count = 1 }
+E("BAG_UPDATE_DELAYED"); RunTimers()
+check(#OPENED == 5, "andere clam: wel geprobeerd")
+E("ADDON_ACTION_FORBIDDEN", "CarefreeBag", "UseContainerItem()")
+check(NS.clamBlocked, "blokkade vlak na een clam-poging: automatisch openen stopt")
+NS.clamBlocked = nil; CarefreeBagDB.lastError = nil
+BAGS[0][3], BAGS[0][4] = nil, nil
+function C_Container.UseContainerItem(b, s) local it = BAGS[b][s]; OPENED[#OPENED + 1] = it and it.itemID; BAGS[b][s] = nil end
+
 -- optie uit
 CarefreeBagDB.autoOpenClams = false
 BAGS[0][3] = { itemID = 5524, count = 1 }
 E("BAG_UPDATE_DELAYED"); RunTimers()
-check(#OPENED == 2, "optie uit: niet geopend")
+check(#OPENED == 5, "optie uit: niet geopend")
 SlashCmdList.CAREFREEBAG(""); RunTimers()
 check(CarefreeBagConfig.clamCb, "vinkje 'Open clams automatically' in de opties")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))

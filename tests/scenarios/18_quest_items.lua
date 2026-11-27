@@ -113,28 +113,36 @@ hq.quest:Fire("OnClick"); RunTimers()
 check(CarefreeBagQuestReminder and CarefreeBagQuestReminder:IsShown(), "klik op Leftovers: lijstje open")
 check(Row(5002) and Row(5004) and not Row(5000), "lijstje: alleen de restjes")
 -- Always keep, en via hetzelfde lijstje weer terug
-Row(5002).keep:Fire("OnClick"); RunTimers()
+check(Row(5002).main:GetText() == "Destroy" and Row(5002).opt:IsShown() and Row(5002).name:GetText():find("no value", 1, true),
+  "geen waarde: één knop Destroy (advies) + menu ▼ (#25)")
+Row(5002).opt:Fire("OnClick")
+local texts = {}; for _, c in ipairs(Row(5002).menuChoices) do texts[#texts + 1] = c.text end
+texts = table.concat(texts, ", ")
+check(texts == "Remind me next login, Remind me next level, Always keep", "menu: de andere keuzes: " .. texts)
+Row(5002):Choose("keep"); RunTimers()
 check(CFC().questKeep and CFC().questKeep[5002], "Always keep: onthouden (per karakter)")
 check(Btn(5002).questKind == "kept" and not Btn(5002).cfbQuest.border:IsShown() and not Btn(5002).desat, "gehouden: geen markering meer")
 check(Tip(5002):find("You always keep this item", 1, true), "tooltip: je houdt dit altijd")
-check(Row(5002) and Row(5002).keep:GetText() == "Remind me" and not Row(5002).snooze:IsShown(), "lijstje: gehouden item met knop Remind me")
-Row(5002).keep:Fire("OnClick"); RunTimers()
+check(Row(5002) and Row(5002).main:GetText() == "Remind me" and not Row(5002).opt:IsShown(), "lijstje: gehouden item met alleen de knop Remind me")
+Row(5002).main:Fire("OnClick"); RunTimers()
 check(not CFC().questKeep[5002] and Btn(5002).questKind == "orphan", "Remind me: weer een restje")
 -- Next level, en weer terug
-Row(5002).snooze:Fire("OnClick"); RunTimers()
+Row(5002):Choose("snooze"); RunTimers()
 check(CFC().questSnooze and CFC().questSnooze[5002] == 20 and not CFC().questKeep[5002], "Next level: uitgesteld tot level 21 (per karakter)")
 check(Btn(5002).questKind == "snoozed" and not Btn(5002).cfbQuest.border:IsShown(), "uitgesteld: geen oranje rand")
 check(Tip(5002):find("level 21", 1, true), "tooltip: herinnering op level 21")
 check(Row(5002) and Row(5002).name:GetText():find("from level 21", 1, true), "lijstje: from level 21")
-Row(5002).keep:Fire("OnClick"); RunTimers()
+Row(5002).main:Fire("OnClick"); RunTimers()
 check(not CFC().questSnooze[5002] and Btn(5002).questKind == "orphan", "Remind me: meteen weer herinneren")
-Row(5002).snooze:Fire("OnClick"); RunTimers()
+Row(5002):Choose("snooze"); RunTimers()
 LEVEL = 21
 NS.Refresh(); RunTimers()
 check(Btn(5002).questKind == "orphan" and not CFC().questSnooze[5002], "level hoger: weer een restje")
 LEVEL = 60
 NS.QuestReminderFill()
-check(Row(5002) and not Row(5002).snooze:IsShown() and not CarefreeBagQuestReminder.snoozeAll:IsShown(), "max level: geen Next level")
+Row(5002).opt:Fire("OnClick")
+local hasNext = false; for _, c in ipairs(Row(5002).menuChoices) do if c.text == "Remind me next level" then hasNext = true end end
+check(Row(5002) and not hasNext and not CarefreeBagQuestReminder.snoozeAll:IsShown(), "max level: geen Next level")
 LEVEL = 20
 hq = QuestHeader()
 hq.quest:Fire("OnClick"); RunTimers()
@@ -191,7 +199,7 @@ local rows = NS.QuestReminderRows()
 local ids = {}
 for _, r in ipairs(rows) do if r.shown and r.item then ids[r.item.itemID] = r end end
 check(ids[5002] and ids[5004] and not ids[5000] and not ids[5005], "lijstje: alleen de restjes")
-ids[5004].keep:Fire("OnClick"); RunTimers()
+ids[5004]:Choose("keep"); RunTimers()
 check(CFC().questKeep[5004], "Always keep in het lijstje: onthouden")
 local left = 0
 for _, r in ipairs(rows) do if r.shown and r.item then left = left + 1 end end
@@ -200,8 +208,30 @@ CarefreeBagQuestReminder.later:Fire("OnClick")
 check(not CarefreeBagQuestReminder:IsShown() and not CFC().questKeep[5002], "Remind me later: dicht, niets onthouden")
 -- "All next level": alles in het lijstje uitstellen tot het volgende level
 CarefreeBagQuestReminder:Show(); NS.QuestReminderFill()
-check(CarefreeBagQuestReminder.snoozeAll:IsShown(), "lijstje: knop All next level")
+check(not CarefreeBagQuestReminder.snoozeAll:IsShown(), "één item: geen knop All next level (minder knoppen)")
+CFC().questKeep[5004] = nil; NS.QuestReminderFill()
+check(CarefreeBagQuestReminder.snoozeAll:IsShown(), "twee items: knop All next level")
 CarefreeBagQuestReminder.snoozeAll:Fire("OnClick"); RunTimers()
-check(CFC().questSnooze[5002] == 20 and not CarefreeBagQuestReminder:IsShown(), "All next level: uitgesteld, lijstje dicht")
+check(CFC().questSnooze[5002] == 20 and CFC().questSnooze[5004] == 20 and not CarefreeBagQuestReminder:IsShown(), "All next level: uitgesteld, lijstje dicht")
 check(#NS.QuestLeftovers() == 0, "uitgesteld: niet meer in het lijstje")
+
+-- #25: item met waarde = knop Auto Sell; zonder waarde = Destroy (met een vraag); volgende login
+ITEMS[5006] = { name = "Gnoll Paw", quality = 1, stack = 10, bind = 1, icon = 8, quest = true, price = 7 }
+ITEMS[5007] = { name = "Torn Page", quality = 1, stack = 1, bind = 1, icon = 9, quest = true }
+ITEMS[5008] = { name = "Odd Rock", quality = 1, stack = 1, bind = 1, icon = 10, quest = true }
+BAGS[0][8] = { itemID = 5006, count = 2 }; BAGS[0][9] = { itemID = 5007, count = 1 }; BAGS[0][10] = { itemID = 5008, count = 1 }
+E("BAG_UPDATE_DELAYED"); QE("BAG_UPDATE_DELAYED"); RunTimers()
+CarefreeBagQuestReminder:Show(); NS.QuestReminderFill()
+check(Row(5006) and Row(5006).main:GetText() == "Auto Sell" and Row(5006).name:GetText():find("worth 14c", 1, true), "waarde: knop Auto Sell, 'worth 14c'")
+Row(5006).main:Fire("OnClick"); RunTimers()
+check(CFC().assign[5006] == "grey" and not Row(5006), "Auto Sell: in de groep Auto Sell, weg uit het lijstje")
+DELETED = {}
+function DeleteCursorItem() DELETED[#DELETED + 1] = CURSOR and CURSOR.itemID; CURSOR = nil end
+check(Row(5007).main:GetText() == "Destroy", "geen waarde: knop Destroy")
+Row(5007).main:Fire("OnClick")
+check(POPUPS[#POPUPS].which == "CAREFREEBAG_DESTROY" and #DELETED == 0, "Destroy: eerst een vraag, nog niets weg")
+StaticPopupDialogs.CAREFREEBAG_DESTROY.OnAccept(); RunTimers()
+check(DELETED[1] == 5007 and BAGS[0][9] == nil and not Row(5007), "ja: weggegooid, weg uit het lijstje")
+Row(5008):Choose("login"); RunTimers()
+check(not Row(5008) and #NS.QuestLeftovers() == 0 and #NS.QuestLeftovers(true) > 0, "volgende login: nu niet meer in het lijstje (via Leftovers nog wel)")
 check(CarefreeBagDB.lastError == nil, "geen fout: " .. tostring(CarefreeBagDB.lastError))

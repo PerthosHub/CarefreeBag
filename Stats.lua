@@ -792,13 +792,14 @@ ns.OnEvent("CHAT_MSG_ADDON", "stats", function(_, prefix, msg, _, sender)
 end)
 
 ---------------------------------------------------------------------------
--- De vraag bij de start: kort, wat heb jij eraan, en ja zeggen
+-- Bij de start: een korte melding (geen ja/nee-vraag meer, Johans keuze 2026-11-27).
+-- Delen staat aan zodra je de melding ziet; uitzetten kan in de opties (Advanced).
+-- Wie eerder "nee" zei, houdt "nee" (DB.statsShare = false); wie "ja" zei, krijgt niets te zien.
 ---------------------------------------------------------------------------
 
 function ns.StatsInvite()
-	return "|cffffd100" .. T("CarefreeBag is brand new and gets better every day, with your help!") .. "|r\n\n"
-		.. T("Share errors and usage stats, and we can fix bugs much faster.")
-		.. "\n\n|cffaaaaaa" .. T("Runs in the background, nothing changes for you. Change it anytime in the options.") .. "|r"
+	return "|cffffd100" .. T("CarefreeBag shares errors and usage stats with the developer, so bugs get fixed faster.") .. "|r"
+		.. "\n\n|cffaaaaaa" .. T("Don't want this? Turn it off in the options (Advanced settings).") .. "|r"
 end
 
 -- Volledige uitleg (hover bij het vinkje in de opties): wat er gaat, hoe, en dat de naam meegaat.
@@ -837,12 +838,12 @@ local function Ask()
 	asked = true
 	StaticPopupDialogs["CAREFREEBAG_STATS"] = {
 		text = ns.StatsInvite(),
-		button1 = T("Sure, I like quick bug fixes"),
-		button2 = T("No, rather not"),
-		OnAccept = function() ns.SetStatsShare(true); Print(T("Thank you!")) end,
-		OnCancel = function(_, _, reason) if reason == "clicked" then ns.SetStatsShare(false) end end,
-		timeout = 0, whileDead = 1, hideOnEscape = false, preferredIndex = 3,
+		button1 = T("OK"),
+		timeout = 0, whileDead = 1, hideOnEscape = true, preferredIndex = 3,
 	}
+	-- Aan op het moment dat je de melding ziet (niet eerder: wie hem nooit zag, deelt niets).
+	ns.SetStatsShare(true)
+	ns.Note("stats", "notice shown, sharing on")
 	StaticPopup_Show("CAREFREEBAG_STATS")
 end
 

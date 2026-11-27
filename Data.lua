@@ -98,6 +98,7 @@ function ns.HookAHTooltip()
 		local owner = tt:GetOwner()
 		if owner and owner.isCarefreeItem and owner.group then AddAHLines(tt, owner.group) end
 		if owner and owner.isCarefreeItem and owner.group and ns.KeptLine then pcall(ns.KeptLine, tt, owner.group.itemID) end
+		if owner and owner.isCarefreeItem and owner.group and ns.StockLine then pcall(ns.StockLine, tt, owner.group) end -- "Keep N" (Stock.lua)
 		if owner and ns.QuestTooltip then pcall(ns.QuestTooltip, tt, owner) end -- bij welke quest hoort het (QuestItems.lua)
 		if AddOwnerLines then pcall(AddOwnerLines, tt) end
 	end

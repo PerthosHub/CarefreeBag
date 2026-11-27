@@ -52,6 +52,18 @@ local function Blocked(event, addon, what)
 	local loot = GetNumLootItems and (GetNumLootItems() or 0) or 0
 	ns.SetError(event .. ": " .. tostring(what) .. (okS and free and (" (free slots " .. #free .. ", loot window items " .. loot
 		.. (InCombatLockdown and InCombatLockdown() and ", in combat" or "") .. ")") or ""))
+	-- Wat deed je vlak daarvoor? (Johan wist het niet meer, 27-11): de laatste klik op een
+	-- CFB-vakje en of WoW op een doel wachtte. Apart genoteerd, zodat de fout zelf gelijk blijft.
+	local c, now = ns.lastClick, GetTime()
+	local targeting = SpellIsTargeting and SpellIsTargeting() and "yes" or "no"
+	if c and now - c.t < 15 then
+		ns.Note("blocked", ("%s after a %s%s on item %s at %d:%d, %.1f s before, waiting for a target: %s, clam tried: %s"):format(
+			tostring(what), c.button, c.shift and "+shift" or "", tostring(c.id), c.bag or -9, c.slot or -9, now - c.t,
+			targeting, ns.ClamTriedRecently and ns.ClamTriedRecently() and "yes" or "no"))
+	else
+		ns.Note("blocked", ("%s, no click on a CFB slot in the last 15 s, waiting for a target: %s, clam tried: %s"):format(
+			tostring(what), targeting, ns.ClamTriedRecently and ns.ClamTriedRecently() and "yes" or "no"))
+	end
 end
 ns.OnEvent("ADDON_ACTION_BLOCKED", "blocked", Blocked)
 ns.OnEvent("ADDON_ACTION_FORBIDDEN", "blocked", Blocked)

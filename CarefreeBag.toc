@@ -24,6 +24,7 @@ BagWindow.lua
 BankPanel.lua
 Blizzard.lua
 Chores.lua
+Stock.lua
 Mail.lua
 Loot.lua
 BagSwap.lua

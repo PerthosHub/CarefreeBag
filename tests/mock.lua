@@ -87,7 +87,8 @@ function hooksecurefunc(t, name, fn)
   local old = t[name]; t[name] = function(...) local r = { old(...) }; fn(...); return unpack(r) end
 end
 function SetItemButtonTexture(b, t) b.tex = t end
-function SetItemButtonCount(b, c) b.count = c end
+-- Zoals WoW: b.count = c (dat leest het splitsvenster), b.shownCount = het getal op het vakje.
+function SetItemButtonCount(b, c) b.count = c; b.shownCount = c end
 function SetItemButtonDesaturated(b, d) b.desat = d end
 function SetItemButtonQuality() end
 function ClearItemButtonOverlay() end

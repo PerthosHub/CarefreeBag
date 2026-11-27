@@ -12,10 +12,16 @@ local CatByKey, Kept, KeptGroups, SectionOf, T = ns.CatByKey, ns.Kept, ns.KeptGr
 
 local LOOT_ITEM = (Enum and Enum.LootSlotType and Enum.LootSlotType.Item) or LOOT_SLOT_ITEM or 1
 local AH_CUT = 0.05
-local QUEST_VALUE = 2 ^ 50                                -- questloot is altijd "meer waard"
+-- questloot is altijd "meer waard" (2^31-1: past nog als geheel getal, 2^50 gaf "integer overflow")
+local QUEST_VALUE = 2 ^ 31 - 1
 local NEVER = { quest = true, keys = true, hidden = true } -- deze groepen stellen we nooit voor
-local W = 330
+local W = 400
 local ROW_H, ICON = 36, 30
+local TOP_H, FOOT_H = 30, 8 + 22 + 16 -- titel boven de rijen, "Leave all" eronder
+-- Modern groen en rood (Johan, #23): zachter dan het felle Blizzard-groen/rood, als een balk
+-- die links sterk begint en naar rechts vervaagt, met een dun streepje ervoor.
+local GOOD, BAD = { 0.29, 0.87, 0.50 }, { 0.97, 0.44, 0.44 }
+local GOOD_HEX, BAD_HEX = "|cff4ade80", "|cfff87171"
 local MAX_ROWS = 6
 local MENU_W = 250
 
@@ -29,7 +35,8 @@ local function GroupName(key)
 end
 
 -- skipItems/skipGroups: "eenmalig overslaan", geldt tot het lootvenster dichtgaat.
-local state = { pending = nil, dismissed = false, scheduled = false, skipItems = {}, skipGroups = {} }
+-- left: loot-vakken waarvoor je "Leave it" koos (vak + link), ook tot het lootvenster dichtgaat.
+local state = { pending = nil, dismissed = false, scheduled = false, skipItems = {}, skipGroups = {}, left = {} }
 local panel
 
 local function Money(m)
@@ -132,7 +139,7 @@ local function LootList(items, free)
 			local id = tonumber(link:match("item:(%d+)"))
 			local r = id and Info(id)
 			qty = (qty and qty > 0) and qty or 1
-			if id and not locked and not Fits(items, free, id, qty, r and r[18]) then
+			if id and not locked and not state.left[i .. link] and not Fits(items, free, id, qty, r and r[18]) then
 				local each, ah = Each(link, r and r[12])
 				list[#list + 1] = { slot = i, link = link, icon = icon, count = qty, value = isQuest and QUEST_VALUE or each * qty,
 					price = each * qty, ah = ah, quest = isQuest, id = id, reagent = r and r[18] }
@@ -185,20 +192,24 @@ end
 -- Het paneel naast het lootvenster
 ---------------------------------------------------------------------------
 
--- Rode Blizzard-knop groen kleuren (advies) of weer gewoon rood maken.
-local function Tint(btn, green)
+-- Rode Blizzard-knop kleuren: "green" = het advies, "grey" = de andere keuze (rustig, niet
+-- rood: rood voelt als gevaar), nil = gewoon rood.
+local function Tint(btn, mode)
 	for _, rg in ipairs({ btn:GetRegions() }) do
 		if rg and rg.GetObjectType and rg:GetObjectType() == "Texture" and rg ~= btn:GetHighlightTexture() then
-			if rg.SetDesaturated then rg:SetDesaturated(green and true or false) end
-			if green then rg:SetVertexColor(0.35, 0.95, 0.35) else rg:SetVertexColor(1, 1, 1) end
+			if rg.SetDesaturated then rg:SetDesaturated(mode ~= nil) end
+			if mode == "green" then rg:SetVertexColor(0.35, 0.95, 0.5)
+			elseif mode == "grey" then rg:SetVertexColor(0.7, 0.7, 0.7)
+			else rg:SetVertexColor(1, 1, 1) end
 		end
 	end
-	btn.green = green and true or false
+	btn.green = mode == "green"
+	btn.grey = mode == "grey"
 end
 
 local function SetButtons(on)
 	if not panel then return end
-	for _, r in ipairs(panel.rows) do r.btn:SetEnabled(on) end
+	for _, r in ipairs(panel.rows) do r.btn:SetEnabled(on); r.leave:SetEnabled(on) end
 	panel.leaveAll:SetEnabled(on)
 end
 
@@ -263,6 +274,7 @@ local function Swap(row)
 	if not info or info.itemID ~= e.itemID or info.isLocked then Evaluate(); return end
 	if CursorHasItem() then ClearCursor() end
 	C_Container.PickupContainerItem(e.bag, e.slot)
+	-- (weggooien kan alleen tijdens een echte klik, daarom gebeurt het hier en niet later)
 	local kind, id = GetCursorInfo()
 	if kind ~= "item" or id ~= e.itemID then ClearCursor(); Evaluate(); return end
 	DeleteCursorItem()
@@ -273,6 +285,15 @@ local function Swap(row)
 	if ns.StatsCount then ns.StatsCount("lp") end
 	SetBusy(row)
 	C_Timer.After(0.2, TryPending)
+end
+
+-- Klik op "Leave it" in een rij: deze loot laten liggen (tot het lootvenster dichtgaat), de rest blijft staan.
+local function Leave(row)
+	local o = row and row.offer
+	if not o or panel.busy then return end
+	state.left[o.loot.slot .. o.loot.link] = true
+	Log("loot: leave " .. Short(o.loot.link))
+	Evaluate()
 end
 
 -- Opties bij het item dat weg zou gaan (knopje ▼ in de rij): nooit / nu niet, voor het item of de hele groep.
@@ -447,10 +468,15 @@ local function NewRow(i)
 	r.arrow:SetPoint("LEFT", r.loot, "RIGHT", 4, 0)
 	r.junk = Icon(2 + ICON + 22)
 	r.junk:SetScript("OnEnter", function() Tip(r, r.offer and r.offer.junk.e.link) end)
-	-- Achtergrond over de hele rij: groen = slim, rood = niet slim (van de rand van het lootvenster tot de knop).
+	-- Achtergrond over de hele rij: groen = slim, rood = niet slim. Links sterk, naar rechts
+	-- vervagend, met een dun streepje ervoor (modern, past bij de donkere achtergrond).
 	r.bg = r:CreateTexture(nil, "BACKGROUND")
 	r.bg:SetPoint("TOPLEFT", r, "TOPLEFT", -6, 1)
 	r.bg:SetPoint("BOTTOMRIGHT", r, "BOTTOMRIGHT", 6, -1)
+	r.accent = r:CreateTexture(nil, "BORDER")
+	r.accent:SetPoint("TOPLEFT", r.bg, "TOPLEFT", 0, 0)
+	r.accent:SetPoint("BOTTOMLEFT", r.bg, "BOTTOMLEFT", 0, 0)
+	r.accent:SetWidth(3)
 	-- Vinkje of kruisje (zoals bij een ready check), dan het verschil.
 	r.mark = r:CreateTexture(nil, "OVERLAY")
 	r.mark:SetSize(18, 18)
@@ -471,8 +497,13 @@ local function NewRow(i)
 		if panel.menu:IsShown() and panel.menuRow == r then panel.menu:Hide() else ShowMenu(r) end
 	end)
 	ns.Tooltip(r.opt, T("Options"), T("Never destroy this item or group, or skip it this time."))
-	r.btn = MakeButton(r, T("Pick up"), 76)
-	r.btn:SetPoint("RIGHT", r.opt, "LEFT", -2, 0)
+	-- Twee knoppen, altijd op dezelfde plek: het advies is groen, de andere grijs (Johan, #23).
+	r.leave = MakeButton(r, T("Leave it"), 70)
+	r.leave:SetPoint("RIGHT", r.opt, "LEFT", -2, 0)
+	r.leave:SetScript("OnClick", function() Leave(r) end)
+	ns.Tooltip(r.leave, T("Leave it"), T("Leave this loot where it is. Nothing is destroyed."))
+	r.btn = MakeButton(r, T("Pick up"), 70)
+	r.btn:SetPoint("RIGHT", r.leave, "LEFT", -2, 0)
 	r.btn:SetScript("OnClick", function() Swap(r) end)
 	ns.Tooltip(r.btn, T("Pick up"), T("Destroys the item on the right of the arrow for good (it cannot be bought back) and picks up the loot."))
 	r:SetScript("OnEnter", function() Tip(r, r.offer and r.offer.loot.link) end)
@@ -551,18 +582,20 @@ local function LootButtonFor(slot)
 	end
 end
 
--- Rijen onder elkaar (geen lootvenster te zien, bijv. autoloot).
+-- Rijen onder elkaar (geen lootvenster te zien, bijv. autoloot), in de volgorde van het lootvenster.
 local function Stack(n)
 	for i, r in ipairs(panel.rows) do
 		r:ClearAllPoints()
-		r:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -30 - (i - 1) * ROW_H)
+		r:SetPoint("TOPLEFT", panel, "TOPLEFT", ns.PAD, -TOP_H - (i - 1) * ROW_H)
 	end
-	panel:SetHeight(30 + n * ROW_H + 8 + 22 + 16)
+	panel:SetHeight(TOP_H + n * ROW_H + FOOT_H)
 end
 
--- Naast het lootvenster, even hoog, en elke rij op dezelfde hoogte als zijn item in het
--- lootvenster: zo loopt de regel door. Rechts, of links als rechts niet op het scherm past
--- of je tassen bedekt. Geen lootvenster (of een item niet te vinden): rijen onder elkaar.
+-- Naast het lootvenster, en elke rij op dezelfde hoogte als zijn item in het lootvenster: zo
+-- loopt de regel door (Johan, #23). Rechts, of links als rechts niet op het scherm past of je
+-- tassen bedekt. Zit het eerste item hoog (onder de titel), dan schuift het paneel iets omhoog;
+-- zit het laatste laag, dan wordt het paneel langer dan het lootvenster ("Leave all" eronder).
+-- Geen lootvenster, een item niet te vinden of rijen die over elkaar vallen: onder elkaar.
 local function Place(n)
 	panel:ClearAllPoints()
 	local L = LootFrame and LootFrame:IsShown() and Rect(LootFrame)
@@ -583,28 +616,47 @@ local function Place(n)
 	local ui = UIParent:GetEffectiveScale() or 1
 	local ys, aligned = {}, true
 	local height = (L[4] - L[2]) / k
+	local highest, lowest, prev
 	for i, r in ipairs(panel.rows) do
 		if r.offer then
 			local b = LootButtonFor(r.offer.loot.slot)
 			local _, cy = b and b:GetCenter()
 			if not cy then aligned = false; break end
 			ys[i] = (cy * (b:GetEffectiveScale() or 1) / ui - L[4]) / k
-			-- niet onder de titel en niet over "Leave all": dan toch onder elkaar
-			if ys[i] > -(30 + ROW_H / 2) or ys[i] < -(height - 52 - ROW_H / 2) then aligned = false; break end
+			-- rijen staan op volgorde van het lootvenster: elke rij moet onder de vorige passen
+			if prev and prev - ys[i] < ROW_H - 4 then aligned = false; break end
+			prev = ys[i]
+			highest = highest or ys[i]
+			lowest = ys[i]
 		end
 	end
 	local a, b = useLeft and "TOPRIGHT" or "TOPLEFT", useLeft and "TOPLEFT" or "TOPRIGHT"
 	local dx = useLeft and -4 or 4
-	panel:SetPoint(a, LootFrame, b, dx, 0)
-	if not aligned then Stack(n); return end
-	-- even hoog als het lootvenster, elke rij naast zijn loot-item
-	panel:SetPoint(useLeft and "BOTTOMRIGHT" or "BOTTOMLEFT", LootFrame, useLeft and "BOTTOMLEFT" or "BOTTOMRIGHT", dx, 0)
+	if not aligned or not highest then
+		panel:SetPoint(a, LootFrame, b, dx, 0)
+		Stack(n)
+		return
+	end
+	-- eerste rij moet onder de titel passen: dan het hele paneel zoveel omhoog
+	local up = math.max(0, TOP_H + ROW_H / 2 + highest)
+	panel:SetPoint(a, LootFrame, b, dx, up)
+	panel:SetHeight(math.max(height + up, up - lowest + ROW_H / 2 + FOOT_H))
 	for i, r in ipairs(panel.rows) do
 		if ys[i] then
 			r:ClearAllPoints()
-			r:SetPoint("LEFT", panel, "TOPLEFT", ns.PAD, ys[i])
+			r:SetPoint("LEFT", panel, "TOPLEFT", ns.PAD, ys[i] - up)
 		end
 	end
+end
+
+-- Achtergrond van een rij: kleur links sterk, naar rechts vervagend (oudere clients zonder
+-- verloop: één zachte kleur).
+local function RowColor(r, c)
+	r.bg:SetColorTexture(1, 1, 1, 1)
+	local ok = CreateColor and r.bg.SetGradient and pcall(r.bg.SetGradient, r.bg, "HORIZONTAL",
+		CreateColor(c[1], c[2], c[3], 0.30), CreateColor(c[1], c[2], c[3], 0.04))
+	if not ok then r.bg:SetColorTexture(c[1], c[2], c[3], 0.18) end
+	r.accent:SetColorTexture(c[1], c[2], c[3], 0.9)
 end
 
 -- Eén rij vullen: iconen, verschil in groen/rood (quest = groen "Quest"), knop groen/rood.
@@ -616,31 +668,39 @@ local function FillRow(r, o)
 	r.junk.count:SetText(o.junk.e.count > 1 and o.junk.e.count or "")
 	local smart = Smart(o)
 	if o.loot.quest then
-		r.diff:SetText("|cff33ff33" .. T("Quest") .. "|r")
+		r.diff:SetText(GOOD_HEX .. T("Quest") .. "|r")
 	elseif smart then
-		r.diff:SetText("|cff33ff33+" .. Money(o.loot.value - o.junk.value) .. "|r")
+		r.diff:SetText(GOOD_HEX .. "+" .. Money(o.loot.value - o.junk.value) .. "|r")
 	else
-		r.diff:SetText("|cffff5555-" .. Money(o.junk.value - o.loot.value) .. "|r")
+		r.diff:SetText(BAD_HEX .. "-" .. Money(o.junk.value - o.loot.value) .. "|r")
 	end
 	r.ah:SetText((o.junk.ah or o.loot.ah) and "|cff66ccffAH|r" or "")
 	-- in één oogopslag: groene rij met vinkje = doen, rode rij met kruisje = liever niet
-	if smart then r.bg:SetColorTexture(0.1, 0.8, 0.1, 0.28) else r.bg:SetColorTexture(0.85, 0.1, 0.1, 0.22) end
+	RowColor(r, smart and GOOD or BAD)
 	r.mark:SetTexture(smart and "Interface\\RaidFrame\\ReadyCheck-Ready" or "Interface\\RaidFrame\\ReadyCheck-NotReady")
 	r.smart = smart
 	r.advice = smart and "pickup" or "leave"
-	Tint(r.btn, smart)
+	-- het advies groen, de andere knop grijs: je klikt vanzelf op wat slim is
+	Tint(r.btn, smart and "green" or "grey")
+	Tint(r.leave, smart and "grey" or "green")
 	r:Show()
 end
 
+-- offers: op waarde (de duurste loot kreeg het goedkoopste item). Op het scherm staan ze in de
+-- volgorde van het lootvenster, zodat elke rij naast (of in dezelfde volgorde als) zijn loot staat.
 local function ShowOffers(offers)
 	if not panel then BuildPanel() end
 	panel.busy = false
 	SetButtons(true)
+	local shown = {}
+	for i = 1, math.min(#offers, MAX_ROWS) do shown[i] = offers[i] end
+	table.sort(shown, function(a, b) return a.loot.slot < b.loot.slot end)
 	for i, r in ipairs(panel.rows) do
-		if offers[i] then FillRow(r, offers[i]) else r.offer = nil; r:Hide() end
+		if shown[i] then FillRow(r, shown[i]) else r.offer = nil; r:Hide() end
 	end
-	local first = panel.rows[1]
-	panel.offer, panel.advice = first.offer, first.advice -- korte namen (tests, andere bestanden)
+	-- korte namen (tests, andere bestanden): het meest waardevolle aanbod
+	panel.offer = offers[1]
+	panel.advice = Smart(offers[1]) and "pickup" or "leave"
 	-- menu open bij een rij die er nog staat: bijwerken, anders weg
 	if panel.menu:IsShown() and panel.menuRow and panel.menuRow.offer then ShowMenu(panel.menuRow) else panel.menu:Hide() end
 	Place(math.min(#offers, MAX_ROWS))
@@ -662,10 +722,10 @@ Evaluate = function()
 			local _, _, qty, _, _, locked, isQuest = GetLootSlotInfo(i)
 			local id = link and tonumber(link:match("item:(%d+)"))
 			local r = id and Info(id)
-			ns.Note("bags full", ("no offer, loot slot %d: %s id %s x%s, type %s, locked %s, quest %s, fits %s"):format(i,
+			if not (link and state.left[i .. link]) then ns.Note("bags full", ("no offer, loot slot %d: %s id %s x%s, type %s, locked %s, quest %s, fits %s"):format(i,
 				link and Short(link) or "no link", tostring(id), tostring(qty),
 				tostring(GetLootSlotType and GetLootSlotType(i)), tostring(locked), tostring(isQuest),
-				tostring(id and Fits(items, free, id, (qty and qty > 0) and qty or 1, r and r[18]) or false)))
+				tostring(id and Fits(items, free, id, (qty and qty > 0) and qty or 1, r and r[18]) or false))) end
 		end
 	end
 	-- Items die ook in de loot liggen (bijv. een schelp die op je stapel past) niet weggooien.
@@ -707,7 +767,7 @@ end
 function ns.LootEvent(event)
 	if event == "LOOT_CLOSED" then
 		state.pending, state.dismissed = nil, false
-		state.skipItems, state.skipGroups = {}, {} -- "eenmalig overslaan" is voorbij
+		state.skipItems, state.skipGroups, state.left = {}, {}, {} -- "eenmalig overslaan" en "Leave it" zijn voorbij
 		HidePanel()
 	elseif ns.DB and ns.DB.lootPanel == false then
 		HidePanel() -- optie "Bags full: offer to make room" staat uit
@@ -722,6 +782,22 @@ end
 -- Events: lootvenster en "tassen vol"
 ---------------------------------------------------------------------------
 
+-- Alleen WoW-meldingen over tassen en loot noteren, niet "You cannot attack that target" of
+-- "Out of range" (Johans log 27-11: tientallen regels per uur, de nuttige regels schoven eruit).
+local BAG_MESSAGES = { "ERR_ITEM_MAX_COUNT", "ERR_BAG_FULL", "ERR_ITEM_DOESNT_GO_INTO_BAG", "ERR_LOOT_GONE",
+	"ERR_LOOT_CANT_LOOT_THAT_NOW", "ERR_ITEM_UNIQUE_EQUIPPABLE", "ERR_TOO_MANY_SPECIAL_BAGS", "ERR_ITEM_LOCKED" }
+local function BagMessage(msg)
+	for _, name in ipairs(BAG_MESSAGES) do
+		local text = _G[name]
+		if type(text) == "string" and text ~= "" then
+			-- sommige teksten hebben %s (bijv. "You can't carry any more %s"): alleen het vaste begin vergelijken
+			local fixed = text:match("^([^%%]*)") or text
+			if fixed ~= "" and tostring(msg):sub(1, #fixed) == fixed then return true end
+		end
+	end
+	return false
+end
+
 for _, ev in ipairs({ "LOOT_OPENED", "LOOT_SLOT_CLEARED", "LOOT_CLOSED" }) do
 	ns.OnEvent(ev, "loot", function(event) ns.LootEvent(event) end)
 end
@@ -734,7 +810,7 @@ ns.OnEvent("UI_ERROR_MESSAGE", "loot", function(_, _, msg)
 		ns.Note("bags full", ("free slots %s, loot window items %d, panel %s"):format(okS and free and #free or "?", loot,
 			ns.DB.lootPanel == false and "off" or "on"))
 		ns.LootEvent("FULL")
-	elseif GetNumLootItems and (GetNumLootItems() or 0) > 0 then
+	elseif GetNumLootItems and (GetNumLootItems() or 0) > 0 and BagMessage(msg) then
 		ns.Note("bags full", "loot window open, WoW says: " .. tostring(msg)) -- bijv. "kan er niet meer van dragen"
 	end
 end)

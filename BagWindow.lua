@@ -364,10 +364,11 @@ local function NewItemButton(i)
 	-- Rechtsklik op een tas: slim wisselen als alle tasvakken vol zijn (BagSwap.lua).
 	-- Rechtsklik bij de mailbox: alle stapels van dit vakje in de mail (Mail.lua).
 	b:HookScript("PreClick", function(self, button)
-		-- Het getal op het vakje is alles bij elkaar (bijv. 60), maar splitsen kan alleen binnen
-		-- één stapel: WoW's splitsvenster krijgt daarom het echte aantal van de stapel.
-		-- (Niet afhankelijk van IsShiftKeyDown: die mist de eerste klik vanuit een ander venster.)
-		if self.group and self.group.rep then self.count = self.group.rep.count end
+		-- Onthouden voor de log als WoW daarna iets blokkeert (Start.lua, Blocked).
+		-- Geen velden op de knop zelf zetten tijdens de klik: dat kan WoW als "taint" zien.
+		local g = self.group
+		ns.lastClick = { id = g and g.itemID, bag = g and g.rep and g.rep.bag, slot = g and g.rep and g.rep.slot,
+			button = tostring(button), shift = IsShiftKeyDown and IsShiftKeyDown() or false, t = GetTime() }
 		-- Oppakken (klik zonder iets aan de muis) bij de bank: de rest volgt als het in de bank landt.
 		if button == "LeftButton" and not CursorHasItem() and ns.BankPickup then
 			pcall(ns.BankPickup, self.group, self:GetBagID(), self:GetID())
@@ -524,6 +525,54 @@ function ns.ShowMenu(m)
 	menuCatcher.menu = m
 	menuCatcher:Show()
 	m:Show()
+end
+
+-- Keuzemenu aan een knopje (▼): WoW's eigen menu (zoals rechtsklik op een speler), of ons
+-- eigen menu als die er niet is. choices = { { text = "...", fn = function() end }, ... };
+-- een regel zonder fn is een kopje. Gebruikt door QuestReminder.lua.
+local choiceMenu
+function ns.ChoiceMenu(anchor, title, choices)
+	if MenuUtil and MenuUtil.CreateContextMenu then
+		local ok = pcall(MenuUtil.CreateContextMenu, anchor, function(_, root)
+			if title then root:CreateTitle(title) end
+			for _, c in ipairs(choices) do
+				if c.fn then root:CreateButton(c.text, function() c.fn() end) else root:CreateTitle(c.text) end
+			end
+		end)
+		if ok then return end
+	end
+	if not choiceMenu then
+		choiceMenu = ns.NewMenu("CarefreeBagChoiceMenu")
+		choiceMenu.buttons = {}
+		choiceMenu.title = choiceMenu:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		choiceMenu.title:SetPoint("TOPLEFT", choiceMenu, "TOPLEFT", 10, -8)
+	end
+	local m = choiceMenu
+	local y = -8
+	m.title:SetText(title or "")
+	if title then y = y - 16 end
+	for i, c in ipairs(choices) do
+		local b = m.buttons[i]
+		if not b then
+			b = CreateFrame("Button", nil, m)
+			b:SetSize(200, 18)
+			b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+			b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+			b.label:SetPoint("LEFT", b, "LEFT", 6, 0)
+			m.buttons[i] = b
+		end
+		b.label:SetText(c.text)
+		b:SetScript("OnClick", function() m:Hide(); if c.fn then c.fn() end end)
+		b:ClearAllPoints()
+		b:SetPoint("TOPLEFT", m, "TOPLEFT", 6, y)
+		b:Show()
+		y = y - 18
+	end
+	for i = #choices + 1, #m.buttons do m.buttons[i]:Hide() end
+	m:SetSize(212, -y + 8)
+	m:ClearAllPoints()
+	m:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -2)
+	ns.ShowMenu(m)
 end
 
 -- Keuzelijstje voor sorteren (één lijstje, gedeeld door alle groepen).
@@ -862,7 +911,12 @@ local function SetupItemButton(b, g)
 	SetItemButtonTexture(b, info.iconFileID)
 	pcall(SetItemButtonQuality, b, info.quality, info.hyperlink, false, info.isBound)
 	SetItemButtonCount(b, g.count)
+	-- Het getal op het vakje is alles bij elkaar (bijv. 60), maar splitsen kan alleen binnen
+	-- één stapel: WoW's splitsvenster leest b.count, dus dat is het echte aantal van de stapel.
+	-- Hier zetten (bij het bijwerken), niet meer tijdens de klik (PreClick): minder kans op taint.
+	b.count = e.count
 	SetItemButtonDesaturated(b, info.isLocked)
+	if ns.StockBadge then pcall(ns.StockBadge, b, g) end -- "Keep N" (Stock.lua)
 	pcall(b.UpdateNewItem, b, info.quality)
 	local isNew = false
 	if C_NewItems and C_NewItems.IsNewItem then
@@ -1437,6 +1491,14 @@ function ns.BuildMain()
 	ns.main.scrollMax = 0
 	ns.main.scroll:EnableMouseWheel(true)
 	ns.main.scroll:SetScript("OnMouseWheel", function(self, delta)
+		-- Shift + muiswiel op een item: hoeveel je altijd bij je houdt (Stock.lua). Staat in de tooltip.
+		if IsShiftKeyDown and IsShiftKeyDown() and ns.StockWheel then
+			local f
+			if GetMouseFoci then local t = GetMouseFoci(); f = t and t[1]
+			elseif GetMouseFocus then f = GetMouseFocus() end
+			while f and not f.isCarefreeItem do f = f.GetParent and f:GetParent() or nil end
+			if f and f.group then ns.StockWheel(f, delta); return end
+		end
 		local v = (self:GetVerticalScroll() or 0) - delta * (ns.TILE + ns.GAP)
 		self:SetVerticalScroll(math.max(0, math.min(ns.main.scrollMax or 0, v)))
 	end)
